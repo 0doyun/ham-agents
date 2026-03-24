@@ -91,6 +91,22 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
         return events
     }
 
+    func fetchSettings() async throws -> DaemonSettingsPayload {
+        DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: true,
+                error: true,
+                waitingInput: true,
+                quietHoursEnabled: false,
+                previewText: false
+            )
+        )
+    }
+
+    func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {
+        settings
+    }
+
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
         var agent = snapshot.agents.first { $0.id == agentID }!
         agent.notificationPolicy = policy

@@ -33,6 +33,8 @@ public protocol HamDaemonClientProtocol: Sendable {
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload
     func fetchAgents() async throws -> [Agent]
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload]
+    func fetchSettings() async throws -> DaemonSettingsPayload
+    func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent
     func updateRole(agentID: String, role: String) async throws -> Agent
     func removeAgent(agentID: String) async throws
@@ -95,6 +97,28 @@ public final class HamDaemonClient: HamDaemonClientProtocol, @unchecked Sendable
             throw HamDaemonClientError.server(error)
         }
         return response.events ?? []
+    }
+
+    public func fetchSettings() async throws -> DaemonSettingsPayload {
+        let response = try await transport.send(.init(command: .getSettings))
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
+        guard let settings = response.settings else {
+            throw HamDaemonClientError.missingPayload("settings")
+        }
+        return settings
+    }
+
+    public func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {
+        let response = try await transport.send(.init(command: .updateSettings, settings: settings))
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
+        guard let updated = response.settings else {
+            throw HamDaemonClientError.missingPayload("settings")
+        }
+        return updated
     }
 
     public func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
