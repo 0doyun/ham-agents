@@ -42,3 +42,4 @@
 - 2026-03-25: `ham open` baseline은 daemon이 계산한 open target 을 CLI가 그대로 소비하는 방식으로 시작한다. richer platform-specific focus/open behavior는 later integration slices에서 확장한다.
 - 2026-03-25: first Swift settings integration only exposes notification toggles from the backend settings document; broader settings sections remain later slices.
 - 2026-03-25: quiet hours enforcement baseline currently treats `quiet_hours_enabled` as a global notification suppressor until a richer time-window schema exists.
+- 2026-03-25: notification settings enforcement baseline applies stored toggle rules and preview-text masking in Swift before dispatch; true quiet-hours time windows remain a later slice.

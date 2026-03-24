@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ham-agents/ham-agents/go/internal/adapters"
 	"github.com/ham-agents/ham-agents/go/internal/core"
 	"github.com/ham-agents/ham-agents/go/internal/ipc"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
@@ -46,6 +47,8 @@ func run(args []string) error {
 		return runObserve(ctx, client, args[1:])
 	case "open":
 		return runOpen(ctx, client, args[1:])
+	case "ask":
+		return runAsk(ctx, client, args[1:])
 	case "settings":
 		return runSettings(ctx, client, args[1:])
 	case "list":
@@ -77,6 +80,7 @@ Usage:
   ham attach <session-ref> [name] [--project path] [--role role] [--provider provider]
   ham observe <source-ref> [name] [--project path] [--role role] [--provider provider]
   ham open <agent-id> [--json] [--print]
+  ham ask <agent-id> <message>
   ham settings [--json]
   ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--preview-text=true|false]
   ham list [--json]
@@ -153,6 +157,26 @@ func runOpen(ctx context.Context, client *ipc.Client, args []string) error {
 	}
 
 	return openTarget(target)
+}
+
+func runAsk(ctx context.Context, client *ipc.Client, args []string) error {
+	agentID, message, err := parseAskInput(args)
+	if err != nil {
+		return err
+	}
+
+	target, err := client.OpenTarget(ctx, agentID)
+	if err != nil {
+		return err
+	}
+
+	result, err := adapters.NewQuickMessageSender(nil).Send(target, message)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(result)
+	return nil
 }
 
 func runSettings(ctx context.Context, client *ipc.Client, args []string) error {
@@ -464,6 +488,18 @@ func parseOpenInput(args []string) (agentID string, asJSON bool, printOnly bool,
 
 	if agentID == "" {
 		err = fmt.Errorf("agent id is required")
+	}
+	return
+}
+
+func parseAskInput(args []string) (agentID string, message string, err error) {
+	if len(args) < 2 {
+		return "", "", fmt.Errorf("agent id and message are required")
+	}
+	agentID = args[0]
+	message = strings.Join(args[1:], " ")
+	if strings.TrimSpace(message) == "" {
+		err = fmt.Errorf("message is required")
 	}
 	return
 }

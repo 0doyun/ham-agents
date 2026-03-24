@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **quiet hours suppression baseline** 다.
+현재 활성 범위는 **CLI `ham ask` messaging baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -72,13 +72,18 @@
 - [x] backend settings state baseline 추가
 - [x] Swift menu bar에서 settings를 읽고 일부 토글을 수정할 수 있게 연결
 - [x] stored notification settings가 실제 delivery behavior 에 반영되게 연결
-- [ ] quiet hours enabled setting이 notification suppression에 반영되게 연결
+- [x] quiet hours enabled setting이 notification suppression에 반영되게 연결
+- [x] daemon-backed `ham ask <agent> "..."` baseline 추가
 
 ### Current Slice Checklist
 
 - [x] settings-aware notification filtering 추가
 - [x] preview-text masking behavior 추가
 - [x] Swift tests로 settings-driven notification behavior 보호
+- [x] daemon-backed message target resolution 재사용
+- [x] CLI `ham ask` 구현
+- [x] Go adapter sender/fallback 추가
+- [x] Go tests/CLI smoke 로 message path 보호
 - [ ] quiet hours toggle UI 추가
 - [ ] quiet hours suppression behavior 추가
 - [ ] Swift tests로 quiet hours suppression 보호
