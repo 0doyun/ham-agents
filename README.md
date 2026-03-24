@@ -39,6 +39,8 @@ go/
   internal/ipc/           # socket path/bootstrap IPC config
   internal/adapters/      # iTerm2 adapter boundary
 Sources/
+  HamCore/                # shared Swift models + daemon payload contracts
+  HamAppServices/         # Swift daemon client + menu bar summary prep
   ...                     # transitional Swift bootstrap code
 Tests/
   ...                     # transitional Swift bootstrap tests
@@ -76,3 +78,8 @@ go run ./go/cmd/ham run claude reviewer --project /tmp/demo --role reviewer
 go run ./go/cmd/ham status --json
 go run ./go/cmd/ham events --json --limit 5
 ```
+
+Swift menu bar prep currently lives in `HamAppServices`, which provides:
+- daemon request/response payload models shared with Go
+- a Unix socket transport for `hamd`
+- a summary service that can turn snapshot + events into menu bar counts/feed data

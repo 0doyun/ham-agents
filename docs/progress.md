@@ -91,3 +91,13 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: actual Swift daemon client transport, menu bar target/app bootstrap, event follow/stream surface
+
+### 2026-03-24 (Swift daemon client + menu bar summary baseline prep)
+- `HamCore` 에 daemon IPC request/response + runtime snapshot payload 모델을 추가해 Swift가 CLI가 아니라 daemon contract 자체를 이해할 수 있게 했다.
+- `HamAppServices` 타깃을 추가하고, Unix socket 기반 `UnixSocketDaemonTransport`, `HamDaemonClient`, `MenuBarSummaryService` 를 구현했다.
+- summary service가 daemon snapshot + recent events 를 menu bar-friendly count/feed data로 합성하도록 만들고, fixture/stub 기반 tests로 polling behavior를 보호했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: 실제 menu bar app target bootstrap, Swift-side live daemon polling integration, popover agent list baseline

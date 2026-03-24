@@ -8,6 +8,7 @@ let package = Package(
     ],
     products: [
         .library(name: "HamCore", targets: ["HamCore"]),
+        .library(name: "HamAppServices", targets: ["HamAppServices"]),
         .library(name: "HamRuntime", targets: ["HamRuntime"]),
         .library(name: "HamPersistence", targets: ["HamPersistence"]),
         .library(name: "HamInference", targets: ["HamInference"]),
@@ -19,6 +20,11 @@ let package = Package(
         .target(
             name: "HamCore",
             path: "Sources/HamCore"
+        ),
+        .target(
+            name: "HamAppServices",
+            dependencies: ["HamCore"],
+            path: "Sources/HamAppServices"
         ),
         .target(
             name: "HamPersistence",
@@ -54,6 +60,11 @@ let package = Package(
             name: "HamCoreTests",
             dependencies: ["HamCore"],
             path: "Tests/HamCoreTests"
+        ),
+        .testTarget(
+            name: "HamAppServicesTests",
+            dependencies: ["HamAppServices", "HamCore"],
+            path: "Tests/HamAppServicesTests"
         ),
         .testTarget(
             name: "HamRuntimeTests",
