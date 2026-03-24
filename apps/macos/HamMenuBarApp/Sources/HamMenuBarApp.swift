@@ -375,6 +375,16 @@ private struct AgentDetailView: View {
                 Text("\(agent.provider) · \(agent.mode.rawValue)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if let sessionTitle = agent.sessionTitle, !sessionTitle.isEmpty {
+                    Text(sessionTitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if agent.mode == .attached {
+                    Text(agent.sessionIsActive ? "Current iTerm session" : "Background iTerm session")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
                 Text(agent.projectPath)
                     .font(.caption)
                     .foregroundStyle(.secondary)

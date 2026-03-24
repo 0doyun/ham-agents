@@ -105,6 +105,38 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.agent(withID: "agent-1")?.status, .disconnected)
     }
 
+    func testRefreshSurfacesAttachedSessionMetadata() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "ops",
+            provider: "iterm2",
+            host: "localhost",
+            mode: .attached,
+            projectPath: "/tmp/app",
+            status: .idle,
+            statusConfidence: 0.6,
+            lastEventAt: Date(timeIntervalSince1970: 1),
+            sessionRef: "iterm2://session/abc",
+            sessionTitle: "Claude Review",
+            sessionIsActive: true
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.agent(withID: "agent-1")?.sessionTitle, "Claude Review")
+        XCTAssertEqual(viewModel.agent(withID: "agent-1")?.sessionIsActive, true)
+    }
+
     func testRefreshCapturesErrors() async {
         let client = FailingClient()
         let viewModel = MenuBarViewModel(client: client)
