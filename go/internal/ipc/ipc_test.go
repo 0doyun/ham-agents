@@ -115,6 +115,18 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		t.Fatalf("unexpected role %q", renamed.Role)
 	}
 
+	if err := client.RemoveAgent(context.Background(), agent.ID); err != nil {
+		t.Fatalf("remove agent via client: %v", err)
+	}
+
+	agentsAfterRemove, err := client.ListAgents(context.Background())
+	if err != nil {
+		t.Fatalf("list after remove: %v", err)
+	}
+	if len(agentsAfterRemove) != 0 {
+		t.Fatalf("expected empty registry after remove, got %d", len(agentsAfterRemove))
+	}
+
 	cancel()
 	if err := <-serverErrors; err != nil && !errors.Is(err, context.Canceled) {
 		t.Fatalf("server shutdown: %v", err)

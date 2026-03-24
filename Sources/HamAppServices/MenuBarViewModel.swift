@@ -142,6 +142,23 @@ public final class MenuBarViewModel: ObservableObject {
         }
     }
 
+    public func stopTracking(forAgentID id: Agent.ID?) async {
+        guard let id else {
+            errorMessage = "No agent selected."
+            return
+        }
+
+        do {
+            try await client.removeAgent(agentID: id)
+            agents.removeAll { $0.id == id }
+            roleDraft = agent(withID: nil)?.role ?? ""
+            quickMessageFeedback = nil
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     public func start() {
         guard !hasStarted else { return }
         hasStarted = true

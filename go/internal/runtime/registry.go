@@ -177,6 +177,29 @@ func (r *Registry) UpdateRole(ctx context.Context, agentID string, role string) 
 	return core.Agent{}, fmt.Errorf("agent %q not found", agentID)
 }
 
+func (r *Registry) Remove(ctx context.Context, agentID string) error {
+	agents, err := r.store.LoadAgents(ctx)
+	if err != nil {
+		return err
+	}
+
+	filtered := make([]core.Agent, 0, len(agents))
+	removed := false
+	for _, agent := range agents {
+		if agent.ID == agentID {
+			removed = true
+			continue
+		}
+		filtered = append(filtered, agent)
+	}
+
+	if !removed {
+		return fmt.Errorf("agent %q not found", agentID)
+	}
+
+	return r.store.SaveAgents(ctx, filtered)
+}
+
 func (r *Registry) Events(ctx context.Context, limit int) ([]core.Event, error) {
 	if r.eventStore == nil {
 		return []core.Event{}, nil

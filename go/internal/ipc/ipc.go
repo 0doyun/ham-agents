@@ -26,6 +26,7 @@ const (
 	CommandEvents     Command = "events.list"
 	CommandSetNotificationPolicy Command = "agents.set_notification_policy"
 	CommandSetRole               Command = "agents.set_role"
+	CommandRemoveAgent           Command = "agents.remove"
 )
 
 type Request struct {
@@ -154,6 +155,14 @@ func (c *Client) UpdateRole(ctx context.Context, agentID string, role string) (c
 		return core.Agent{}, fmt.Errorf("daemon response missing agent payload")
 	}
 	return *response.Agent, nil
+}
+
+func (c *Client) RemoveAgent(ctx context.Context, agentID string) error {
+	_, err := c.request(ctx, Request{
+		Command: CommandRemoveAgent,
+		AgentID: agentID,
+	})
+	return err
 }
 
 func (c *Client) request(ctx context.Context, request Request) (Response, error) {
