@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **CLI confidence/reason visibility baseline** 다.
+현재 활성 범위는 **CLI attention detail baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -108,6 +108,7 @@
 - [x] runtime lifecycle coverage follow-up 추가
 - [x] attention queue follow-up 추가
 - [x] CLI confidence/reason visibility baseline 추가
+- [x] CLI attention detail baseline 추가
 
 ### Current Slice Checklist
 
@@ -182,9 +183,9 @@
 - [x] `ham list` human output 에 confidence/reason 일부 노출
 - [x] `ham status` human output 에 attention-oriented 요약 추가
 - [x] Go tests로 CLI confidence/reason visibility 보호
-- [ ] `ham status` human output 에 urgent agent detail 일부 노출
-- [ ] `ham list` human output 의 attention-first scanability refinement
-- [ ] Go tests로 CLI attention detail baseline 보호
+- [x] `ham status` human output 에 urgent agent detail 일부 노출
+- [x] `ham list` human output 의 attention-first scanability refinement
+- [x] Go tests로 CLI attention detail baseline 보호
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호

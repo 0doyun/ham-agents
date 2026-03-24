@@ -184,6 +184,13 @@ func TestRenderAgentsJSONKeepsMachineReadableFields(t *testing.T) {
 			StatusConfidence: 0.45,
 			StatusReason:     "Question-like output detected.",
 		},
+		{
+			ID:               "agent-2",
+			DisplayName:      "broken",
+			Status:           core.AgentStatusError,
+			StatusConfidence: 0.95,
+			StatusReason:     "Tool failed.",
+		},
 	}, true)
 	if err != nil {
 		t.Fatalf("render agents json: %v", err)
@@ -196,8 +203,85 @@ func TestRenderAgentsJSONKeepsMachineReadableFields(t *testing.T) {
 	if !strings.Contains(payload, `"status_confidence": 0.45`) {
 		t.Fatalf("expected raw confidence field in payload %q", payload)
 	}
+	firstIndex := strings.Index(payload, `"id": "agent-1"`)
+	secondIndex := strings.Index(payload, `"id": "agent-2"`)
+	if firstIndex == -1 || secondIndex == -1 || firstIndex > secondIndex {
+		t.Fatalf("expected json output to preserve input order, got %q", payload)
+	}
 	if strings.Contains(payload, "likely waiting_input") || strings.Contains(payload, "low 45%") {
 		t.Fatalf("expected json output to avoid human wording, got %q", payload)
+	}
+}
+
+func TestRenderAgentsHumanReadablePrioritizesAttentionAgents(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	err := renderAgents(&output, []core.Agent{
+		{
+			ID:          "agent-1",
+			DisplayName: "calm",
+			Status:      core.AgentStatusThinking,
+			LastEventAt: time.Unix(1, 0).UTC(),
+		},
+		{
+			ID:               "agent-2",
+			DisplayName:      "waiting",
+			Status:           core.AgentStatusWaitingInput,
+			StatusConfidence: 0.65,
+			StatusReason:     "Needs approval.",
+			LastEventAt:      time.Unix(2, 0).UTC(),
+		},
+		{
+			ID:               "agent-3",
+			DisplayName:      "broken",
+			Status:           core.AgentStatusError,
+			StatusConfidence: 0.9,
+			StatusReason:     "Tool failed.",
+			LastEventAt:      time.Unix(3, 0).UTC(),
+		},
+	}, false)
+	if err != nil {
+		t.Fatalf("render agents: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("expected 3 lines, got %d from %q", len(lines), output.String())
+	}
+	if !strings.Contains(lines[0], "broken") || !strings.Contains(lines[1], "waiting") || !strings.Contains(lines[2], "calm") {
+		t.Fatalf("expected attention-first ordering, got %q", output.String())
+	}
+}
+
+func TestRenderAgentsHumanReadableUsesRecencyWithinSameSeverity(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	err := renderAgents(&output, []core.Agent{
+		{
+			ID:          "agent-1",
+			DisplayName: "older",
+			Status:      core.AgentStatusWaitingInput,
+			LastEventAt: time.Unix(1, 0).UTC(),
+		},
+		{
+			ID:          "agent-2",
+			DisplayName: "newer",
+			Status:      core.AgentStatusWaitingInput,
+			LastEventAt: time.Unix(2, 0).UTC(),
+		},
+	}, false)
+	if err != nil {
+		t.Fatalf("render agents: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 lines, got %d from %q", len(lines), output.String())
+	}
+	if !strings.Contains(lines[0], "newer") || !strings.Contains(lines[1], "older") {
+		t.Fatalf("expected newer same-severity urgent agent first, got %q", output.String())
 	}
 }
 
@@ -241,6 +325,87 @@ func TestRenderStatusHumanReadableIncludesAttentionSummary(t *testing.T) {
 	}
 }
 
+func TestRenderStatusHumanReadableIncludesUrgentAgentDetails(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	err := renderStatus(&output, core.RuntimeSnapshot{
+		Agents: []core.Agent{
+			{
+				ID:               "agent-1",
+				DisplayName:      "disconnected",
+				Status:           core.AgentStatusDisconnected,
+				StatusConfidence: 0.8,
+				StatusReason:     "Session vanished.",
+				LastEventAt:      time.Unix(1, 0).UTC(),
+			},
+			{
+				ID:               "agent-2",
+				DisplayName:      "waiting",
+				Status:           core.AgentStatusWaitingInput,
+				StatusConfidence: 0.55,
+				StatusReason:     "Needs approval.",
+				LastEventAt:      time.Unix(2, 0).UTC(),
+			},
+			{
+				ID:               "agent-3",
+				DisplayName:      "erroring",
+				Status:           core.AgentStatusError,
+				StatusConfidence: 0.95,
+				StatusReason:     "Tool failed.",
+				LastEventAt:      time.Unix(3, 0).UTC(),
+			},
+		},
+	}, false)
+	if err != nil {
+		t.Fatalf("render status: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+	if len(lines) != 4 {
+		t.Fatalf("expected summary plus 3 urgent lines, got %d from %q", len(lines), output.String())
+	}
+	if !strings.Contains(lines[1], "erroring") || !strings.Contains(lines[2], "waiting") || !strings.Contains(lines[3], "disconnected") {
+		t.Fatalf("expected severity-ordered urgent details, got %q", output.String())
+	}
+	if !strings.Contains(lines[1], "Tool failed.") || !strings.Contains(lines[2], "Needs approval.") {
+		t.Fatalf("expected reasons in urgent details, got %q", output.String())
+	}
+}
+
+func TestRenderStatusHumanReadableUsesRecencyWithinSameSeverity(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	err := renderStatus(&output, core.RuntimeSnapshot{
+		Agents: []core.Agent{
+			{
+				ID:          "agent-1",
+				DisplayName: "older",
+				Status:      core.AgentStatusWaitingInput,
+				LastEventAt: time.Unix(1, 0).UTC(),
+			},
+			{
+				ID:          "agent-2",
+				DisplayName: "newer",
+				Status:      core.AgentStatusWaitingInput,
+				LastEventAt: time.Unix(2, 0).UTC(),
+			},
+		},
+	}, false)
+	if err != nil {
+		t.Fatalf("render status: %v", err)
+	}
+
+	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("expected summary plus 2 urgent lines, got %d from %q", len(lines), output.String())
+	}
+	if !strings.Contains(lines[1], "newer") || !strings.Contains(lines[2], "older") {
+		t.Fatalf("expected newer same-severity urgent detail first, got %q", output.String())
+	}
+}
+
 func TestRenderStatusJSONKeepsMachineReadableShape(t *testing.T) {
 	t.Parallel()
 
@@ -261,7 +426,7 @@ func TestRenderStatusJSONKeepsMachineReadableShape(t *testing.T) {
 	if !strings.Contains(payload, `"total": 3`) || !strings.Contains(payload, `"running": 1`) || !strings.Contains(payload, `"waiting": 1`) || !strings.Contains(payload, `"done": 1`) {
 		t.Fatalf("expected machine-readable counts in payload %q", payload)
 	}
-	if strings.Contains(payload, "attention=") {
+	if strings.Contains(payload, "attention=") || strings.Contains(payload, "\n!") {
 		t.Fatalf("expected json payload to avoid human summary wording, got %q", payload)
 	}
 }

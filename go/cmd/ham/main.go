@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -798,6 +799,8 @@ func renderAgents(out io.Writer, agents []core.Agent, asJSON bool) error {
 		return writeJSONTo(out, agents)
 	}
 
+	agents = sortAgentsForHumanList(agents)
+
 	if len(agents) == 0 {
 		_, err := fmt.Fprintln(out, "no tracked agents")
 		return err
@@ -868,7 +871,7 @@ func renderStatus(out io.Writer, snapshot core.RuntimeSnapshot, asJSON bool) err
 	}
 
 	attentionCount := countAttentionAgents(snapshot.Agents)
-	_, err := fmt.Fprintf(
+	if _, err := fmt.Fprintf(
 		out,
 		"total=%d running=%d waiting=%d done=%d attention=%d\n",
 		snapshot.TotalCount(),
@@ -876,8 +879,96 @@ func renderStatus(out io.Writer, snapshot core.RuntimeSnapshot, asJSON bool) err
 		snapshot.WaitingCount(),
 		snapshot.DoneCount(),
 		attentionCount,
-	)
-	return err
+	); err != nil {
+		return err
+	}
+
+	for _, agent := range urgentAgents(snapshot.Agents) {
+		if _, err := fmt.Fprintf(out, "! %s\n", formatAgentListLine(agent)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func urgentAgents(agents []core.Agent) []core.Agent {
+	filtered := make([]core.Agent, 0, len(agents))
+	for _, agent := range agents {
+		if !requiresAttention(agent.Status) {
+			continue
+		}
+		filtered = append(filtered, agent)
+	}
+
+	sort.SliceStable(filtered, func(i, j int) bool {
+		left := filtered[i]
+		right := filtered[j]
+
+		leftSeverity := attentionSeverity(left.Status)
+		rightSeverity := attentionSeverity(right.Status)
+		if leftSeverity != rightSeverity {
+			return leftSeverity < rightSeverity
+		}
+		if !left.LastEventAt.Equal(right.LastEventAt) {
+			return left.LastEventAt.After(right.LastEventAt)
+		}
+		if left.DisplayName != right.DisplayName {
+			return left.DisplayName < right.DisplayName
+		}
+		return left.ID < right.ID
+	})
+
+	return filtered
+}
+
+func sortAgentsForHumanList(agents []core.Agent) []core.Agent {
+	sorted := append([]core.Agent(nil), agents...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		left := sorted[i]
+		right := sorted[j]
+
+		leftAttention := requiresAttention(left.Status)
+		rightAttention := requiresAttention(right.Status)
+		if leftAttention != rightAttention {
+			return leftAttention
+		}
+
+		leftSeverity := attentionSeverity(left.Status)
+		rightSeverity := attentionSeverity(right.Status)
+		if leftSeverity != rightSeverity {
+			return leftSeverity < rightSeverity
+		}
+		if !left.LastEventAt.Equal(right.LastEventAt) {
+			return left.LastEventAt.After(right.LastEventAt)
+		}
+		if left.DisplayName != right.DisplayName {
+			return left.DisplayName < right.DisplayName
+		}
+		return left.ID < right.ID
+	})
+	return sorted
+}
+
+func requiresAttention(status core.AgentStatus) bool {
+	switch status {
+	case core.AgentStatusError, core.AgentStatusWaitingInput, core.AgentStatusDisconnected:
+		return true
+	default:
+		return false
+	}
+}
+
+func attentionSeverity(status core.AgentStatus) int {
+	switch status {
+	case core.AgentStatusError:
+		return 0
+	case core.AgentStatusWaitingInput:
+		return 1
+	case core.AgentStatusDisconnected:
+		return 2
+	default:
+		return 3
+	}
 }
 
 func printEvents(out io.Writer, events []core.Event, asJSON bool) error {
