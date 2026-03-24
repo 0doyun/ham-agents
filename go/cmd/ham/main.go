@@ -859,6 +859,20 @@ func countAttentionAgents(agents []core.Agent) int {
 	return count
 }
 
+func attentionBreakdown(agents []core.Agent) (errorCount, waitingCount, disconnectedCount int) {
+	for _, agent := range agents {
+		switch agent.Status {
+		case core.AgentStatusError:
+			errorCount++
+		case core.AgentStatusWaitingInput:
+			waitingCount++
+		case core.AgentStatusDisconnected:
+			disconnectedCount++
+		}
+	}
+	return errorCount, waitingCount, disconnectedCount
+}
+
 func renderStatus(out io.Writer, snapshot core.RuntimeSnapshot, asJSON bool) error {
 	if asJSON {
 		return writeJSONTo(out, map[string]any{
@@ -881,6 +895,18 @@ func renderStatus(out io.Writer, snapshot core.RuntimeSnapshot, asJSON bool) err
 		attentionCount,
 	); err != nil {
 		return err
+	}
+	if attentionCount > 0 {
+		errorCount, waitingCount, disconnectedCount := attentionBreakdown(snapshot.Agents)
+		if _, err := fmt.Fprintf(
+			out,
+			"attention_breakdown error=%d waiting_input=%d disconnected=%d\n",
+			errorCount,
+			waitingCount,
+			disconnectedCount,
+		); err != nil {
+			return err
+		}
 	}
 
 	for _, agent := range urgentAgents(snapshot.Agents) {
