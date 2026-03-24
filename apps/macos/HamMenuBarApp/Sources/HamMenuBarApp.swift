@@ -29,14 +29,17 @@ struct HamMenuBarApp: App {
             client = PreviewDaemonClient()
         }
         let notificationSink = UserNotificationSink()
+        let projectOpener = WorkspaceProjectOpener()
+        let sessionOpener = ItermSessionOpener(projectOpener: projectOpener)
         let viewModel = MenuBarViewModel(
             client: client,
             notificationSink: notificationSink,
             notificationPermissionController: notificationSink,
-            projectOpener: WorkspaceProjectOpener(),
-            sessionOpener: ItermSessionOpener(projectOpener: WorkspaceProjectOpener()),
-            quickMessageSender: ClipboardQuickMessageSender(
-                sessionOpener: ItermSessionOpener(projectOpener: WorkspaceProjectOpener())
+            projectOpener: projectOpener,
+            sessionOpener: sessionOpener,
+            quickMessageSender: ItermQuickMessageSender(
+                sessionOpener: sessionOpener,
+                projectOpener: projectOpener
             )
         )
         viewModel.start()
@@ -356,13 +359,73 @@ private struct ItermSessionOpener: SessionOpening {
     }
 }
 
-private struct ClipboardQuickMessageSender: QuickMessageSending {
+private struct ItermQuickMessageSender: QuickMessageSending {
     let sessionOpener: SessionOpening
+    let projectOpener: ProjectOpening
+    private let planner = QuickMessagePlanner()
 
     func send(message: String, to agent: Agent) {
+        switch planner.plan(message: message, for: agent, supportsTerminalAutomation: true) {
+        case .terminalWrite(let target, let message):
+            if tryTerminalWrite(message: message, target: target) {
+                return
+            }
+        case .clipboardHandoff(let message):
+            copyToClipboard(message)
+            sessionOpener.openSession(for: agent)
+            return
+        }
+
+        copyToClipboard(message)
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(message, forType: .string)
-        sessionOpener.openSession(for: agent)
+        projectOpener.openProject(at: agent.projectPath)
+    }
+
+    private func tryTerminalWrite(message: String, target: SessionTarget) -> Bool {
+        let workspace = NSWorkspace.shared
+
+        switch target {
+        case .externalURL(let url):
+            workspace.open(url)
+        case .workspace(let path):
+            guard let appURL = workspace.urlForApplication(withBundleIdentifier: "com.googlecode.iterm2") else {
+                return false
+            }
+            let configuration = NSWorkspace.OpenConfiguration()
+            workspace.open([URL(fileURLWithPath: path)], withApplicationAt: appURL, configuration: configuration) { _, _ in }
+        }
+
+        let source = """
+        tell application "iTerm"
+            activate
+            tell current window
+                tell current session
+                    write text "\(appleScriptEscaped(message))"
+                end tell
+            end tell
+        end tell
+        """
+
+        guard let script = NSAppleScript(source: source) else {
+            return false
+        }
+
+        var error: NSDictionary?
+        script.executeAndReturnError(&error)
+        return error == nil
+    }
+
+    private func copyToClipboard(_ message: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(message, forType: .string)
+    }
+
+    private func appleScriptEscaped(_ message: String) -> String {
+        message
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
     }
 }
