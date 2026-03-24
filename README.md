@@ -104,3 +104,4 @@ The current `ham-menubar` baseline:
 - lets the user stop tracking the selected agent from the popover
 - already renders attached agents distinctly because mode/confidence now flow through from the daemon
 - shows mode and confidence inline so managed/attached distinctions are visible in the baseline UI
+- can also register observed sources and refresh their status heuristically from transcript/log contents

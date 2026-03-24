@@ -126,6 +126,7 @@
 - `go/internal/store` persists the managed registry to a local JSON file under `HAM_AGENTS_HOME` or `~/Library/Application Support/ham-agents/`.
 - `go/internal/runtime` exposes register/list/snapshot behavior for managed agents and appends lifecycle events to the local event log.
 - `go/internal/runtime` now also supports a minimal attached-agent registration path with lower default confidence.
+- `go/internal/runtime` now also supports a minimal observed-agent registration path and refreshes observed status from source contents during list/snapshot reads.
 - `go/internal/ipc` now owns the JSON request/response contract, Unix socket server, and daemon client used by the CLI.
 - `go/cmd/ham` now talks to `hamd` over the local Unix socket for `run`, `list`, and `status`.
 - `go/cmd/ham` now talks to `hamd` over the local Unix socket for `run`, `attach`, `list`, and `status`.
