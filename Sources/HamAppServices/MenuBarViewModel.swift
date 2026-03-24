@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import HamCore
+import HamNotifications
 
 @MainActor
 public final class MenuBarViewModel: ObservableObject {
@@ -11,6 +12,8 @@ public final class MenuBarViewModel: ObservableObject {
 
     private let client: HamDaemonClientProtocol
     private let summaryService: MenuBarSummaryService
+    private let notificationEngine: StatusChangeNotificationEngine
+    private let notificationSink: NotificationSink
     private let pollIntervalNanoseconds: UInt64
     private let sleep: @Sendable (UInt64) async throws -> Void
     private var hasStarted = false
@@ -18,6 +21,8 @@ public final class MenuBarViewModel: ObservableObject {
 
     public init(
         client: HamDaemonClientProtocol,
+        notificationEngine: StatusChangeNotificationEngine = StatusChangeNotificationEngine(),
+        notificationSink: NotificationSink = NoopNotificationSink(),
         pollIntervalNanoseconds: UInt64 = 15_000_000_000,
         sleep: @escaping @Sendable (UInt64) async throws -> Void = { nanoseconds in
             try await Task.sleep(nanoseconds: nanoseconds)
@@ -25,6 +30,8 @@ public final class MenuBarViewModel: ObservableObject {
     ) {
         self.client = client
         self.summaryService = MenuBarSummaryService(client: client)
+        self.notificationEngine = notificationEngine
+        self.notificationSink = notificationSink
         self.pollIntervalNanoseconds = pollIntervalNanoseconds
         self.sleep = sleep
     }
@@ -69,14 +76,23 @@ public final class MenuBarViewModel: ObservableObject {
     public func refresh(eventLimit: Int = 5) async {
         isRefreshing = true
         defer { isRefreshing = false }
+        let previousAgents = agents
 
         do {
             async let loadedSummary = summaryService.refresh(eventLimit: eventLimit)
             async let loadedAgents = client.fetchAgents()
 
-            summary = try await loadedSummary
-            agents = try await loadedAgents
+            let summaryValue = try await loadedSummary
+            let loadedAgentsValue = try await loadedAgents
+            let candidates = notificationEngine.candidates(previous: previousAgents, current: loadedAgentsValue)
+
+            summary = summaryValue
+            agents = loadedAgentsValue
             errorMessage = nil
+
+            for candidate in candidates {
+                notificationSink.send(candidate)
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

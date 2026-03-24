@@ -89,3 +89,4 @@ The current `ham-menubar` baseline:
 - starts an initial refresh on launch
 - polls daemon state on an interval through the shared view model
 - supports manual refresh from the popover
+- detects done / waiting_input / error status transitions and routes notification candidates through a sink boundary

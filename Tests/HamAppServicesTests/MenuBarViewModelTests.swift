@@ -2,6 +2,7 @@ import Foundation
 import XCTest
 @testable import HamAppServices
 @testable import HamCore
+@testable import HamNotifications
 
 @MainActor
 final class MenuBarViewModelTests: XCTestCase {
@@ -103,6 +104,42 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.errorMessage)
         viewModel.stop()
     }
+
+    func testRefreshSendsNotificationForObservedDoneTransition() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .done,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2),
+            lastUserVisibleSummary: "Build completed."
+        )
+        let client = TransitioningClient(initialAgents: [previous], nextAgents: [current])
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(client: client, notificationSink: sink)
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        let sent = sink.candidates
+        XCTAssertEqual(sent.count, 1)
+        XCTAssertEqual(sent.first?.title, "builder finished")
+    }
 }
 
 private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
@@ -173,5 +210,41 @@ private actor SleepController {
             return
         }
         try await Task.sleep(nanoseconds: 50_000_000)
+    }
+}
+
+private actor TransitioningClient: HamDaemonClientProtocol {
+    private let initialAgents: [Agent]
+    private let nextAgents: [Agent]
+    private var fetchAgentsCalls = 0
+
+    init(initialAgents: [Agent], nextAgents: [Agent]) {
+        self.initialAgents = initialAgents
+        self.nextAgents = nextAgents
+    }
+
+    func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload {
+        let agents = fetchAgentsCalls == 0 ? initialAgents : nextAgents
+        return DaemonRuntimeSnapshotPayload(agents: agents, generatedAt: Date(timeIntervalSince1970: 10))
+    }
+
+    func fetchAgents() async throws -> [Agent] {
+        defer { fetchAgentsCalls += 1 }
+        return fetchAgentsCalls == 0 ? initialAgents : nextAgents
+    }
+
+    func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
+        []
+    }
+}
+
+private final class RecordingNotificationSink: NotificationSink, @unchecked Sendable {
+    private let lock = NSLock()
+    private(set) var candidates: [NotificationCandidate] = []
+
+    func send(_ candidate: NotificationCandidate) {
+        lock.lock()
+        defer { lock.unlock() }
+        candidates.append(candidate)
     }
 }

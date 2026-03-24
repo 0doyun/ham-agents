@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **menu bar polling/reconnect behavior + liveliness refinement** 다.
+현재 활성 범위는 **notification trigger foundation from polled status transitions** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -49,12 +49,14 @@
 - [x] Swift가 daemon socket/command surface를 통해 snapshot + events를 읽을 수 있게 연결
 - [x] Swift menu bar executable target과 baseline status surface 추가
 - [x] menu bar 상태 surface가 launch 이후에도 daemon 상태를 주기적으로 따라가게 만들기
+- [x] status transition 기반 notification trigger foundation 추가
 
 ### Current Slice Checklist
 
-- [x] polling/reconnect capable view model 추가
-- [x] timer/manual refresh interplay 정리
-- [x] 오류 후 recovery / retry behavior tests 추가
+- [x] done / waiting_input / error transition detection 추가
+- [x] notification sink boundary 추가
+- [x] menu bar polling layer와 notification engine 연결
+- [x] Swift tests로 transition/dedupe behavior 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

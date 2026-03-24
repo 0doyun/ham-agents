@@ -25,3 +25,4 @@
 - 2026-03-24: menu bar baseline 이전 단계에서는 Swift UI가 `HamAppServices` summary layer를 통해 daemon snapshot/event 조합 결과를 소비하는 방향으로 간다.
 - 2026-03-24: initial menu bar bootstrap은 daemon transport 구성이 불가능할 때 preview client fallback을 사용하고, 정상 구성일 때는 launch 시점에 즉시 daemon refresh를 시작한다.
 - 2026-03-24: 초기 polling 모델은 fixed-interval refresh + manual refresh 조합으로 간다. push/event-stream 기반 UI 동기화는 이후 slice에서 확장한다.
+- 2026-03-24: notification foundation 단계에서는 daemon event stream 대신 polled status transition 비교로 done / waiting_input / error 후보를 만든다.

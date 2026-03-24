@@ -122,3 +122,13 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: popover agent detail actions, notification trigger hookup, live event follow / stream consumption
+
+### 2026-03-24 (notification trigger foundation)
+- `HamNotifications` 에 status transition 비교 기반 `StatusChangeNotificationEngine` 과 `NotificationSink` boundary 를 추가했다.
+- `MenuBarViewModel` refresh path를 확장해 이전 agent 상태와 새 상태를 비교하고 done / waiting_input / error 전이에서 notification candidate를 sink로 보낼 수 있게 했다.
+- 반복 poll에서 같은 상태를 다시 알리지 않도록 transition-based dedupe 를 기본으로 잡고, muted policy 도 계속 존중하도록 유지했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: actual macOS notification delivery sink, popover agent detail actions, live event stream/follow integration
