@@ -486,7 +486,7 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 			events = append(events, core.Event{
 				AgentID: agent.ID,
 				Type:    core.EventTypeAgentDisconnected,
-				Summary: formatStatusTransitionSummary(refreshed[index].Status, refreshed[index].StatusReason),
+				Summary: statusTransitionSummary(refreshed[index]),
 			})
 			changed = true
 		case attached && agent.Status == core.AgentStatusDisconnected:
@@ -498,7 +498,7 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 			events = append(events, core.Event{
 				AgentID: agent.ID,
 				Type:    core.EventTypeAgentReconnected,
-				Summary: formatStatusTransitionSummary(refreshed[index].Status, refreshed[index].StatusReason),
+				Summary: statusTransitionSummary(refreshed[index]),
 			})
 			changed = true
 		}
@@ -536,11 +536,11 @@ func eventsAfterID(events []core.Event, afterEventID string, limit int) []core.E
 	return followed
 }
 
-func formatStatusTransitionSummary(status core.AgentStatus, reason string) string {
-	if strings.TrimSpace(reason) == "" {
-		return fmt.Sprintf("Status changed to %s.", status)
+func statusTransitionSummary(agent core.Agent) string {
+	if strings.TrimSpace(agent.StatusReason) == "" {
+		return fmt.Sprintf("Status changed to %s.", agent.Status)
 	}
-	return fmt.Sprintf("Status changed to %s. %s", status, strings.TrimSpace(reason))
+	return fmt.Sprintf("Status changed to %s. %s", agent.Status, strings.TrimSpace(agent.StatusReason))
 }
 
 func (r *Registry) RefreshObserved(ctx context.Context) error {
@@ -574,7 +574,7 @@ func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agen
 				events = append(events, core.Event{
 					AgentID: agent.ID,
 					Type:    core.EventTypeAgentStatusUpdated,
-					Summary: formatStatusTransitionSummary(updated.Status, updated.StatusReason),
+					Summary: statusTransitionSummary(updated),
 				})
 			}
 			refreshed[index] = updated
