@@ -308,7 +308,7 @@ func TestRefreshAttachedRestoresDisconnectedSessionsWhenReachable(t *testing.T) 
 		t.Fatalf("refresh attached missing session: %v", err)
 	}
 	if err := registry.RefreshAttached(ctx, []core.AttachableSession{
-		{ID: "abc", Title: "Claude", SessionRef: "iterm2://session/abc", IsActive: true},
+		{ID: "abc", Title: "Claude", SessionRef: "iterm2://session/abc", IsActive: true, TTY: "ttys001", WorkingDirectory: "/tmp/project", Activity: "claude"},
 	}); err != nil {
 		t.Fatalf("refresh attached restored session: %v", err)
 	}
@@ -328,6 +328,15 @@ func TestRefreshAttachedRestoresDisconnectedSessionsWhenReachable(t *testing.T) 
 	}
 	if !listed[0].SessionIsActive {
 		t.Fatal("expected restored session to be marked active")
+	}
+	if listed[0].SessionTTY != "ttys001" {
+		t.Fatalf("expected synced tty, got %q", listed[0].SessionTTY)
+	}
+	if listed[0].SessionWorkingDirectory != "/tmp/project" {
+		t.Fatalf("expected synced working directory, got %q", listed[0].SessionWorkingDirectory)
+	}
+	if listed[0].SessionActivity != "claude" {
+		t.Fatalf("expected synced activity, got %q", listed[0].SessionActivity)
 	}
 }
 
@@ -352,7 +361,7 @@ func TestRefreshAttachedSyncsMetadataWithoutDisconnect(t *testing.T) {
 	}
 
 	if err := registry.RefreshAttached(ctx, []core.AttachableSession{
-		{ID: "abc", Title: "Claude Review", SessionRef: "iterm2://session/abc", IsActive: true},
+		{ID: "abc", Title: "Claude Review", SessionRef: "iterm2://session/abc", IsActive: true, TTY: "ttys001", WorkingDirectory: "/tmp/project", Activity: "claude"},
 	}); err != nil {
 		t.Fatalf("refresh attached metadata: %v", err)
 	}
@@ -369,6 +378,15 @@ func TestRefreshAttachedSyncsMetadataWithoutDisconnect(t *testing.T) {
 	}
 	if !listed[0].SessionIsActive {
 		t.Fatal("expected session active marker to sync")
+	}
+	if listed[0].SessionTTY != "ttys001" {
+		t.Fatalf("expected tty sync, got %q", listed[0].SessionTTY)
+	}
+	if listed[0].SessionWorkingDirectory != "/tmp/project" {
+		t.Fatalf("expected working directory sync, got %q", listed[0].SessionWorkingDirectory)
+	}
+	if listed[0].SessionActivity != "claude" {
+		t.Fatalf("expected activity sync, got %q", listed[0].SessionActivity)
 	}
 	if listed[0].Status != core.AgentStatusIdle {
 		t.Fatalf("expected idle status, got %q", listed[0].Status)

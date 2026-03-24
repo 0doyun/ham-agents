@@ -20,6 +20,9 @@ final class DaemonPayloadDecodingTests: XCTestCase {
           "notification_policy": "default",
           "session_title": "Claude Review",
           "session_is_active": true,
+          "session_tty": "ttys001",
+          "session_working_directory": "/tmp/demo",
+          "session_activity": "claude",
           "avatar_variant": "default"
         }
         """
@@ -33,6 +36,9 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         XCTAssertEqual(agent.notificationPolicy, .default)
         XCTAssertEqual(agent.sessionTitle, "Claude Review")
         XCTAssertTrue(agent.sessionIsActive)
+        XCTAssertEqual(agent.sessionTTY, "ttys001")
+        XCTAssertEqual(agent.sessionWorkingDirectory, "/tmp/demo")
+        XCTAssertEqual(agent.sessionActivity, "claude")
     }
 
     func testDaemonStatusPayloadDecodesFromGoStatusJSON() throws {
