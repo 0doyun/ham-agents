@@ -52,6 +52,8 @@ type Agent struct {
 	SessionTTY              string             `json:"session_tty,omitempty"`
 	SessionWorkingDirectory string             `json:"session_working_directory,omitempty"`
 	SessionActivity         string             `json:"session_activity,omitempty"`
+	SessionProcessID        int                `json:"session_process_id,omitempty"`
+	SessionCommand          string             `json:"session_command,omitempty"`
 	AvatarVariant           string             `json:"avatar_variant"`
 }
 
@@ -97,6 +99,8 @@ type AttachableSession struct {
 	TTY              string `json:"tty,omitempty"`
 	WorkingDirectory string `json:"working_directory,omitempty"`
 	Activity         string `json:"activity,omitempty"`
+	ProcessID        int    `json:"process_id,omitempty"`
+	Command          string `json:"command,omitempty"`
 }
 
 func (s RuntimeSnapshot) TotalCount() int {

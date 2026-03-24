@@ -308,7 +308,7 @@ func TestRefreshAttachedRestoresDisconnectedSessionsWhenReachable(t *testing.T) 
 		t.Fatalf("refresh attached missing session: %v", err)
 	}
 	if err := registry.RefreshAttached(ctx, []core.AttachableSession{
-		{ID: "abc", Title: "Claude", SessionRef: "iterm2://session/abc", IsActive: true, TTY: "ttys001", WorkingDirectory: "/tmp/project", Activity: "claude"},
+		{ID: "abc", Title: "Claude", SessionRef: "iterm2://session/abc", IsActive: true, TTY: "ttys001", WorkingDirectory: "/tmp/project", Activity: "claude", ProcessID: 12345, Command: "/usr/local/bin/claude"},
 	}); err != nil {
 		t.Fatalf("refresh attached restored session: %v", err)
 	}
@@ -338,6 +338,12 @@ func TestRefreshAttachedRestoresDisconnectedSessionsWhenReachable(t *testing.T) 
 	if listed[0].SessionActivity != "claude" {
 		t.Fatalf("expected synced activity, got %q", listed[0].SessionActivity)
 	}
+	if listed[0].SessionProcessID != 12345 {
+		t.Fatalf("expected synced process id, got %d", listed[0].SessionProcessID)
+	}
+	if listed[0].SessionCommand != "/usr/local/bin/claude" {
+		t.Fatalf("expected synced command, got %q", listed[0].SessionCommand)
+	}
 }
 
 func TestRefreshAttachedSyncsMetadataWithoutDisconnect(t *testing.T) {
@@ -361,7 +367,7 @@ func TestRefreshAttachedSyncsMetadataWithoutDisconnect(t *testing.T) {
 	}
 
 	if err := registry.RefreshAttached(ctx, []core.AttachableSession{
-		{ID: "abc", Title: "Claude Review", SessionRef: "iterm2://session/abc", IsActive: true, TTY: "ttys001", WorkingDirectory: "/tmp/project", Activity: "claude"},
+		{ID: "abc", Title: "Claude Review", SessionRef: "iterm2://session/abc", IsActive: true, TTY: "ttys001", WorkingDirectory: "/tmp/project", Activity: "claude", ProcessID: 12345, Command: "/usr/local/bin/claude"},
 	}); err != nil {
 		t.Fatalf("refresh attached metadata: %v", err)
 	}
@@ -387,6 +393,12 @@ func TestRefreshAttachedSyncsMetadataWithoutDisconnect(t *testing.T) {
 	}
 	if listed[0].SessionActivity != "claude" {
 		t.Fatalf("expected activity sync, got %q", listed[0].SessionActivity)
+	}
+	if listed[0].SessionProcessID != 12345 {
+		t.Fatalf("expected process id sync, got %d", listed[0].SessionProcessID)
+	}
+	if listed[0].SessionCommand != "/usr/local/bin/claude" {
+		t.Fatalf("expected command sync, got %q", listed[0].SessionCommand)
 	}
 	if listed[0].Status != core.AgentStatusIdle {
 		t.Fatalf("expected idle status, got %q", listed[0].Status)

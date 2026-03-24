@@ -430,6 +430,17 @@ private struct AgentDetailView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
+                    if let sessionProcessID = agent.sessionProcessID {
+                        Text("pid \(sessionProcessID)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    if let sessionCommand = agent.sessionCommand, !sessionCommand.isEmpty {
+                        Text(sessionCommand)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
                 }
                 Text(agent.projectPath)
                     .font(.caption)
