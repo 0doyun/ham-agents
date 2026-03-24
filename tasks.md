@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **sessionRef-aware session opening refinement** 다.
+현재 활성 범위는 **popover notification pause/resume baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -56,12 +56,13 @@
 - [x] iTerm/workspace opening action baseline 추가
 - [x] notification permission 상태를 popover에서 인지/요청 가능하게 만들기
 - [x] sessionRef URL 이 있으면 이를 우선 사용하고 없으면 workspace fallback 하도록 세분화
+- [x] popover에서 agent별 notification pause/resume action 추가
 
 ### Current Slice Checklist
 
-- [x] session target planning helper 추가
-- [x] sessionRef URL 우선 / workspace fallback 연결
-- [x] Swift tests로 session target selection 보호
+- [x] local notification policy override 추가
+- [x] popover detail pane에 pause/resume button 추가
+- [x] Swift tests로 muted transition suppression 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

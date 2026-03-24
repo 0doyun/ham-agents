@@ -279,6 +279,71 @@ final class MenuBarViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.notificationPermissionStatus, .authorized)
     }
+
+    func testToggleNotificationPauseUpdatesSelectedAgentPolicy() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        viewModel.toggleNotificationPause(forAgentID: "agent-1")
+
+        XCTAssertTrue(viewModel.isNotificationsMuted(forAgentID: "agent-1"))
+    }
+
+    func testMutedOverrideSuppressesLaterDoneNotification() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .done,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2),
+            lastUserVisibleSummary: "Build completed."
+        )
+        let client = TransitioningClient(initialAgents: [previous], nextAgents: [current])
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(client: client, notificationSink: sink)
+
+        await viewModel.refresh()
+        viewModel.toggleNotificationPause(forAgentID: "agent-1")
+        await viewModel.refresh()
+
+        XCTAssertTrue(sink.candidates.isEmpty)
+        XCTAssertTrue(viewModel.isNotificationsMuted(forAgentID: "agent-1"))
+    }
 }
 
 private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {

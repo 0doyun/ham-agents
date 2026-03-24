@@ -20,6 +20,7 @@ public final class MenuBarViewModel: ObservableObject {
     private let sessionOpener: SessionOpening
     private let pollIntervalNanoseconds: UInt64
     private let sleep: @Sendable (UInt64) async throws -> Void
+    private var notificationOverrides: [Agent.ID: NotificationPolicy] = [:]
     private var hasStarted = false
     private var refreshTask: Task<Void, Never>?
 
@@ -74,6 +75,17 @@ public final class MenuBarViewModel: ObservableObject {
         sessionOpener.openSession(for: agent)
     }
 
+    public func isNotificationsMuted(forAgentID id: Agent.ID?) -> Bool {
+        agent(withID: id)?.notificationPolicy == .muted
+    }
+
+    public func toggleNotificationPause(forAgentID id: Agent.ID?) {
+        guard let agent = agent(withID: id) else { return }
+        let nextPolicy: NotificationPolicy = agent.notificationPolicy == .muted ? .default : .muted
+        notificationOverrides[agent.id] = nextPolicy
+        agents = applyNotificationOverrides(to: agents)
+    }
+
     public func requestNotificationPermission() async {
         notificationPermissionStatus = await notificationPermissionController.requestPermission()
     }
@@ -119,7 +131,7 @@ public final class MenuBarViewModel: ObservableObject {
             async let permissionStatus = notificationPermissionController.currentPermissionStatus()
 
             let summaryValue = try await loadedSummary
-            let loadedAgentsValue = try await loadedAgents
+            let loadedAgentsValue = applyNotificationOverrides(to: try await loadedAgents)
             let candidates = notificationEngine.candidates(previous: previousAgents, current: loadedAgentsValue)
 
             summary = summaryValue
@@ -137,5 +149,14 @@ public final class MenuBarViewModel: ObservableObject {
 
     deinit {
         refreshTask?.cancel()
+    }
+
+    private func applyNotificationOverrides(to agents: [Agent]) -> [Agent] {
+        agents.map { agent in
+            guard let override = notificationOverrides[agent.id] else { return agent }
+            var updated = agent
+            updated.notificationPolicy = override
+            return updated
+        }
     }
 }

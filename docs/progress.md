@@ -190,3 +190,12 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: richer session identification from daemon, iTerm message/send actions, live event stream/follow integration
+
+### 2026-03-24 (popover notification pause/resume baseline)
+- `MenuBarViewModel` 에 local notification policy override 를 추가해 selected agent 별로 notification mute 상태를 즉시 바꿀 수 있게 했다.
+- popover detail pane에 `Pause Notifications` / `Resume Notifications` 버튼을 추가하고, muted 상태일 때 이후 done transition notification candidate 가 suppress 되는 것을 테스트로 고정했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: richer session identification from daemon, iTerm message/send actions, backend-persisted notification settings
