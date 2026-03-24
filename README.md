@@ -105,3 +105,4 @@ The current `ham-menubar` baseline:
 - already renders attached agents distinctly because mode/confidence now flow through from the daemon
 - shows mode and confidence inline so managed/attached distinctions are visible in the baseline UI
 - can also register observed sources and refresh their status heuristically from transcript/log contents
+- keeps observed-source status fresher while `hamd` is serving by polling observed paths in the background

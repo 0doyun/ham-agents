@@ -296,6 +296,15 @@
     - `go run ./go/cmd/ham list` / `status --json` ✅
 - 다음 우선순위 후보: always-on observed watching, richer attached/iTerm session identification, broader backend-persisted settings state
 
+### 2026-03-25 (observed source polling baseline)
+- `RuntimeRegistry.RefreshObserved` 공개 entrypoint 를 추가하고, `hamd serve` 가 2초 간격으로 observed source 를 refresh 하도록 polling loop 를 붙였다.
+- Go tests 로 refresh entrypoint 가 persisted observed status 를 갱신하는지 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: OS-level observed watching, richer attached/iTerm session identification, broader backend-persisted settings state
+
 ### 2026-03-25 (agent role rename baseline)
 - Go runtime/IPC/client 에 role update path 를 추가해 selected agent role 을 daemon-backed source of truth 쪽에서 갱신할 수 있게 했다.
 - popover detail pane에 role draft field 와 `Save` action 을 추가하고, Swift view model 이 daemon mutation 결과로 local agent list 를 갱신하도록 연결했다.

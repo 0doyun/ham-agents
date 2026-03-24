@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/ipc"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
@@ -62,6 +63,7 @@ func run(args []string) error {
 		}
 
 		server := ipc.NewServer(ipcConfig.SocketPath, registry)
+		go pollObserved(ctx, registry, 2*time.Second)
 		fmt.Printf("hamd serving on %s\n", ipcConfig.SocketPath)
 		return server.Serve(ctx)
 	case "snapshot":
@@ -77,5 +79,19 @@ func run(args []string) error {
 		return nil
 	default:
 		return fmt.Errorf("unsupported command %q", command)
+	}
+}
+
+func pollObserved(ctx context.Context, registry *runtime.Registry, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			_ = registry.RefreshObserved(ctx)
+		}
 	}
 }
