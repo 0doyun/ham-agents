@@ -90,3 +90,4 @@ The current `ham-menubar` baseline:
 - polls daemon state on an interval through the shared view model
 - supports manual refresh from the popover
 - detects done / waiting_input / error status transitions and routes notification candidates through a sink boundary
+- requests notification permission on first delivery attempt and can submit macOS notification requests through `UserNotifications`
