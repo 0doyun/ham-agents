@@ -379,6 +379,16 @@ func (r *Registry) Events(ctx context.Context, limit int) ([]core.Event, error) 
 	return events[len(events)-limit:], nil
 }
 
+func (r *Registry) RefreshObserved(ctx context.Context) error {
+	agents, err := r.store.LoadAgents(ctx)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.refreshObservedAgents(ctx, agents)
+	return err
+}
+
 func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agent) ([]core.Agent, error) {
 	if len(agents) == 0 {
 		return agents, nil
