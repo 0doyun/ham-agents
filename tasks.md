@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **settings UI integration baseline** 다.
+현재 활성 범위는 **notification settings enforcement baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -71,13 +71,13 @@
 - [x] `ham open <agent>` baseline 추가
 - [x] backend settings state baseline 추가
 - [x] Swift menu bar에서 settings를 읽고 일부 토글을 수정할 수 있게 연결
+- [ ] stored notification settings가 실제 delivery behavior 에 반영되게 연결
 
 ### Current Slice Checklist
 
-- [x] Swift daemon settings payload/client 추가
-- [x] MenuBarViewModel settings fetch/update 추가
-- [x] popover notifications settings UI 추가
-- [x] Swift tests로 settings round-trip 보호
+- [ ] settings-aware notification filtering 추가
+- [ ] preview-text masking behavior 추가
+- [ ] Swift tests로 settings-driven notification behavior 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 
