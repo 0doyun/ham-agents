@@ -428,6 +428,35 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.settings.notifications.quietHoursEndHour, 7)
     }
 
+    func testUpdateAppearanceSettingsChangesPublishedTheme() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateAppearanceSetting(theme: "night")
+
+        XCTAssertEqual(viewModel.settings.appearance.theme, "night")
+    }
+
     func testSaveRoleUpdatesSelectedAgent() async {
         let agent = Agent(
             id: "agent-1",

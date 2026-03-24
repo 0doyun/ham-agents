@@ -406,3 +406,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: broader settings sections baseline, live event stream/follow integration, richer attached metadata sync
+
+### 2026-03-25 (broader settings sections baseline)
+- daemon settings schema 에 `appearance.theme` (`auto|day|night`) section 을 추가해 settings 문서가 notifications-only 구조에서 한 단계 확장되도록 만들었다.
+- CLI `ham settings appearance --theme=...` 와 Swift menu bar `Appearance` section 을 연결해 backend-backed non-notification setting 을 양쪽 surface 에서 수정 가능하게 만들었다.
+- Go tests 로 appearance theme persistence/validation 을 보호하고, Swift tests 로 published appearance setting round-trip 을 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: live event stream / follow baseline, richer attached metadata sync, stronger settings sections

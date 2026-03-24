@@ -46,3 +46,4 @@
 - 2026-03-25: richer iTerm session identification baseline treats `iterm2://session/<id>` as a structured session target instead of a generic URL, so open/ask can aim at a specific session before falling back to current-session behavior.
 - 2026-03-25: attach picker baseline reads a lightweight iTerm session snapshot via AppleScript and only trusts session id/title/current-session marker for now; richer cwd/layout/termination metadata remains a later slice.
 - 2026-03-25: attached termination detection baseline treats disappearance from the polled iTerm session list as a disconnect signal and recovery to the same `session_ref` as enough evidence to restore the agent to idle.
+- 2026-03-25: broader settings baseline starts with an `appearance.theme` section (`auto|day|night`) so the daemon-backed settings document can grow beyond notifications without coupling this slice to full visual theming behavior.

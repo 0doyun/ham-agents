@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 )
 
 const (
@@ -10,6 +11,7 @@ const (
 	MaxQuietHour          = 23
 	DefaultQuietStartHour = 22
 	DefaultQuietEndHour   = 8
+	DefaultTheme          = "auto"
 )
 
 type NotificationSettings struct {
@@ -20,6 +22,39 @@ type NotificationSettings struct {
 	QuietHoursStartHour int  `json:"quiet_hours_start_hour"`
 	QuietHoursEndHour   int  `json:"quiet_hours_end_hour"`
 	PreviewText         bool `json:"preview_text"`
+}
+
+type AppearanceSettings struct {
+	Theme string `json:"theme"`
+}
+
+func (a *AppearanceSettings) UnmarshalJSON(data []byte) error {
+	type rawAppearanceSettings struct {
+		Theme *string `json:"theme"`
+	}
+
+	var raw rawAppearanceSettings
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	defaults := DefaultSettings().Appearance
+	*a = defaults
+
+	if raw.Theme != nil {
+		a.Theme = strings.TrimSpace(*raw.Theme)
+	}
+
+	return nil
+}
+
+func (a AppearanceSettings) Validate() error {
+	switch strings.TrimSpace(a.Theme) {
+	case "auto", "day", "night":
+		return nil
+	default:
+		return fmt.Errorf("appearance theme must be one of auto, day, or night")
+	}
 }
 
 func (n *NotificationSettings) UnmarshalJSON(data []byte) error {
@@ -78,10 +113,42 @@ func (n NotificationSettings) Validate() error {
 
 type Settings struct {
 	Notifications NotificationSettings `json:"notifications"`
+	Appearance    AppearanceSettings   `json:"appearance"`
+}
+
+func (s *Settings) UnmarshalJSON(data []byte) error {
+	type rawSettings struct {
+		Notifications json.RawMessage `json:"notifications"`
+		Appearance    json.RawMessage `json:"appearance"`
+	}
+
+	var raw rawSettings
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	defaults := DefaultSettings()
+	*s = defaults
+
+	if len(raw.Notifications) > 0 {
+		if err := json.Unmarshal(raw.Notifications, &s.Notifications); err != nil {
+			return err
+		}
+	}
+	if len(raw.Appearance) > 0 {
+		if err := json.Unmarshal(raw.Appearance, &s.Appearance); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s Settings) Validate() error {
-	return s.Notifications.Validate()
+	if err := s.Notifications.Validate(); err != nil {
+		return err
+	}
+	return s.Appearance.Validate()
 }
 
 func DefaultSettings() Settings {
@@ -94,6 +161,9 @@ func DefaultSettings() Settings {
 			QuietHoursStartHour: DefaultQuietStartHour,
 			QuietHoursEndHour:   DefaultQuietEndHour,
 			PreviewText:         false,
+		},
+		Appearance: AppearanceSettings{
+			Theme: DefaultTheme,
 		},
 	}
 }

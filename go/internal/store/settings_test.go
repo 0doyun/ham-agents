@@ -24,6 +24,7 @@ func TestFileSettingsStoreRoundTrip(t *testing.T) {
 	settings.Notifications.PreviewText = true
 	settings.Notifications.QuietHoursStartHour = 21
 	settings.Notifications.QuietHoursEndHour = 7
+	settings.Appearance.Theme = "night"
 
 	if err := settingsStore.Save(ctx, settings); err != nil {
 		t.Fatalf("save settings: %v", err)
@@ -42,6 +43,9 @@ func TestFileSettingsStoreRoundTrip(t *testing.T) {
 	if reloaded.Notifications.QuietHoursEndHour != 7 {
 		t.Fatalf("expected quiet end hour 7, got %d", reloaded.Notifications.QuietHoursEndHour)
 	}
+	if reloaded.Appearance.Theme != "night" {
+		t.Fatalf("expected theme night, got %q", reloaded.Appearance.Theme)
+	}
 }
 
 func TestFileSettingsStoreBackfillsQuietHoursDefaultsForLegacyFiles(t *testing.T) {
@@ -56,7 +60,8 @@ func TestFileSettingsStoreBackfillsQuietHoursDefaultsForLegacyFiles(t *testing.T
     "waiting_input": true,
     "quiet_hours_enabled": true,
     "preview_text": false
-  }
+  },
+  "appearance": {}
 }
 `
 	if err := os.WriteFile(path, []byte(payload), 0o644); err != nil {
@@ -74,5 +79,8 @@ func TestFileSettingsStoreBackfillsQuietHoursDefaultsForLegacyFiles(t *testing.T
 	}
 	if settings.Notifications.QuietHoursEndHour != core.DefaultQuietEndHour {
 		t.Fatalf("expected quiet end default %d, got %d", core.DefaultQuietEndHour, settings.Notifications.QuietHoursEndHour)
+	}
+	if settings.Appearance.Theme != core.DefaultTheme {
+		t.Fatalf("expected default theme %q, got %q", core.DefaultTheme, settings.Appearance.Theme)
 	}
 }
