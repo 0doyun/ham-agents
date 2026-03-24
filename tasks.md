@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **Go daemon IPC + runtime event flow foundation 다음 vertical slice** 다.
+현재 활성 범위는 **daemon event query + feed-ready backend surface 다음 vertical slice** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -44,14 +44,14 @@
 - [x] 첫 hybrid implementation slice 완료: managed session registry + `ham status/list`
 - [x] `ham` ↔ `hamd` 실제 IPC 연결로 direct store path 축소
 - [x] runtime event log / lifecycle foundation 추가
+- [x] event feed를 CLI/daemon에서 조회 가능하게 노출
 
 ### Current Slice Checklist
 
-- [x] IPC request/response contract 정의
-- [x] Unix socket daemon server 구현
-- [x] `ham` CLI가 daemon client를 통해 `run/list/status` 호출
-- [x] managed agent event log 구조 추가
-- [x] daemon-backed integration tests 추가
+- [x] recent events query contract 추가
+- [x] `ham events` CLI 추가
+- [x] daemon event query handler 추가
+- [x] event list tests/smoke 추가
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests + daemon smoke checks green
 

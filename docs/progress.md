@@ -65,3 +65,19 @@
     - `go run ./go/cmd/ham run claude reviewer --project /tmp/demo --role reviewer` → daemon 경유 등록 ✅
     - `go run ./go/cmd/ham status --json` → runtime snapshot 반환 ✅
 - 남은 갭: long-lived event stream, richer lifecycle transitions, menu bar app runtime consumption
+
+### 2026-03-24 (event query / feed-ready backend slice)
+- `ham events` CLI를 추가해 daemon-backed recent event feed를 바로 조회할 수 있게 했다.
+- IPC contract에 `events.list` + `limit` 필드를 추가하고, daemon이 runtime event log를 recent-first bounded query로 노출하도록 연결했다.
+- runtime에 `Events(limit)` 조회를 추가해 future activity feed / menu bar detail panel이 같은 backend surface를 재사용할 수 있게 했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - unsandboxed smoke:
+    - `go run ./go/cmd/hamd serve --once=false` ✅
+    - `go run ./go/cmd/ham list` → `no tracked agents` ✅
+    - `go run ./go/cmd/ham run claude reviewer --project /tmp/demo --role reviewer` ✅
+    - `go run ./go/cmd/ham events --json --limit 5` → `agent.registered` event 반환 ✅
+    - `go run ./go/cmd/ham status --json` ✅
+- 다음 우선순위 후보: event stream/follow mode, menu bar baseline target, runtime lifecycle transition enrichment

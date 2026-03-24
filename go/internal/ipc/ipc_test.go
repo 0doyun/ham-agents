@@ -87,6 +87,17 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		t.Fatalf("expected total count 1, got %d", snapshot.TotalCount())
 	}
 
+	events, err := client.Events(context.Background(), 10)
+	if err != nil {
+		t.Fatalf("events via client: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	if events[0].AgentID != agent.ID {
+		t.Fatalf("unexpected event agent id %q", events[0].AgentID)
+	}
+
 	cancel()
 	if err := <-serverErrors; err != nil && !errors.Is(err, context.Canceled) {
 		t.Fatalf("server shutdown: %v", err)

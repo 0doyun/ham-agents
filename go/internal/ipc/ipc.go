@@ -23,6 +23,7 @@ const (
 	CommandRunManaged Command = "run.managed"
 	CommandListAgents Command = "agents.list"
 	CommandStatus     Command = "agents.status"
+	CommandEvents     Command = "events.list"
 )
 
 type Request struct {
@@ -31,11 +32,13 @@ type Request struct {
 	DisplayName string  `json:"display_name,omitempty"`
 	ProjectPath string  `json:"project_path,omitempty"`
 	Role        string  `json:"role,omitempty"`
+	Limit       int     `json:"limit,omitempty"`
 }
 
 type Response struct {
 	Agent    *core.Agent           `json:"agent,omitempty"`
 	Agents   []core.Agent          `json:"agents,omitempty"`
+	Events   []core.Event          `json:"events,omitempty"`
 	Snapshot *core.RuntimeSnapshot `json:"snapshot,omitempty"`
 	Error    string                `json:"error,omitempty"`
 }
@@ -109,6 +112,14 @@ func (c *Client) Status(ctx context.Context) (core.RuntimeSnapshot, error) {
 		return core.RuntimeSnapshot{}, fmt.Errorf("daemon response missing snapshot payload")
 	}
 	return *response.Snapshot, nil
+}
+
+func (c *Client) Events(ctx context.Context, limit int) ([]core.Event, error) {
+	response, err := c.request(ctx, Request{Command: CommandEvents, Limit: limit})
+	if err != nil {
+		return nil, err
+	}
+	return response.Events, nil
 }
 
 func (c *Client) request(ctx context.Context, request Request) (Response, error) {

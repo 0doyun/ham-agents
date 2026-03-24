@@ -67,3 +67,12 @@ go test ./...
 ```
 
 Daemon-backed smoke verification currently requires running `hamd serve --once=false` outside the Codex sandbox because Unix socket binding is blocked inside the sandboxed test environment.
+
+Current daemon-backed CLI surface:
+
+```bash
+go run ./go/cmd/ham list
+go run ./go/cmd/ham run claude reviewer --project /tmp/demo --role reviewer
+go run ./go/cmd/ham status --json
+go run ./go/cmd/ham events --json --limit 5
+```
