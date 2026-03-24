@@ -76,6 +76,7 @@ Current daemon-backed CLI surface:
 go run ./go/cmd/ham list
 go run ./go/cmd/ham run claude reviewer --project /tmp/demo --role reviewer
 go run ./go/cmd/ham attach iterm2://session/abc ops --project /tmp/demo --role reviewer
+go run ./go/cmd/ham open --print <agent-id>
 go run ./go/cmd/ham status --json
 go run ./go/cmd/ham events --json --limit 5
 ```
@@ -106,3 +107,4 @@ The current `ham-menubar` baseline:
 - shows mode and confidence inline so managed/attached distinctions are visible in the baseline UI
 - can also register observed sources and refresh their status heuristically from transcript/log contents
 - keeps observed-source status fresher while `hamd` is serving by polling observed paths in the background
+- resolves open targets for agents through the daemon and exposes that path via `ham open`

@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -377,6 +378,30 @@ func (r *Registry) Events(ctx context.Context, limit int) ([]core.Event, error) 
 		return events, nil
 	}
 	return events[len(events)-limit:], nil
+}
+
+func (r *Registry) OpenTarget(ctx context.Context, agentID string) (core.OpenTarget, error) {
+	agents, err := r.store.LoadAgents(ctx)
+	if err != nil {
+		return core.OpenTarget{}, err
+	}
+
+	for _, agent := range agents {
+		if agent.ID != agentID {
+			continue
+		}
+
+		sessionRef := strings.TrimSpace(agent.SessionRef)
+		if sessionRef != "" {
+			if parsed, err := url.Parse(sessionRef); err == nil && parsed.Scheme != "" {
+				return core.OpenTarget{Kind: core.OpenTargetKindExternalURL, Value: sessionRef}, nil
+			}
+		}
+
+		return core.OpenTarget{Kind: core.OpenTargetKindWorkspace, Value: agent.ProjectPath}, nil
+	}
+
+	return core.OpenTarget{}, fmt.Errorf("agent %q not found", agentID)
 }
 
 func (r *Registry) RefreshObserved(ctx context.Context) error {

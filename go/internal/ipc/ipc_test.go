@@ -98,6 +98,14 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		t.Fatalf("unexpected mode %q", observed.Mode)
 	}
 
+	target, err := client.OpenTarget(context.Background(), attached.ID)
+	if err != nil {
+		t.Fatalf("open target via client: %v", err)
+	}
+	if target.Kind != "external_url" {
+		t.Fatalf("unexpected open target kind %q", target.Kind)
+	}
+
 	agents, err := client.ListAgents(context.Background())
 	if err != nil {
 		t.Fatalf("list agents via client: %v", err)

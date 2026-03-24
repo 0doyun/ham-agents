@@ -69,6 +69,18 @@ type Event struct {
 	OccurredAt time.Time `json:"occurred_at"`
 }
 
+type OpenTargetKind string
+
+const (
+	OpenTargetKindExternalURL OpenTargetKind = "external_url"
+	OpenTargetKindWorkspace   OpenTargetKind = "workspace"
+)
+
+type OpenTarget struct {
+	Kind  OpenTargetKind `json:"kind"`
+	Value string         `json:"value"`
+}
+
 func (s RuntimeSnapshot) TotalCount() int {
 	return len(s.Agents)
 }

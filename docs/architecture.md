@@ -128,9 +128,11 @@
 - `go/internal/runtime` now also supports a minimal attached-agent registration path with lower default confidence.
 - `go/internal/runtime` now also supports a minimal observed-agent registration path and refreshes observed status from source contents during list/snapshot reads.
 - `hamd serve` now also polls observed sources in the background so observed agent state can drift forward without waiting for an explicit list/snapshot request.
+- `go/internal/runtime` now also resolves open targets so CLI/UI surfaces can reuse one backend rule for session URLs vs. workspace fallback.
 - `go/internal/ipc` now owns the JSON request/response contract, Unix socket server, and daemon client used by the CLI.
 - `go/cmd/ham` now talks to `hamd` over the local Unix socket for `run`, `list`, and `status`.
 - `go/cmd/ham` now talks to `hamd` over the local Unix socket for `run`, `attach`, `list`, and `status`.
+- `go/cmd/ham` now talks to `hamd` over the local Unix socket for `run`, `attach`, `observe`, `open`, `list`, and `status`.
 - `go/cmd/hamd` serves the runtime over the socket in normal mode and still supports `serve --once` / `snapshot` bootstrap inspection commands.
 - `Sources/HamAppServices` now gives Swift a matching daemon request/response contract, Unix socket transport, and summary service for future menu bar surfaces.
 - `apps/macos/HamMenuBarApp/Sources` now contains a compile-tested menu bar bootstrap that renders summary badges and a tracked-agent list using the shared Swift service layer.
