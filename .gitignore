@@ -6,4 +6,8 @@ Packages/
 
 .omx/logs/
 .omx/metrics.json
-.omx/state/*.json
+.omx/state/
+.omx/notepad.md
+.omx/context/
+.omx/interviews/
+.omx/tmux-hook.json

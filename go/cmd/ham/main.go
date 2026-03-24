@@ -1,0 +1,196 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/ham-agents/ham-agents/go/internal/runtime"
+	"github.com/ham-agents/ham-agents/go/internal/store"
+)
+
+func main() {
+	if err := run(os.Args[1:]); err != nil {
+		fmt.Fprintf(os.Stderr, "ham: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(args []string) error {
+	ctx := context.Background()
+	registry, statePath, err := newRegistry()
+	if err != nil {
+		return err
+	}
+
+	if len(args) == 0 {
+		printHelp(statePath)
+		return nil
+	}
+
+	switch args[0] {
+	case "help", "--help", "-h":
+		printHelp(statePath)
+		return nil
+	case "run":
+		return runRegister(ctx, registry, args[1:])
+	case "list":
+		return runList(ctx, registry, args[1:])
+	case "status":
+		return runStatus(ctx, registry, args[1:])
+	default:
+		return fmt.Errorf("unsupported command %q", args[0])
+	}
+}
+
+func newRegistry() (*runtime.Registry, string, error) {
+	statePath, err := store.DefaultStatePath()
+	if err != nil {
+		return nil, "", err
+	}
+
+	agentStore := store.NewFileAgentStore(statePath)
+	return runtime.NewRegistry(agentStore), statePath, nil
+}
+
+func printHelp(statePath string) {
+	fmt.Printf(`ham-agents Go CLI bootstrap
+
+Usage:
+  ham help
+  ham run <provider> [name] [--project path] [--role role]
+  ham list [--json]
+  ham status [--json]
+
+State path:
+  %s
+`, statePath)
+}
+
+func runRegister(ctx context.Context, registry *runtime.Registry, args []string) error {
+	input, err := parseRunInput(args)
+	if err != nil {
+		return err
+	}
+
+	agent, err := registry.RegisterManaged(ctx, input)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("registered %s [%s] via %s\n", agent.DisplayName, agent.ID, agent.Provider)
+	return nil
+}
+
+func runList(ctx context.Context, registry *runtime.Registry, args []string) error {
+	flags := flag.NewFlagSet("list", flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	asJSON := flags.Bool("json", false, "emit JSON")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+
+	agents, err := registry.List(ctx)
+	if err != nil {
+		return err
+	}
+
+	if *asJSON {
+		return writeJSON(agents)
+	}
+
+	if len(agents) == 0 {
+		fmt.Println("no tracked agents")
+		return nil
+	}
+
+	for _, agent := range agents {
+		fmt.Printf("%s\t%s\t%s\t%s\t%s\n", agent.ID, agent.DisplayName, agent.Provider, agent.Status, agent.Mode)
+	}
+	return nil
+}
+
+func runStatus(ctx context.Context, registry *runtime.Registry, args []string) error {
+	flags := flag.NewFlagSet("status", flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	asJSON := flags.Bool("json", false, "emit JSON")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+
+	snapshot, err := registry.Snapshot(ctx)
+	if err != nil {
+		return err
+	}
+
+	if *asJSON {
+		return writeJSON(map[string]any{
+			"total":       snapshot.TotalCount(),
+			"running":     snapshot.RunningCount(),
+			"waiting":     snapshot.WaitingCount(),
+			"done":        snapshot.DoneCount(),
+			"generatedAt": snapshot.GeneratedAt,
+		})
+	}
+
+	fmt.Printf("total=%d running=%d waiting=%d done=%d\n", snapshot.TotalCount(), snapshot.RunningCount(), snapshot.WaitingCount(), snapshot.DoneCount())
+	return nil
+}
+
+func parseRunInput(args []string) (runtime.RegisterManagedInput, error) {
+	provider, remainder := splitProvider(args)
+	input := runtime.RegisterManagedInput{Provider: provider}
+
+	for index := 0; index < len(remainder); index++ {
+		argument := remainder[index]
+
+		switch {
+		case argument == "--project":
+			index++
+			if index >= len(remainder) {
+				return runtime.RegisterManagedInput{}, fmt.Errorf("missing value for --project")
+			}
+			input.ProjectPath = remainder[index]
+		case strings.HasPrefix(argument, "--project="):
+			input.ProjectPath = strings.TrimPrefix(argument, "--project=")
+		case argument == "--role":
+			index++
+			if index >= len(remainder) {
+				return runtime.RegisterManagedInput{}, fmt.Errorf("missing value for --role")
+			}
+			input.Role = remainder[index]
+		case strings.HasPrefix(argument, "--role="):
+			input.Role = strings.TrimPrefix(argument, "--role=")
+		case strings.HasPrefix(argument, "-"):
+			return runtime.RegisterManagedInput{}, fmt.Errorf("unsupported flag %q", argument)
+		case input.DisplayName == "":
+			input.DisplayName = argument
+		default:
+			return runtime.RegisterManagedInput{}, fmt.Errorf("unexpected argument %q", argument)
+		}
+	}
+
+	return input, nil
+}
+
+func splitProvider(args []string) (string, []string) {
+	if len(args) == 0 {
+		return "unknown", args
+	}
+	if strings.HasPrefix(args[0], "-") {
+		return "unknown", args
+	}
+	return args[0], args[1:]
+}
+
+func writeJSON(value any) error {
+	payload, err := json.MarshalIndent(value, "", "  ")
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(os.Stdout, "%s\n", payload)
+	return err
+}

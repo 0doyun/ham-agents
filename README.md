@@ -20,6 +20,7 @@ This repository is structured so autonomous execution workflows such as `ralph` 
 
 - UI: SwiftUI/AppKit menu bar app
 - CLI/runtime: Go
+- Transitional bootstrap: SwiftPM package kept green during migration
 - Platform: macOS
 - IPC direction: Unix domain socket + JSON event stream
 - Initial delivery strategy: managed mode first, then runtime/persistence, then menu bar, then richer orchestration
@@ -27,12 +28,16 @@ This repository is structured so autonomous execution workflows such as `ralph` 
 ## Repository Layout
 
 ```text
-Apps/
-  HamMenuBarApp/          # Swift macOS app planning surface
+apps/
+  macos/HamMenuBarApp/    # Swift macOS app planning surface
 go/
   cmd/ham/                # Go CLI entrypoint
   cmd/hamd/               # Go daemon entrypoint
-  internal/...            # runtime, store, inference, adapters, ipc
+  internal/core/          # agent domain model and runtime snapshot
+  internal/runtime/       # managed registry service
+  internal/store/         # local file-backed persistence
+  internal/ipc/           # socket path/bootstrap IPC config
+  internal/adapters/      # iTerm2 adapter boundary
 Sources/
   ...                     # transitional Swift bootstrap code
 Tests/
@@ -51,12 +56,15 @@ docs/
 The bootstrap slice should remain green with:
 
 ```bash
-swift build
-swift test
+swift build --disable-sandbox
+swift test --disable-sandbox
 ```
 
-The target architecture will add:
+The Go bootstrap slice adds:
 
 ```bash
 go test ./...
+go run ./go/cmd/ham list
+go run ./go/cmd/ham status
+go run ./go/cmd/hamd serve --once
 ```

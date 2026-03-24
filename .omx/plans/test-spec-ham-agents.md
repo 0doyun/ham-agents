@@ -10,8 +10,8 @@
 ## Current Baseline Checks
 
 ```bash
-swift build
-swift test
+swift build --disable-sandbox
+swift test --disable-sandbox
 ```
 
 Hybrid transition adds:

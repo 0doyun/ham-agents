@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **전체 스펙 구현을 위한 실행 기반 정리와 기술 방향 정합화**다.
+현재 활성 범위는 **hybrid repository realignment + Go managed-session foundation 첫 vertical slice** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -39,7 +39,20 @@
 - [x] Ralph용 PRD / test spec 아티팩트 생성
 - [x] 핵심 모듈 골격 생성
 - [x] Git 원격과 연결된 실제 작업 트리로 전환
-- [ ] 첫 hybrid implementation slice 시작: managed session registry + `ham status/list`
+- [x] 저장소 레이아웃을 Swift UI / Go runtime 방향으로 실제 정렬
+- [x] Go workspace bootstrap 추가: `go/cmd/ham`, `go/cmd/hamd`, `go/internal/{core,runtime,store,ipc,adapters}`
+- [x] 첫 hybrid implementation slice 완료: managed session registry + `ham status/list`
+
+### Current Slice Checklist
+
+- [x] Go module/bootstrap 추가
+- [x] managed agent domain model을 Go core로 이관
+- [x] file-backed registry store 추가
+- [x] Go runtime registry + snapshot 구현
+- [x] `ham run` / `ham list` / `ham status` 구현
+- [x] `hamd` bootstrap entrypoint 추가
+- [x] Swift bootstrap build/test green 유지
+- [x] Go tests + CLI smoke checks green
 
 ## Out of Scope For Current Slice
 
@@ -59,7 +72,7 @@
 - [x] 모듈 경계 정의
 - [x] 기본 테스트 타깃 생성
 - [x] GitHub origin 연결 확인
-- [ ] hybrid repository layout로 재정렬 시작
+- [x] hybrid repository layout로 재정렬 시작
 
 #### Acceptance Criteria
 - [x] 저장소 구조가 스펙 아키텍처와 대응된다
@@ -67,16 +80,16 @@
 - [x] 원격 push 가능한 Git 워크트리여야 한다
 
 ### Epic 2: Managed Session Foundation
-- [ ] agent domain model 확정
-- [ ] local registry/persistence 초안 구현
-- [ ] `ham status`
-- [ ] `ham list`
-- [ ] `ham run` 최소 구현
+- [x] agent domain model 확정
+- [x] local registry/persistence 초안 구현
+- [x] `ham status`
+- [x] `ham list`
+- [x] `ham run` 최소 구현
 
 #### Acceptance Criteria
-- [ ] managed agent 생성 및 조회 가능
-- [ ] CLI에서 현재 상태를 읽을 수 있음
-- [ ] 최소 persistence 경로가 정의됨
+- [x] managed agent 생성 및 조회 가능
+- [x] CLI에서 현재 상태를 읽을 수 있음
+- [x] 최소 persistence 경로가 정의됨
 
 ### Epic 3: Local Runtime and Event Flow
 - [ ] runtime coordinator 구현
