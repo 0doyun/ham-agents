@@ -125,8 +125,10 @@
 - `go/internal/core` owns the canonical managed-agent model for the new backend path.
 - `go/internal/store` persists the managed registry to a local JSON file under `HAM_AGENTS_HOME` or `~/Library/Application Support/ham-agents/`.
 - `go/internal/runtime` exposes register/list/snapshot behavior for managed agents and appends lifecycle events to the local event log.
+- `go/internal/runtime` now also supports a minimal attached-agent registration path with lower default confidence.
 - `go/internal/ipc` now owns the JSON request/response contract, Unix socket server, and daemon client used by the CLI.
 - `go/cmd/ham` now talks to `hamd` over the local Unix socket for `run`, `list`, and `status`.
+- `go/cmd/ham` now talks to `hamd` over the local Unix socket for `run`, `attach`, `list`, and `status`.
 - `go/cmd/hamd` serves the runtime over the socket in normal mode and still supports `serve --once` / `snapshot` bootstrap inspection commands.
 - `Sources/HamAppServices` now gives Swift a matching daemon request/response contract, Unix socket transport, and summary service for future menu bar surfaces.
 - `apps/macos/HamMenuBarApp/Sources` now contains a compile-tested menu bar bootstrap that renders summary badges and a tracked-agent list using the shared Swift service layer.

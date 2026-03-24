@@ -38,6 +38,8 @@ func run(args []string) error {
 		return nil
 	case "run":
 		return runRegister(ctx, client, args[1:])
+	case "attach":
+		return runAttach(ctx, client, args[1:])
 	case "list":
 		return runList(ctx, client, args[1:])
 	case "status":
@@ -64,6 +66,7 @@ func printHelp(socketPath string) {
 Usage:
   ham help
   ham run <provider> [name] [--project path] [--role role]
+  ham attach <session-ref> [name] [--project path] [--role role] [--provider provider]
   ham list [--json]
   ham status [--json]
   ham events [--json] [--limit N]
@@ -85,6 +88,21 @@ func runRegister(ctx context.Context, client *ipc.Client, args []string) error {
 	}
 
 	fmt.Printf("registered %s [%s] via %s\n", agent.DisplayName, agent.ID, agent.Provider)
+	return nil
+}
+
+func runAttach(ctx context.Context, client *ipc.Client, args []string) error {
+	input, err := parseAttachInput(args)
+	if err != nil {
+		return err
+	}
+
+	agent, err := client.AttachSession(ctx, input)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("attached %s [%s] via %s\n", agent.DisplayName, agent.ID, agent.Provider)
 	return nil
 }
 
@@ -199,6 +217,57 @@ func parseRunInput(args []string) (runtime.RegisterManagedInput, error) {
 			input.DisplayName = argument
 		default:
 			return runtime.RegisterManagedInput{}, fmt.Errorf("unexpected argument %q", argument)
+		}
+	}
+
+	return input, nil
+}
+
+func parseAttachInput(args []string) (runtime.RegisterAttachedInput, error) {
+	if len(args) == 0 {
+		return runtime.RegisterAttachedInput{}, fmt.Errorf("session ref is required")
+	}
+
+	input := runtime.RegisterAttachedInput{
+		Provider:   "iterm2",
+		SessionRef: args[0],
+	}
+	remainder := args[1:]
+
+	for index := 0; index < len(remainder); index++ {
+		argument := remainder[index]
+
+		switch {
+		case argument == "--project":
+			index++
+			if index >= len(remainder) {
+				return runtime.RegisterAttachedInput{}, fmt.Errorf("missing value for --project")
+			}
+			input.ProjectPath = remainder[index]
+		case strings.HasPrefix(argument, "--project="):
+			input.ProjectPath = strings.TrimPrefix(argument, "--project=")
+		case argument == "--role":
+			index++
+			if index >= len(remainder) {
+				return runtime.RegisterAttachedInput{}, fmt.Errorf("missing value for --role")
+			}
+			input.Role = remainder[index]
+		case strings.HasPrefix(argument, "--role="):
+			input.Role = strings.TrimPrefix(argument, "--role=")
+		case argument == "--provider":
+			index++
+			if index >= len(remainder) {
+				return runtime.RegisterAttachedInput{}, fmt.Errorf("missing value for --provider")
+			}
+			input.Provider = remainder[index]
+		case strings.HasPrefix(argument, "--provider="):
+			input.Provider = strings.TrimPrefix(argument, "--provider=")
+		case strings.HasPrefix(argument, "-"):
+			return runtime.RegisterAttachedInput{}, fmt.Errorf("unsupported flag %q", argument)
+		case input.DisplayName == "":
+			input.DisplayName = argument
+		default:
+			return runtime.RegisterAttachedInput{}, fmt.Errorf("unexpected argument %q", argument)
 		}
 	}
 

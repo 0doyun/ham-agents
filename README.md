@@ -75,6 +75,7 @@ Current daemon-backed CLI surface:
 ```bash
 go run ./go/cmd/ham list
 go run ./go/cmd/ham run claude reviewer --project /tmp/demo --role reviewer
+go run ./go/cmd/ham attach iterm2://session/abc ops --project /tmp/demo --role reviewer
 go run ./go/cmd/ham status --json
 go run ./go/cmd/ham events --json --limit 5
 ```
@@ -101,4 +102,5 @@ The current `ham-menubar` baseline:
 - persists notification pause/resume through the daemon so mute state survives refreshes instead of living only in Swift UI memory
 - lets the user edit and save the selected agent role through the daemon-backed detail pane
 - lets the user stop tracking the selected agent from the popover
+- already renders attached agents distinctly because mode/confidence now flow through from the daemon
 - shows mode and confidence inline so managed/attached distinctions are visible in the baseline UI

@@ -71,6 +71,38 @@ func TestRegisterManagedPersistsAndBuildsSnapshot(t *testing.T) {
 	}
 }
 
+func TestRegisterAttachedPersistsModeAndConfidence(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterAttached(ctx, runtime.RegisterAttachedInput{
+		Provider:    "iterm2",
+		DisplayName: "ops",
+		ProjectPath: "/tmp/project",
+		Role:        "reviewer",
+		SessionRef:  "iterm2://session/abc",
+	})
+	if err != nil {
+		t.Fatalf("register attached: %v", err)
+	}
+
+	if agent.Mode != core.AgentModeAttached {
+		t.Fatalf("expected attached mode, got %q", agent.Mode)
+	}
+	if agent.StatusConfidence != 0.6 {
+		t.Fatalf("expected 0.6 confidence, got %v", agent.StatusConfidence)
+	}
+	if agent.SessionRef != "iterm2://session/abc" {
+		t.Fatalf("unexpected session ref %q", agent.SessionRef)
+	}
+}
+
 func TestRegisterManagedSucceedsWhenEventLogAppendFails(t *testing.T) {
 	t.Parallel()
 

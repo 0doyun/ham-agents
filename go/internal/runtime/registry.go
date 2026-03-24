@@ -20,6 +20,14 @@ type RegisterManagedInput struct {
 	SessionRef  string
 }
 
+type RegisterAttachedInput struct {
+	Provider    string
+	DisplayName string
+	ProjectPath string
+	Role        string
+	SessionRef  string
+}
+
 type Registry struct {
 	store      store.AgentStore
 	eventStore store.EventStore
@@ -84,6 +92,77 @@ func (r *Registry) RegisterManaged(ctx context.Context, input RegisterManagedInp
 		LastUserVisibleSummary: "Managed session registered.",
 		NotificationPolicy:     core.NotificationPolicyDefault,
 		SessionRef:             strings.TrimSpace(input.SessionRef),
+		AvatarVariant:          "default",
+	}
+
+	agents = append(agents, agent)
+	if err := r.store.SaveAgents(ctx, agents); err != nil {
+		return core.Agent{}, err
+	}
+
+	if r.eventStore != nil {
+		event := core.Event{
+			ID:         fmt.Sprintf("event-%d", now.UnixNano()),
+			AgentID:    agent.ID,
+			Type:       core.EventTypeAgentRegistered,
+			Summary:    agent.LastUserVisibleSummary,
+			OccurredAt: now,
+		}
+		_ = r.eventStore.Append(ctx, event)
+	}
+
+	return agent, nil
+}
+
+func (r *Registry) RegisterAttached(ctx context.Context, input RegisterAttachedInput) (core.Agent, error) {
+	agents, err := r.store.LoadAgents(ctx)
+	if err != nil {
+		return core.Agent{}, err
+	}
+
+	now := r.clock().UTC()
+	hostname, err := r.hostname()
+	if err != nil {
+		hostname = "localhost"
+	}
+
+	sessionRef := strings.TrimSpace(input.SessionRef)
+	if sessionRef == "" {
+		return core.Agent{}, fmt.Errorf("session ref is required for attach")
+	}
+
+	provider := strings.TrimSpace(input.Provider)
+	if provider == "" {
+		provider = "iterm2"
+	}
+
+	displayName := strings.TrimSpace(input.DisplayName)
+	if displayName == "" {
+		displayName = "attached-agent"
+	}
+
+	projectPath := strings.TrimSpace(input.ProjectPath)
+	if projectPath == "" {
+		projectPath, err = os.Getwd()
+		if err != nil {
+			return core.Agent{}, fmt.Errorf("resolve working directory: %w", err)
+		}
+	}
+
+	agent := core.Agent{
+		ID:                     r.idProvider(now),
+		DisplayName:            displayName,
+		Provider:               provider,
+		Host:                   hostname,
+		Mode:                   core.AgentModeAttached,
+		ProjectPath:            projectPath,
+		Role:                   strings.TrimSpace(input.Role),
+		Status:                 core.AgentStatusIdle,
+		StatusConfidence:       0.6,
+		LastEventAt:            now,
+		LastUserVisibleSummary: "Attached session registered.",
+		NotificationPolicy:     core.NotificationPolicyDefault,
+		SessionRef:             sessionRef,
 		AvatarVariant:          "default",
 	}
 
