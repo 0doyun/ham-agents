@@ -620,6 +620,17 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: stronger feed semantics, lower-latency visual polish, richer attached shell-state fidelity
 
+### 2026-03-25 (CLI confidence/reason visibility baseline)
+- `ham list` human-readable output 이 agent mode/status/confidence/reason 을 함께 보여주도록 정리해, JSON 없이도 low-confidence inferred state 와 그 근거를 바로 읽을 수 있게 만들었다.
+- low-confidence status 는 Swift detail wording 과 맞춰 `likely ...` 로 soften 하고, confidence 는 `high|medium|low NN%` 형태로 노출하도록 공통 helper 를 추가했다.
+- `ham status` human-readable output 도 `attention=<N>` 요약을 포함하게 만들어 waiting/error/disconnected agent 수를 한 줄에서 바로 확인할 수 있게 했다.
+- Go tests 로 human-readable `ham list` / `ham status` output 과 JSON output contract 가 각각 drift 하지 않게 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: CLI attention detail baseline, richer lifecycle coverage, broader operator-facing CLI scanability
+
 ### 2026-03-25 (severity-aware feed ordering baseline)
 - recent event feed ordering 을 severity-first, recency-second 로 정리해 warning/positive/info 계열 event 가 작은 recent-event window 에서 더 빠르게 보이도록 만들었다.
 - `MenuBarViewModel.recentEvents` 가 `AgentEventPresenter` ordering helper 를 사용하도록 연결하고, Swift tests 로 warning event 가 informational row 앞에 오는 ordering 을 보호했다.

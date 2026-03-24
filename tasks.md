@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **attention queue follow-up** 다.
+현재 활성 범위는 **CLI confidence/reason visibility baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -106,7 +106,8 @@
 - [x] richer attached shell-state fidelity follow-up 추가
 - [x] runtime coordinator follow-up 추가
 - [x] runtime lifecycle coverage follow-up 추가
-- [ ] attention queue follow-up 추가
+- [x] attention queue follow-up 추가
+- [x] CLI confidence/reason visibility baseline 추가
 
 ### Current Slice Checklist
 
@@ -175,9 +176,15 @@
 - [x] lifecycle coverage 추가 확장
 - [x] transition summary consistency 유지
 - [x] Go tests로 lifecycle coverage follow-up 보호
-- [ ] attention row context/reason 강화
-- [ ] attention queue scanability 개선
-- [ ] Go/Swift tests로 attention queue follow-up 보호
+- [x] attention row context/reason 강화
+- [x] attention queue scanability 개선
+- [x] Go/Swift tests로 attention queue follow-up 보호
+- [x] `ham list` human output 에 confidence/reason 일부 노출
+- [x] `ham status` human output 에 attention-oriented 요약 추가
+- [x] Go tests로 CLI confidence/reason visibility 보호
+- [ ] `ham status` human output 에 urgent agent detail 일부 노출
+- [ ] `ham list` human output 의 attention-first scanability refinement
+- [ ] Go tests로 CLI attention detail baseline 보호
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호
@@ -213,7 +220,7 @@
 - [x] attention-required agent grouping/order baseline 추가
 - [x] menu bar 에 attention queue/view 추가
 - [x] Go/Swift tests로 attention queue baseline 보호
-- [ ] feed row ordering/priority refinement 추가
+- [x] feed row ordering/priority refinement 추가
 - [ ] severity-aware feed scanning 개선
 - [ ] Go/Swift tests로 severity-aware feed ordering baseline 보호
 - [x] Swift bootstrap build/test green 유지
