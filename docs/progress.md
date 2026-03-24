@@ -652,6 +652,16 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer lifecycle coverage, broader operator-facing CLI scanability, daemon-backed attention model
 
+### 2026-03-25 (CLI stop baseline)
+- CLI spec 에 맞춰 `ham stop <agent>` 를 추가하고, 현재 baseline 의미를 existing remove/tracking-removal path 에 매핑했다.
+- stop 결과는 human path 에서 `stopped tracking <agent>` 로 보여주고, JSON path 에서는 `{ "removed": "<agent>" }` 만 반환하게 분리해 machine contract 를 단순하게 유지했다.
+- Go tests 로 stop input parsing 과 human/JSON result rendering 을 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: broader operator-facing CLI scanability, richer lifecycle coverage, daemon-backed attention model
+
 ### 2026-03-25 (severity-aware feed ordering baseline)
 - recent event feed ordering 을 severity-first, recency-second 로 정리해 warning/positive/info 계열 event 가 작은 recent-event window 에서 더 빠르게 보이도록 만들었다.
 - `MenuBarViewModel.recentEvents` 가 `AgentEventPresenter` ordering helper 를 사용하도록 연결하고, Swift tests 로 warning event 가 informational row 앞에 오는 ordering 을 보호했다.

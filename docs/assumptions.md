@@ -80,3 +80,4 @@
 - 2026-03-25: CLI confidence/reason visibility baseline keeps the richer wording (`likely ...`, `high|medium|low NN%`) in human-readable `ham list` output only; JSON output remains the stable machine-oriented contract.
 - 2026-03-25: CLI attention detail baseline also remains human-only — attention-first ordering and urgent detail rows affect `ham list` / `ham status` text output, while JSON responses keep their existing unsorted machine-oriented shape.
 - 2026-03-25: CLI attention breakdown baseline keeps `attention_breakdown` as a human-readable status affordance only; JSON status payloads stay unchanged so scripts do not need to learn presentation-only fields.
+- 2026-03-25: `ham stop` baseline currently maps to the existing registry removal / stop-tracking path, not provider/session termination; human output can say “stopped tracking” even though actual process shutdown remains a later slice.

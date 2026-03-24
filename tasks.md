@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **CLI attention breakdown baseline** 다.
+현재 활성 범위는 **CLI stop baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -110,6 +110,7 @@
 - [x] CLI confidence/reason visibility baseline 추가
 - [x] CLI attention detail baseline 추가
 - [x] CLI attention breakdown baseline 추가
+- [x] CLI stop baseline 추가
 
 ### Current Slice Checklist
 
@@ -190,6 +191,9 @@
 - [x] `ham status` human output 에 attention category breakdown 추가
 - [x] attention breakdown 이 human-only formatting 임을 유지
 - [x] Go tests로 CLI attention breakdown baseline 보호
+- [x] `ham stop <agent>` baseline 추가
+- [x] stop output 의 human/JSON path 정리
+- [x] Go tests로 CLI stop baseline 보호
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호

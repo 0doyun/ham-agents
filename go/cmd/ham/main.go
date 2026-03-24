@@ -53,6 +53,8 @@ func run(args []string) error {
 		return runOpen(ctx, client, args[1:])
 	case "ask":
 		return runAsk(ctx, client, args[1:])
+	case "stop":
+		return runStop(ctx, client, args[1:])
 	case "settings":
 		return runSettings(ctx, client, args[1:])
 	case "list":
@@ -87,6 +89,7 @@ Usage:
   ham observe <source-ref> [name] [--project path] [--role role] [--provider provider]
   ham open <agent-id> [--json] [--print]
   ham ask <agent-id> <message>
+  ham stop <agent-id> [--json]
   ham settings [--json]
   ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--quiet-hours=true|false] [--quiet-start-hour=0-23] [--quiet-end-hour=0-23] [--preview-text=true|false]
   ham settings appearance [--theme=auto|day|night]
@@ -266,6 +269,19 @@ func runAsk(ctx context.Context, client *ipc.Client, args []string) error {
 
 	fmt.Println(result)
 	return nil
+}
+
+func runStop(ctx context.Context, client *ipc.Client, args []string) error {
+	agentID, asJSON, err := parseStopInput(args)
+	if err != nil {
+		return err
+	}
+
+	if err := client.RemoveAgent(ctx, agentID); err != nil {
+		return err
+	}
+
+	return renderStopResult(os.Stdout, agentID, asJSON)
 }
 
 func runSettings(ctx context.Context, client *ipc.Client, args []string) error {
@@ -747,6 +763,31 @@ func parseAskInput(args []string) (agentID string, message string, err error) {
 	return
 }
 
+func parseStopInput(args []string) (agentID string, asJSON bool, err error) {
+	for _, argument := range args {
+		switch argument {
+		case "--json":
+			asJSON = true
+		default:
+			if strings.HasPrefix(argument, "-") {
+				err = fmt.Errorf("unsupported flag %q", argument)
+				return
+			}
+			if agentID == "" {
+				agentID = argument
+				continue
+			}
+			err = fmt.Errorf("unexpected argument %q", argument)
+			return
+		}
+	}
+
+	if agentID == "" {
+		err = fmt.Errorf("agent id is required")
+	}
+	return
+}
+
 func parseBoolFlag(argument string, prefix string) (bool, error) {
 	value := strings.TrimPrefix(argument, prefix)
 	switch value {
@@ -791,6 +832,17 @@ func writeJSONTo(out io.Writer, value any) error {
 		return err
 	}
 	_, err = fmt.Fprintf(out, "%s\n", payload)
+	return err
+}
+
+func renderStopResult(out io.Writer, agentID string, asJSON bool) error {
+	if asJSON {
+		return writeJSONTo(out, map[string]any{
+			"removed": agentID,
+		})
+	}
+
+	_, err := fmt.Fprintf(out, "stopped tracking %s\n", agentID)
 	return err
 }
 
