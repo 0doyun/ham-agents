@@ -10,6 +10,7 @@ public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var isRefreshing = false
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
+    @Published public private(set) var quickMessageFeedback: String?
 
     private let client: HamDaemonClientProtocol
     private let summaryService: MenuBarSummaryService
@@ -79,10 +80,20 @@ public final class MenuBarViewModel: ObservableObject {
     }
 
     public func sendQuickMessage(_ message: String, forAgentID id: Agent.ID?) {
-        guard let agent = agent(withID: id) else { return }
+        guard let agent = agent(withID: id) else {
+            quickMessageFeedback = "No agent selected."
+            return
+        }
         let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        quickMessageSender.send(message: trimmed, to: agent)
+        guard !trimmed.isEmpty else {
+            quickMessageFeedback = nil
+            return
+        }
+        let result = quickMessageSender.send(message: trimmed, to: agent)
+        switch result {
+        case .delivered(let message), .handoff(let message), .failed(let message):
+            quickMessageFeedback = message
+        }
     }
 
     public func isNotificationsMuted(forAgentID id: Agent.ID?) -> Bool {

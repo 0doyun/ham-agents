@@ -121,6 +121,7 @@ private struct MenuBarContentView: View {
                 agent: viewModel.agent(withID: selectedAgentID),
                 recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID),
                 notificationsMuted: viewModel.isNotificationsMuted(forAgentID: selectedAgentID),
+                quickMessageFeedback: viewModel.quickMessageFeedback,
                 quickMessage: $quickMessage,
                 openProject: {
                     viewModel.openProject(forAgentID: selectedAgentID)
@@ -189,6 +190,7 @@ private struct AgentDetailView: View {
     let agent: Agent?
     let recentEvents: [AgentEventPayload]
     let notificationsMuted: Bool
+    let quickMessageFeedback: String?
     @Binding var quickMessage: String
     let openProject: () -> Void
     let openSession: () -> Void
@@ -231,17 +233,22 @@ private struct AgentDetailView: View {
                 }
                 .buttonStyle(.bordered)
 
-                Text("Quick Message Handoff")
+                Text("Quick Message")
                     .font(.caption.weight(.semibold))
                     .padding(.top, 4)
-                TextField("Draft message to copy…", text: $quickMessage, axis: .vertical)
+                TextField("Draft message…", text: $quickMessage, axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(2 ... 4)
-                Button("Copy & Open Session") {
+                Button("Send Message") {
                     sendQuickMessage()
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(quickMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                if let quickMessageFeedback {
+                    Text(quickMessageFeedback)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
 
                 Text("Recent Events")
                     .font(.caption.weight(.semibold))
@@ -364,23 +371,21 @@ private struct ItermQuickMessageSender: QuickMessageSending {
     let projectOpener: ProjectOpening
     private let planner = QuickMessagePlanner()
 
-    func send(message: String, to agent: Agent) {
+    func send(message: String, to agent: Agent) -> QuickMessageResult {
         switch planner.plan(message: message, for: agent, supportsTerminalAutomation: true) {
         case .terminalWrite(let target, let message):
             if tryTerminalWrite(message: message, target: target) {
-                return
+                return .delivered("Sent to iTerm.")
             }
         case .clipboardHandoff(let message):
             copyToClipboard(message)
             sessionOpener.openSession(for: agent)
-            return
+            return .handoff("Copied to clipboard and opened the session.")
         }
 
         copyToClipboard(message)
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(message, forType: .string)
         projectOpener.openProject(at: agent.projectPath)
+        return .handoff("Copied to clipboard and opened the project folder.")
     }
 
     private func tryTerminalWrite(message: String, target: SessionTarget) -> Bool {

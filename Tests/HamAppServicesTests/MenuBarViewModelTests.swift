@@ -311,6 +311,7 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(sender.sentMessages.count, 1)
         XCTAssertEqual(sender.sentMessages.first?.0, "agent-1")
         XCTAssertEqual(sender.sentMessages.first?.1, "please check logs")
+        XCTAssertEqual(viewModel.quickMessageFeedback, "Sent.")
     }
 
     func testSendQuickMessageIgnoresBlankDraft() async {
@@ -342,6 +343,15 @@ final class MenuBarViewModelTests: XCTestCase {
         viewModel.sendQuickMessage("   ", forAgentID: "agent-1")
 
         XCTAssertTrue(sender.sentMessages.isEmpty)
+        XCTAssertNil(viewModel.quickMessageFeedback)
+    }
+
+    func testSendQuickMessageWithoutSelectedAgentSetsFailureFeedback() {
+        let viewModel = MenuBarViewModel(client: FailingClient())
+
+        viewModel.sendQuickMessage("hello", forAgentID: nil)
+
+        XCTAssertEqual(viewModel.quickMessageFeedback, "No agent selected.")
     }
 
     func testToggleNotificationPauseUpdatesSelectedAgentPolicy() async {
@@ -543,8 +553,9 @@ private final class RecordingSessionOpener: SessionOpening, @unchecked Sendable 
 private final class RecordingQuickMessageSender: QuickMessageSending, @unchecked Sendable {
     private(set) var sentMessages: [(String, String)] = []
 
-    func send(message: String, to agent: Agent) {
+    func send(message: String, to agent: Agent) -> QuickMessageResult {
         sentMessages.append((agent.id, message))
+        return .delivered("Sent.")
     }
 }
 
