@@ -767,6 +767,67 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: CLI ui baseline, richer lifecycle coverage, daemon-backed lifecycle summary
 
+### 2026-03-25 (CLI ui baseline)
+- spec-listed `ham ui` baseline 을 추가해 menu bar executable launch path 를 CLI 에서 직접 호출할 수 있게 만들었다.
+- resolution 은 `HAM_UI_EXECUTABLE` override → current executable sibling `ham-menubar` → local SwiftPM build artifact → PATH lookup 순서로 정리했고, `--print` / `--json` 으로 planned target 을 확인할 수 있게 했다.
+- actual launch path 는 resolved `ham-menubar` executable 을 detached start 하는 baseline 으로 시작한다.
+- Go tests 로 environment override, build-artifact fallback, unexpected argument rejection 을 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle summary, CLI/UI polish follow-up
+
+### 2026-03-25 (lifecycle-aware event presentation baseline)
+- `agent.status_updated` presentation 이 generic `Status` badge 만 보여주지 않고 `Done`, `Needs Input`, `Error`, `Idle` 같은 lifecycle-aware label/emphasis 를 더 직접 반영하도록 정리했다.
+- `agent.registered` 도 summary copy 를 바탕으로 `Managed`, `Attached`, `Observed` registration context 를 더 직접 보여주도록 만들어 feed summary chips 와 detail rows 가 registration mode 를 더 빨리 읽게 했다.
+- Swift tests 로 lifecycle-aware presentation mapping 과 warning-status-update ordering behavior 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle summary, CLI/UI polish follow-up
+
+### 2026-03-25 (daemon-backed event presentation hint baseline)
+- daemon event payload 에 `presentation_label` / `presentation_emphasis` optional 필드를 추가해, known lifecycle/admin events 의 presentation hint 를 Go 쪽에서 함께 내보내도록 만들었다.
+- runtime event append path 는 known event type + summary 에서 baseline hint 를 채우고, Swift `AgentEventPresenter` 는 이 daemon-provided hint 가 있으면 summary-string inference 보다 우선 사용하도록 정리했다.
+- 이 변경은 additive contract 로 유지되어 older payload 는 기존 Swift inference path 를 그대로 타고, unknown events 는 여전히 technical fallback 을 유지한다.
+- Go/Swift tests 로 stored event hint population, event payload decoding, hint-overrides-summary behavior 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle summary, CLI/UI polish follow-up
+
+### 2026-03-25 (daemon-backed lifecycle summary baseline)
+- daemon event payload 에 `presentation_summary` optional 필드를 추가해, lifecycle/admin event row 가 raw summary 문자열 대신 daemon-authored concise display summary 를 함께 받을 수 있게 만들었다.
+- runtime event append path 는 known lifecycle summaries (`Status changed to …`, disconnect/reconnect 등) 에서 display-friendly summary 를 분리해 hint 로 채우고, Swift recent event rows 는 이 daemon-provided summary hint 가 있으면 우선 사용하도록 정리했다.
+- older/partial payload 는 기존 raw `summary` 표시로 fallback 하므로 contract 는 additive 로 유지된다.
+- Go/Swift tests 로 stored event presentation summary, event payload decoding, summary-hint override/fallback behavior 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle metadata, CLI/UI polish follow-up
+
+### 2026-03-25 (CLI event presentation summary contract baseline)
+- `ham events --json` / `ham logs --json` 경로가 daemon-backed `presentation_summary` 필드를 그대로 유지하도록 tests를 보강해, CLI automation path 도 concise lifecycle summary hint 를 읽을 수 있게 고정했다.
+- filtering/tail limiting helper 가 `presentation_summary` 를 떨어뜨리지 않는지, newline-delimited event JSON line output 이 summary hint 필드를 계속 포함하는지 Go tests 로 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle metadata, CLI/UI polish follow-up
+
+### 2026-03-25 (CLI event presentation hint contract baseline)
+- `ham events --json` / `ham logs --json` 경로가 daemon-backed `presentation_label` / `presentation_emphasis` 필드를 그대로 유지하도록 테스트를 보강해, CLI automation path 도 event presentation hint contract 를 읽을 수 있게 고정했다.
+- filtering/tail limiting helper 가 presentation hint 를 떨어뜨리지 않는지, newline-delimited event JSON line output 이 hint 필드를 계속 포함하는지 Go tests 로 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle summary, CLI/UI polish follow-up
+
 ### 2026-03-25 (CLI status attention subtitle contract baseline)
 - `ham status --json` 이 daemon-backed attention subtitle map 도 함께 내보내도록 정리해, automation path 에서도 urgent row subtitle contract 를 읽을 수 있게 만들었다.
 - human `ham status` output 은 기존 terse summary/attention line 형태를 유지하고, richer subtitle data 는 additive JSON field 로만 노출되게 분리했다.

@@ -22,13 +22,28 @@ public struct AgentEventPayload: Codable, Equatable, Sendable, Identifiable {
     public var type: String
     public var summary: String
     public var occurredAt: Date
+    public var presentationLabel: String?
+    public var presentationEmphasis: String?
+    public var presentationSummary: String?
 
-    public init(id: String, agentID: String, type: String, summary: String, occurredAt: Date) {
+    public init(
+        id: String,
+        agentID: String,
+        type: String,
+        summary: String,
+        occurredAt: Date,
+        presentationLabel: String? = nil,
+        presentationEmphasis: String? = nil,
+        presentationSummary: String? = nil
+    ) {
         self.id = id
         self.agentID = agentID
         self.type = type
         self.summary = summary
         self.occurredAt = occurredAt
+        self.presentationLabel = presentationLabel
+        self.presentationEmphasis = presentationEmphasis
+        self.presentationSummary = presentationSummary
     }
 
     enum CodingKeys: String, CodingKey {
@@ -37,6 +52,9 @@ public struct AgentEventPayload: Codable, Equatable, Sendable, Identifiable {
         case type
         case summary
         case occurredAt = "occurred_at"
+        case presentationLabel = "presentation_label"
+        case presentationEmphasis = "presentation_emphasis"
+        case presentationSummary = "presentation_summary"
     }
 }
 

@@ -73,6 +73,12 @@ func TestRegisterManagedPersistsAndBuildsSnapshot(t *testing.T) {
 	if events[0].AgentID != agent.ID {
 		t.Fatalf("unexpected event agent id %q", events[0].AgentID)
 	}
+	if events[0].PresentationLabel != "Managed" || events[0].PresentationEmphasis != "info" {
+		t.Fatalf("unexpected event presentation %#v", events[0])
+	}
+	if events[0].PresentationSummary != "Managed session registered." {
+		t.Fatalf("unexpected event presentation summary %#v", events[0])
+	}
 }
 
 func TestSnapshotBuildsAttentionSummary(t *testing.T) {

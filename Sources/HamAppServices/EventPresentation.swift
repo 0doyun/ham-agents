@@ -35,15 +35,18 @@ public struct AgentEventSummaryChip: Equatable, Sendable, Identifiable {
 
 public enum AgentEventPresenter {
     public static func present(_ event: AgentEventPayload) -> AgentEventPresentation {
+        if let hinted = hintedPresentation(for: event) {
+            return hinted
+        }
         switch event.type {
         case "agent.registered":
-            return AgentEventPresentation(label: "Registered", emphasis: .info)
+            return presentRegisteredEvent(event)
         case "agent.role_updated":
             return AgentEventPresentation(label: "Role", emphasis: .info)
         case "agent.notification_policy_updated":
             return AgentEventPresentation(label: "Notifications", emphasis: .info)
         case "agent.status_updated":
-            return AgentEventPresentation(label: "Status", emphasis: .info)
+            return presentStatusUpdatedEvent(event)
         case "agent.disconnected":
             return AgentEventPresentation(label: "Disconnected", emphasis: .warning)
         case "agent.reconnected":
@@ -118,6 +121,13 @@ public enum AgentEventPresenter {
         }
     }
 
+    public static func displaySummary(for event: AgentEventPayload) -> String {
+        if let summary = event.presentationSummary?.trimmingCharacters(in: .whitespacesAndNewlines), !summary.isEmpty {
+            return summary
+        }
+        return event.summary
+    }
+
     private static func sortPriority(_ emphasis: AgentEventEmphasis) -> Int {
         switch emphasis {
         case .warning:
@@ -142,5 +152,47 @@ public enum AgentEventPresenter {
         case .neutral:
             return "Other"
         }
+    }
+
+    private static func presentRegisteredEvent(_ event: AgentEventPayload) -> AgentEventPresentation {
+        let summary = event.summary.lowercased()
+        if summary.contains("attached session registered") {
+            return AgentEventPresentation(label: "Attached", emphasis: .info)
+        }
+        if summary.contains("observed source registered") {
+            return AgentEventPresentation(label: "Observed", emphasis: .info)
+        }
+        return AgentEventPresentation(label: "Managed", emphasis: .info)
+    }
+
+    private static func presentStatusUpdatedEvent(_ event: AgentEventPayload) -> AgentEventPresentation {
+        let summary = event.summary.lowercased()
+        switch true {
+        case summary.contains("status changed to error"):
+            return AgentEventPresentation(label: "Error", emphasis: .warning)
+        case summary.contains("status changed to waiting_input"):
+            return AgentEventPresentation(label: "Needs Input", emphasis: .warning)
+        case summary.contains("status changed to done"):
+            return AgentEventPresentation(label: "Done", emphasis: .positive)
+        case summary.contains("status changed to disconnected"):
+            return AgentEventPresentation(label: "Disconnected", emphasis: .warning)
+        case summary.contains("status changed to idle"):
+            return AgentEventPresentation(label: "Idle", emphasis: .info)
+        default:
+            return AgentEventPresentation(label: "Status", emphasis: .info)
+        }
+    }
+
+    private static func hintedPresentation(for event: AgentEventPayload) -> AgentEventPresentation? {
+        guard
+            let label = event.presentationLabel?.trimmingCharacters(in: .whitespacesAndNewlines),
+            !label.isEmpty,
+            let rawEmphasis = event.presentationEmphasis?.trimmingCharacters(in: .whitespacesAndNewlines),
+            let emphasis = AgentEventEmphasis(rawValue: rawEmphasis)
+        else {
+            return nil
+        }
+
+        return AgentEventPresentation(label: label, emphasis: emphasis)
     }
 }

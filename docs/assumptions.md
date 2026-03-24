@@ -91,5 +91,11 @@
 - 2026-03-25: daemon-backed attention ordering baseline lets the daemon provide the preferred urgent-agent order, but Swift still keeps a local severity/recency fallback for partial or older snapshot payloads.
 - 2026-03-25: daemon-backed attention subtitle baseline lets the daemon provide preferred urgent-row subtitle wording, but Swift keeps fallback wording generation so older/partial payloads and local follow-event rebuilds remain readable.
 - 2026-03-25: CLI status attention subtitle contract baseline keeps urgent subtitle data additive on the JSON path only; human `ham status` output stays compact and does not print the subtitle map inline.
+- 2026-03-25: `ham ui` baseline launches the `ham-menubar` executable directly and resolves it via env override, sibling binary, local build artifact, then PATH; it does not yet focus an already-running app instance.
+- 2026-03-25: lifecycle-aware event presentation baseline infers richer labels from existing event type + summary strings, not from a newly versioned daemon event schema yet.
+- 2026-03-25: daemon-backed event presentation hint baseline adds optional per-event presentation hints, but Swift still keeps summary-string inference as a compatibility fallback for older or partially populated event payloads.
+- 2026-03-25: CLI event presentation hint contract baseline keeps event presentation hints additive on JSON event/log output only; human event rows still rely on the existing tab-separated summary format.
+- 2026-03-25: daemon-backed lifecycle summary baseline adds optional per-event `presentation_summary`, but Swift still falls back to raw `summary` when older payloads or unknown events omit that field.
+- 2026-03-25: CLI event presentation summary contract baseline keeps `presentation_summary` additive on JSON event/log output only; human CLI event rows continue to use the existing tab-separated raw summary output.
 - 2026-03-25: CLI status attention subtitle contract baseline keeps urgent subtitle data additive on the JSON path only; human `ham status` output stays compact and does not print the subtitle map inline.
 - 2026-03-25: CLI status attention contract baseline keeps the richer attention data additive on the JSON path only; human `ham status` output stays terse and presentation-oriented.

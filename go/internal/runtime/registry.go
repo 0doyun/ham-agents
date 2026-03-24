@@ -785,24 +785,86 @@ func (r *Registry) saveAgentsAndEvents(ctx context.Context, agents []core.Agent,
 		return err
 	}
 	for _, event := range events {
-		r.appendEvent(ctx, event.AgentID, event.Type, event.Summary)
+		r.appendEvent(ctx, event)
 	}
 	return nil
 }
 
-func (r *Registry) appendEvent(ctx context.Context, agentID string, eventType core.EventType, summary string) {
+func (r *Registry) appendEvent(ctx context.Context, event core.Event) {
 	if r.eventStore == nil {
 		return
 	}
 
-	event := core.Event{
-		ID:         fmt.Sprintf("event-%d", r.clock().UTC().UnixNano()),
-		AgentID:    agentID,
-		Type:       eventType,
-		Summary:    summary,
-		OccurredAt: r.clock().UTC(),
+	if event.ID == "" {
+		event.ID = fmt.Sprintf("event-%d", r.clock().UTC().UnixNano())
+	}
+	if event.OccurredAt.IsZero() {
+		event.OccurredAt = r.clock().UTC()
+	}
+	if event.PresentationLabel == "" || event.PresentationEmphasis == "" || event.PresentationSummary == "" {
+		label, emphasis, presentationSummary := eventPresentationHint(event.Type, event.Summary)
+		if event.PresentationLabel == "" {
+			event.PresentationLabel = label
+		}
+		if event.PresentationEmphasis == "" {
+			event.PresentationEmphasis = emphasis
+		}
+		if event.PresentationSummary == "" {
+			event.PresentationSummary = presentationSummary
+		}
 	}
 	_ = r.eventStore.Append(ctx, event)
+}
+
+func eventPresentationHint(eventType core.EventType, summary string) (label string, emphasis string, presentationSummary string) {
+	lowerSummary := strings.ToLower(summary)
+
+	switch eventType {
+	case core.EventTypeAgentRegistered:
+		switch {
+		case strings.Contains(lowerSummary, "attached session registered"):
+			return "Attached", "info", summary
+		case strings.Contains(lowerSummary, "observed source registered"):
+			return "Observed", "info", summary
+		default:
+			return "Managed", "info", summary
+		}
+	case core.EventTypeAgentRoleUpdated:
+		return "Role", "info", summary
+	case core.EventTypeAgentNotificationPolicyUpdated:
+		return "Notifications", "info", summary
+	case core.EventTypeAgentDisconnected:
+		return "Disconnected", "warning", trimLifecyclePresentationSummary(summary)
+	case core.EventTypeAgentReconnected:
+		return "Reconnected", "positive", trimLifecyclePresentationSummary(summary)
+	case core.EventTypeAgentRemoved:
+		return "Stopped", "neutral", summary
+	case core.EventTypeAgentStatusUpdated:
+		switch {
+		case strings.Contains(lowerSummary, "status changed to error"):
+			return "Error", "warning", trimLifecyclePresentationSummary(summary)
+		case strings.Contains(lowerSummary, "status changed to waiting_input"):
+			return "Needs Input", "warning", trimLifecyclePresentationSummary(summary)
+		case strings.Contains(lowerSummary, "status changed to done"):
+			return "Done", "positive", trimLifecyclePresentationSummary(summary)
+		case strings.Contains(lowerSummary, "status changed to disconnected"):
+			return "Disconnected", "warning", trimLifecyclePresentationSummary(summary)
+		case strings.Contains(lowerSummary, "status changed to idle"):
+			return "Idle", "info", trimLifecyclePresentationSummary(summary)
+		default:
+			return "Status", "info", summary
+		}
+	default:
+		return "", "", ""
+	}
+}
+
+func trimLifecyclePresentationSummary(summary string) string {
+	parts := strings.SplitN(summary, ". ", 2)
+	if len(parts) == 2 && strings.TrimSpace(parts[1]) != "" {
+		return strings.TrimSpace(parts[1])
+	}
+	return summary
 }
 
 func agentsEqual(lhs []core.Agent, rhs []core.Agent) bool {

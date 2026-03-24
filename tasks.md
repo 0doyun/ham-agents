@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **CLI status attention subtitle contract baseline** 다.
+현재 활성 범위는 **CLI event presentation summary contract baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -120,7 +120,12 @@
 - [x] daemon-backed attention subtitle baseline 추가
 - [x] CLI status attention contract baseline 추가
 - [x] CLI status attention subtitle contract baseline 추가
-- [ ] CLI ui baseline 추가
+- [x] CLI ui baseline 추가
+- [x] lifecycle-aware event presentation baseline 추가
+- [x] daemon-backed event presentation hint baseline 추가
+- [x] CLI event presentation hint contract baseline 추가
+- [x] daemon-backed lifecycle summary baseline 추가
+- [ ] CLI event presentation summary contract baseline 추가
 
 ### Current Slice Checklist
 
@@ -237,9 +242,24 @@
 - [x] `ham status --json` 에 attention subtitle fields 반영
 - [x] status JSON 이 daemon attention subtitle contract 를 함께 제공
 - [x] Go tests로 CLI status attention subtitle contract baseline 보호
-- [ ] `ham ui` baseline 추가
-- [ ] menu bar executable resolution/launch plan 정리
-- [ ] Go tests로 CLI ui baseline 보호
+- [x] `ham ui` baseline 추가
+- [x] menu bar executable resolution/launch plan 정리
+- [x] Go tests로 CLI ui baseline 보호
+- [x] `agent.status_updated` presentation 이 lifecycle state 를 더 직접 반영
+- [x] registration presentation 이 mode context 를 더 직접 반영
+- [x] Swift tests로 lifecycle-aware event presentation baseline 보호
+- [x] daemon event payload 에 presentation hint 필드 추가
+- [x] Swift presenter 가 daemon hint 를 우선 사용
+- [x] Go/Swift tests로 daemon-backed event presentation hint baseline 보호
+- [x] `ham events --json` 이 event presentation hint 필드를 유지
+- [x] `ham logs --json` 도 same event hint contract 를 유지
+- [x] Go tests로 CLI event presentation hint contract baseline 보호
+- [x] daemon event payload 에 presentation summary 필드 추가
+- [x] Swift recent event row 가 daemon summary hint 를 우선 사용
+- [x] Go/Swift tests로 daemon-backed lifecycle summary baseline 보호
+- [ ] `ham events --json` 이 presentation_summary 필드를 유지
+- [ ] `ham logs --json` 도 same presentation_summary contract 를 유지
+- [ ] Go tests로 CLI event presentation summary contract baseline 보호
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호
