@@ -481,6 +481,7 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 			refreshed[index].StatusConfidence = 0.75
 			refreshed[index].StatusReason = "Session missing from iTerm session list."
 			refreshed[index].SessionIsActive = false
+			clearAttachedShellState(&refreshed[index])
 			refreshed[index].LastEventAt = now
 			refreshed[index].LastUserVisibleSummary = "Attached session disappeared from iTerm."
 			events = append(events, core.Event{
@@ -541,6 +542,14 @@ func statusTransitionSummary(agent core.Agent) string {
 		return fmt.Sprintf("Status changed to %s.", agent.Status)
 	}
 	return fmt.Sprintf("Status changed to %s. %s", agent.Status, strings.TrimSpace(agent.StatusReason))
+}
+
+func clearAttachedShellState(agent *core.Agent) {
+	agent.SessionTTY = ""
+	agent.SessionWorkingDirectory = ""
+	agent.SessionActivity = ""
+	agent.SessionProcessID = 0
+	agent.SessionCommand = ""
 }
 
 func (r *Registry) RefreshObserved(ctx context.Context) error {

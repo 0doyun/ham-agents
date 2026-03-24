@@ -648,3 +648,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer attached shell-state fidelity follow-up, stronger feed semantics, lower-latency visual polish
+
+### 2026-03-25 (richer attached shell-state fidelity follow-up)
+- attached shell-state follow-up 으로 stale disconnect metadata 를 정리해, attached session 이 끊기면 tty/cwd/activity/pid/command 정보가 그대로 남아 misleading 하지 않게 만들었다.
+- iTerm adapter 쪽도 shell-only noise 를 더 줄여 shell command 는 숨기고 foreground tool 신호가 있으면 그쪽을 우선 사용하도록 보정했다.
+- Go tests 로 disconnect 시 stale shell-state clearing 과 shell-noise normalization behavior 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: runtime coordinator follow-up, stronger feed semantics, lower-latency visual polish

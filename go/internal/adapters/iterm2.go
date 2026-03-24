@@ -163,6 +163,7 @@ func enrichAttachableSessions(sessions []core.AttachableSession, runner ScriptOu
 			sessions[index].Command = command
 			sessions[index].WorkingDirectory = workingDirectoryForPID(runner, strconv.Itoa(pid))
 		}
+		sessions[index] = normalizeAttachableSession(sessions[index])
 	}
 
 	return sessions
@@ -273,4 +274,14 @@ func commandBase(command string) string {
 		return ""
 	}
 	return filepath.Base(fields[0])
+}
+
+func normalizeAttachableSession(session core.AttachableSession) core.AttachableSession {
+	if session.Activity == "shell" {
+		session.Command = ""
+	}
+	if session.WorkingDirectory == "" && session.Activity == "" {
+		session.TTY = ""
+	}
+	return session
 }

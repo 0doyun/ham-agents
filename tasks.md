@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **richer attached shell-state fidelity follow-up** 다.
+현재 활성 범위는 **runtime coordinator follow-up** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -103,7 +103,8 @@
 - [x] runtime lifecycle transition baseline 추가
 - [x] runtime coordinator baseline 추가
 - [x] runtime transition consistency baseline 추가
-- [ ] richer attached shell-state fidelity follow-up 추가
+- [x] richer attached shell-state fidelity follow-up 추가
+- [ ] runtime coordinator follow-up 추가
 
 ### Current Slice Checklist
 
@@ -163,9 +164,12 @@
 - [x] runtime snapshot/list transition consistency 추가 개선
 - [x] transition helper reuse 범위 확장
 - [x] Go tests로 transition consistency baseline 보호
-- [ ] attached shell-state metadata freshness 개선
-- [ ] shell-state display/value prioritization 다듬기
-- [ ] Go/Swift tests로 attached shell-state follow-up 보호
+- [x] attached shell-state metadata freshness 개선
+- [x] shell-state display/value prioritization 다듬기
+- [x] Go/Swift tests로 attached shell-state follow-up 보호
+- [ ] runtime coordinator helper 적용 범위 추가 확장
+- [ ] read/write transition consistency 추가 정리
+- [ ] Go tests로 runtime coordinator follow-up 보호
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호
