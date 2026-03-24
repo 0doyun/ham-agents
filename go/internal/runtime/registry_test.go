@@ -2,6 +2,7 @@ package runtime_test
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -13,8 +14,13 @@ func TestRegisterManagedPersistsAndBuildsSnapshot(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	statePath := filepath.Join(t.TempDir(), "managed-agents.json")
-	registry := runtime.NewRegistry(store.NewFileAgentStore(statePath))
+	root := t.TempDir()
+	statePath := filepath.Join(root, "managed-agents.json")
+	eventPath := filepath.Join(root, "events.jsonl")
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(statePath),
+		store.NewFileEventStore(eventPath),
+	)
 
 	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
 		Provider:    "codex",
@@ -50,5 +56,53 @@ func TestRegisterManagedPersistsAndBuildsSnapshot(t *testing.T) {
 	}
 	if snapshot.RunningCount() != 1 {
 		t.Fatalf("expected running count 1, got %d", snapshot.RunningCount())
+	}
+
+	events, err := store.NewFileEventStore(eventPath).Load(ctx)
+	if err != nil {
+		t.Fatalf("load events: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	if events[0].AgentID != agent.ID {
+		t.Fatalf("unexpected event agent id %q", events[0].AgentID)
+	}
+}
+
+func TestRegisterManagedSucceedsWhenEventLogAppendFails(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	statePath := filepath.Join(root, "managed-agents.json")
+	eventPath := filepath.Join(root, "events")
+	if err := os.MkdirAll(eventPath, 0o755); err != nil {
+		t.Fatalf("create event directory: %v", err)
+	}
+
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(statePath),
+		store.NewFileEventStore(eventPath),
+	)
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider:    "claude",
+		DisplayName: "builder",
+		ProjectPath: "/tmp/project",
+	})
+	if err != nil {
+		t.Fatalf("register managed with failing event log should succeed: %v", err)
+	}
+	if agent.ID == "" {
+		t.Fatal("expected agent id to be populated")
+	}
+
+	listed, err := registry.List(ctx)
+	if err != nil {
+		t.Fatalf("list agents: %v", err)
+	}
+	if len(listed) != 1 {
+		t.Fatalf("expected persisted agent despite event failure, got %d", len(listed))
 	}
 }

@@ -1,0 +1,127 @@
+package store
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+
+	"github.com/ham-agents/ham-agents/go/internal/core"
+)
+
+type EventStore interface {
+	Append(ctx context.Context, event core.Event) error
+	Load(ctx context.Context) ([]core.Event, error)
+}
+
+type FileEventStore struct {
+	path string
+	mu   sync.Mutex
+}
+
+func NewFileEventStore(path string) *FileEventStore {
+	return &FileEventStore{path: path}
+}
+
+func DefaultEventLogPath() (string, error) {
+	if root := os.Getenv("HAM_AGENTS_HOME"); root != "" {
+		return filepath.Join(root, "events.jsonl"), nil
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve user home: %w", err)
+	}
+
+	return filepath.Join(homeDir, "Library", "Application Support", "ham-agents", "events.jsonl"), nil
+}
+
+func (s *FileEventStore) Append(ctx context.Context, event core.Event) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
+	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
+		return fmt.Errorf("create event log directory: %w", err)
+	}
+
+	payload, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("marshal event: %w", err)
+	}
+
+	file, err := os.OpenFile(s.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("open event log: %w", err)
+	}
+	defer file.Close()
+
+	if _, err := file.Write(append(payload, '\n')); err != nil {
+		return fmt.Errorf("append event: %w", err)
+	}
+
+	return nil
+}
+
+func (s *FileEventStore) Load(ctx context.Context) ([]core.Event, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	payload, err := os.ReadFile(s.path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return []core.Event{}, nil
+		}
+		return nil, fmt.Errorf("read event log: %w", err)
+	}
+
+	if len(payload) == 0 {
+		return []core.Event{}, nil
+	}
+
+	lines := bytesSplitLines(payload)
+	events := make([]core.Event, 0, len(lines))
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
+		}
+
+		var event core.Event
+		if err := json.Unmarshal(line, &event); err != nil {
+			return nil, fmt.Errorf("decode event: %w", err)
+		}
+		events = append(events, event)
+	}
+
+	return events, nil
+}
+
+func bytesSplitLines(payload []byte) [][]byte {
+	lines := make([][]byte, 0)
+	start := 0
+	for index, value := range payload {
+		if value != '\n' {
+			continue
+		}
+		lines = append(lines, payload[start:index])
+		start = index + 1
+	}
+	if start < len(payload) {
+		lines = append(lines, payload[start:])
+	}
+	return lines
+}

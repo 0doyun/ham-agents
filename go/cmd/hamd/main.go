@@ -29,7 +29,14 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
-	registry := runtime.NewRegistry(store.NewFileAgentStore(statePath))
+	eventPath, err := store.DefaultEventLogPath()
+	if err != nil {
+		return err
+	}
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(statePath),
+		store.NewFileEventStore(eventPath),
+	)
 
 	command := "serve"
 	if len(args) > 0 {
@@ -50,10 +57,13 @@ func run(args []string) error {
 			return err
 		}
 		if *once {
-			fmt.Printf("hamd bootstrap ready: tracked=%d socket=%s state=%s\n", snapshot.TotalCount(), ipcConfig.SocketPath, statePath)
+			fmt.Printf("hamd bootstrap ready: tracked=%d socket=%s state=%s events=%s\n", snapshot.TotalCount(), ipcConfig.SocketPath, statePath, eventPath)
 			return nil
 		}
-		return fmt.Errorf("long-running daemon mode is not implemented yet; use --once")
+
+		server := ipc.NewServer(ipcConfig.SocketPath, registry)
+		fmt.Printf("hamd serving on %s\n", ipcConfig.SocketPath)
+		return server.Serve(ctx)
 	case "snapshot":
 		snapshot, err := registry.Snapshot(ctx)
 		if err != nil {

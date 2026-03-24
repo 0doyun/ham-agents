@@ -121,7 +121,7 @@
 
 - `go/internal/core` owns the canonical managed-agent model for the new backend path.
 - `go/internal/store` persists the managed registry to a local JSON file under `HAM_AGENTS_HOME` or `~/Library/Application Support/ham-agents/`.
-- `go/internal/runtime` exposes register/list/snapshot behavior for managed agents.
-- `go/cmd/ham` currently talks directly to the runtime/store layer for `run`, `list`, and `status`.
-- `go/cmd/hamd` is bootstrapped as the daemon entrypoint and currently exposes snapshot/bootstrap status while the full IPC server is still pending.
-- `go/internal/ipc` currently fixes the default socket path and command boundary without starting the full daemon transport yet.
+- `go/internal/runtime` exposes register/list/snapshot behavior for managed agents and appends lifecycle events to the local event log.
+- `go/internal/ipc` now owns the JSON request/response contract, Unix socket server, and daemon client used by the CLI.
+- `go/cmd/ham` now talks to `hamd` over the local Unix socket for `run`, `list`, and `status`.
+- `go/cmd/hamd` serves the runtime over the socket in normal mode and still supports `serve --once` / `snapshot` bootstrap inspection commands.

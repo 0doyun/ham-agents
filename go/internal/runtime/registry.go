@@ -22,15 +22,17 @@ type RegisterManagedInput struct {
 
 type Registry struct {
 	store      store.AgentStore
+	eventStore store.EventStore
 	clock      func() time.Time
 	idProvider func(time.Time) string
 	hostname   func() (string, error)
 }
 
-func NewRegistry(agentStore store.AgentStore) *Registry {
+func NewRegistry(agentStore store.AgentStore, eventStore store.EventStore) *Registry {
 	return &Registry{
-		store: agentStore,
-		clock: time.Now,
+		store:      agentStore,
+		eventStore: eventStore,
+		clock:      time.Now,
 		idProvider: func(now time.Time) string {
 			return fmt.Sprintf("managed-%d", now.UnixNano())
 		},
@@ -88,6 +90,17 @@ func (r *Registry) RegisterManaged(ctx context.Context, input RegisterManagedInp
 	agents = append(agents, agent)
 	if err := r.store.SaveAgents(ctx, agents); err != nil {
 		return core.Agent{}, err
+	}
+
+	if r.eventStore != nil {
+		event := core.Event{
+			ID:         fmt.Sprintf("event-%d", now.UnixNano()),
+			AgentID:    agent.ID,
+			Type:       core.EventTypeAgentRegistered,
+			Summary:    agent.LastUserVisibleSummary,
+			OccurredAt: now,
+		}
+		_ = r.eventStore.Append(ctx, event)
 	}
 
 	return agent, nil

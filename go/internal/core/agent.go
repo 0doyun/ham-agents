@@ -55,6 +55,20 @@ type RuntimeSnapshot struct {
 	GeneratedAt time.Time `json:"generated_at"`
 }
 
+type EventType string
+
+const (
+	EventTypeAgentRegistered EventType = "agent.registered"
+)
+
+type Event struct {
+	ID         string    `json:"id"`
+	AgentID    string    `json:"agent_id"`
+	Type       EventType `json:"type"`
+	Summary    string    `json:"summary"`
+	OccurredAt time.Time `json:"occurred_at"`
+}
+
 func (s RuntimeSnapshot) TotalCount() int {
 	return len(s.Agents)
 }

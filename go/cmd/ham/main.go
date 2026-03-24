@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/ham-agents/ham-agents/go/internal/ipc"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
-	"github.com/ham-agents/ham-agents/go/internal/store"
 )
 
 func main() {
@@ -21,42 +21,41 @@ func main() {
 
 func run(args []string) error {
 	ctx := context.Background()
-	registry, statePath, err := newRegistry()
+	client, socketPath, err := newClient()
 	if err != nil {
 		return err
 	}
 
 	if len(args) == 0 {
-		printHelp(statePath)
+		printHelp(socketPath)
 		return nil
 	}
 
 	switch args[0] {
 	case "help", "--help", "-h":
-		printHelp(statePath)
+		printHelp(socketPath)
 		return nil
 	case "run":
-		return runRegister(ctx, registry, args[1:])
+		return runRegister(ctx, client, args[1:])
 	case "list":
-		return runList(ctx, registry, args[1:])
+		return runList(ctx, client, args[1:])
 	case "status":
-		return runStatus(ctx, registry, args[1:])
+		return runStatus(ctx, client, args[1:])
 	default:
 		return fmt.Errorf("unsupported command %q", args[0])
 	}
 }
 
-func newRegistry() (*runtime.Registry, string, error) {
-	statePath, err := store.DefaultStatePath()
+func newClient() (*ipc.Client, string, error) {
+	socketPath, err := ipc.DefaultSocketPath()
 	if err != nil {
 		return nil, "", err
 	}
 
-	agentStore := store.NewFileAgentStore(statePath)
-	return runtime.NewRegistry(agentStore), statePath, nil
+	return ipc.NewClient(socketPath), socketPath, nil
 }
 
-func printHelp(statePath string) {
+func printHelp(socketPath string) {
 	fmt.Printf(`ham-agents Go CLI bootstrap
 
 Usage:
@@ -65,18 +64,18 @@ Usage:
   ham list [--json]
   ham status [--json]
 
-State path:
+Daemon socket:
   %s
-`, statePath)
+`, socketPath)
 }
 
-func runRegister(ctx context.Context, registry *runtime.Registry, args []string) error {
+func runRegister(ctx context.Context, client *ipc.Client, args []string) error {
 	input, err := parseRunInput(args)
 	if err != nil {
 		return err
 	}
 
-	agent, err := registry.RegisterManaged(ctx, input)
+	agent, err := client.RunManaged(ctx, input)
 	if err != nil {
 		return err
 	}
@@ -85,7 +84,7 @@ func runRegister(ctx context.Context, registry *runtime.Registry, args []string)
 	return nil
 }
 
-func runList(ctx context.Context, registry *runtime.Registry, args []string) error {
+func runList(ctx context.Context, client *ipc.Client, args []string) error {
 	flags := flag.NewFlagSet("list", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 	asJSON := flags.Bool("json", false, "emit JSON")
@@ -93,7 +92,7 @@ func runList(ctx context.Context, registry *runtime.Registry, args []string) err
 		return err
 	}
 
-	agents, err := registry.List(ctx)
+	agents, err := client.ListAgents(ctx)
 	if err != nil {
 		return err
 	}
@@ -113,7 +112,7 @@ func runList(ctx context.Context, registry *runtime.Registry, args []string) err
 	return nil
 }
 
-func runStatus(ctx context.Context, registry *runtime.Registry, args []string) error {
+func runStatus(ctx context.Context, client *ipc.Client, args []string) error {
 	flags := flag.NewFlagSet("status", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 	asJSON := flags.Bool("json", false, "emit JSON")
@@ -121,7 +120,7 @@ func runStatus(ctx context.Context, registry *runtime.Registry, args []string) e
 		return err
 	}
 
-	snapshot, err := registry.Snapshot(ctx)
+	snapshot, err := client.Status(ctx)
 	if err != nil {
 		return err
 	}
