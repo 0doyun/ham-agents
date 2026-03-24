@@ -23,7 +23,10 @@ final class QuickMessagePlannerTests: XCTestCase {
 
         XCTAssertEqual(
             plan,
-            .terminalWrite(target: .externalURL(URL(string: "iterm2://session/abc")!), message: "hello")
+            .terminalWrite(
+                target: .itermSession(id: "abc", url: URL(string: "iterm2://session/abc")!),
+                message: "hello"
+            )
         )
     }
 

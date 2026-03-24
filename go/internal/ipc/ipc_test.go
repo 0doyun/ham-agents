@@ -105,8 +105,11 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open target via client: %v", err)
 	}
-	if target.Kind != "external_url" {
+	if target.Kind != "iterm_session" {
 		t.Fatalf("unexpected open target kind %q", target.Kind)
+	}
+	if target.SessionID != "abc" {
+		t.Fatalf("unexpected session id %q", target.SessionID)
 	}
 
 	settings, err := client.Settings(context.Background())

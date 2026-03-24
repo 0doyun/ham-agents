@@ -374,3 +374,14 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer attached/iTerm session identification/send acknowledgement, broader settings sections, live event stream/follow integration
+
+### 2026-03-25 (richer attached/iTerm session identification baseline)
+- daemon open-target resolution 이 `iterm2://session/<id>` 를 generic URL 대신 structured `iterm_session` target 으로 해석하고, `session_id` 를 함께 전달하도록 확장했다.
+- `ham open` / `ham ask` 는 daemon이 계산한 structured target 을 그대로 재사용하고, Go quick-message sender 는 iTerm current session 대신 matching session id 를 우선 찾아 write 하도록 정교화했다.
+- Swift `SessionTargetPlanner`, menu bar session opener, quick-message sender 도 같은 session-id parsing 규칙을 사용해 specific iTerm session focus/write 를 먼저 시도하고, 실패 시 기존 URL/workspace fallback 을 유지한다.
+- Go/Swift tests 로 iTerm session target parsing, open-target payload, quick-message targeting behavior 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: attach picker / iTerm session listing baseline, broader settings sections, live event stream/follow integration

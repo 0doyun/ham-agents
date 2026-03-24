@@ -64,20 +64,25 @@ func (s QuickMessageSender) tryTerminalWrite(target core.OpenTarget, message str
 		if err := s.runner.Run("open", target.Value); err != nil {
 			return err
 		}
+		return s.runner.Run("osascript", "-e", appleScriptWrite(message))
+	case core.OpenTargetKindItermSession:
+		if err := s.runner.Run("open", target.Value); err != nil {
+			return err
+		}
+		return s.runner.Run("osascript", "-e", appleScriptWriteToSession(target.SessionID, message))
 	case core.OpenTargetKindWorkspace:
 		if err := s.runner.Run("open", "-a", "iTerm", target.Value); err != nil {
 			return err
 		}
+		return s.runner.Run("osascript", "-e", appleScriptWrite(message))
 	default:
 		return fmt.Errorf("unsupported target kind %q", target.Kind)
 	}
-
-	return s.runner.Run("osascript", "-e", appleScriptWrite(message))
 }
 
 func (s QuickMessageSender) openTarget(target core.OpenTarget) error {
 	switch target.Kind {
-	case core.OpenTargetKindExternalURL, core.OpenTargetKindWorkspace:
+	case core.OpenTargetKindExternalURL, core.OpenTargetKindItermSession, core.OpenTargetKindWorkspace:
 		return s.runner.Run("open", target.Value)
 	default:
 		return fmt.Errorf("unsupported target kind %q", target.Kind)
@@ -92,6 +97,35 @@ func appleScriptWrite(message string) string {
 	script.WriteString(`    tell current window` + "\n")
 	script.WriteString(`        tell current session` + "\n")
 	script.WriteString(`            write text "` + escaped + `"` + "\n")
+	script.WriteString(`        end tell` + "\n")
+	script.WriteString(`    end tell` + "\n")
+	script.WriteString(`end tell`)
+	return script.String()
+}
+
+func appleScriptWriteToSession(sessionID string, message string) string {
+	if strings.TrimSpace(sessionID) == "" {
+		return appleScriptWrite(message)
+	}
+
+	escapedMessage := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(message)
+	escapedSessionID := strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(sessionID)
+	var script bytes.Buffer
+	script.WriteString(`tell application "iTerm"` + "\n")
+	script.WriteString(`    activate` + "\n")
+	script.WriteString(`    repeat with aWindow in windows` + "\n")
+	script.WriteString(`        repeat with aTab in tabs of aWindow` + "\n")
+	script.WriteString(`            repeat with aSession in sessions of aTab` + "\n")
+	script.WriteString(`                if id of aSession is "` + escapedSessionID + `" then` + "\n")
+	script.WriteString(`                    tell aSession to write text "` + escapedMessage + `"` + "\n")
+	script.WriteString(`                    return` + "\n")
+	script.WriteString(`                end if` + "\n")
+	script.WriteString(`            end repeat` + "\n")
+	script.WriteString(`        end repeat` + "\n")
+	script.WriteString(`    end repeat` + "\n")
+	script.WriteString(`    tell current window` + "\n")
+	script.WriteString(`        tell current session` + "\n")
+	script.WriteString(`            write text "` + escapedMessage + `"` + "\n")
 	script.WriteString(`        end tell` + "\n")
 	script.WriteString(`    end tell` + "\n")
 	script.WriteString(`end tell`)

@@ -2,6 +2,7 @@ package adapters
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
@@ -14,8 +15,9 @@ func TestQuickMessageSenderUsesTerminalWriteWhenCommandsSucceed(t *testing.T) {
 	sender := NewQuickMessageSender(runner)
 
 	result, err := sender.Send(core.OpenTarget{
-		Kind:  core.OpenTargetKindExternalURL,
-		Value: "iterm2://session/abc",
+		Kind:      core.OpenTargetKindItermSession,
+		Value:     "iterm2://session/abc",
+		SessionID: "abc",
 	}, "hello")
 	if err != nil {
 		t.Fatalf("send message: %v", err)
@@ -28,6 +30,9 @@ func TestQuickMessageSenderUsesTerminalWriteWhenCommandsSucceed(t *testing.T) {
 	}
 	if runner.calls[0].name != "open" || runner.calls[1].name != "osascript" {
 		t.Fatalf("unexpected calls %#v", runner.calls)
+	}
+	if len(runner.calls[1].args) < 2 || !strings.Contains(runner.calls[1].args[1], `id of aSession is "abc"`) {
+		t.Fatalf("expected targeted iTerm session script, got %#v", runner.calls[1].args)
 	}
 }
 
@@ -58,8 +63,8 @@ type commandCall struct {
 }
 
 type recordingRunner struct {
-	calls       []commandCall
-	inputCalls  []commandCall
+	calls        []commandCall
+	inputCalls   []commandCall
 	failOpenOnce bool
 }
 

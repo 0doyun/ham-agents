@@ -43,3 +43,4 @@
 - 2026-03-25: first Swift settings integration only exposes notification toggles from the backend settings document; broader settings sections remain later slices.
 - 2026-03-25: quiet hours baseline now stores hour-only start/end values (`22 -> 8` default) in the daemon settings document so CLI and Swift UI can round-trip the same schema.
 - 2026-03-25: quiet hours evaluation uses local current-hour checks in Swift notification filtering; when start and end hours are equal, the baseline treats that as all-day suppression instead of inventing minute-level semantics.
+- 2026-03-25: richer iTerm session identification baseline treats `iterm2://session/<id>` as a structured session target instead of a generic URL, so open/ask can aim at a specific session before falling back to current-session behavior.

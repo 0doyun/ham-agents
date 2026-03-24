@@ -237,11 +237,14 @@ func TestOpenTargetPrefersSessionRefURL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open target: %v", err)
 	}
-	if target.Kind != core.OpenTargetKindExternalURL {
-		t.Fatalf("expected external_url, got %q", target.Kind)
+	if target.Kind != core.OpenTargetKindItermSession {
+		t.Fatalf("expected iterm_session, got %q", target.Kind)
 	}
 	if target.Value != "iterm2://session/abc" {
 		t.Fatalf("unexpected target value %q", target.Value)
+	}
+	if target.SessionID != "abc" {
+		t.Fatalf("unexpected session id %q", target.SessionID)
 	}
 }
 
