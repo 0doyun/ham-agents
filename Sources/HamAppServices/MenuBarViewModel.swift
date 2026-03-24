@@ -11,6 +11,7 @@ public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
     @Published public private(set) var quickMessageFeedback: String?
+    @Published public var roleDraft = ""
 
     private let client: HamDaemonClientProtocol
     private let summaryService: MenuBarSummaryService
@@ -60,6 +61,10 @@ public final class MenuBarViewModel: ObservableObject {
     public func agent(withID id: Agent.ID?) -> Agent? {
         guard let id else { return agents.first }
         return agents.first(where: { $0.id == id }) ?? agents.first
+    }
+
+    public func setRoleDraft(from agentID: Agent.ID?) {
+        roleDraft = agent(withID: agentID)?.role ?? ""
     }
 
     public func recentEvents(forAgentID id: Agent.ID?) -> [AgentEventPayload] {
@@ -119,6 +124,24 @@ public final class MenuBarViewModel: ObservableObject {
         notificationPermissionStatus = await notificationPermissionController.requestPermission()
     }
 
+    public func saveRole(forAgentID id: Agent.ID?) async {
+        guard let id else {
+            errorMessage = "No agent selected."
+            return
+        }
+
+        do {
+            let updated = try await client.updateRole(agentID: id, role: roleDraft)
+            if let index = agents.firstIndex(where: { $0.id == updated.id }) {
+                agents[index] = updated
+            }
+            roleDraft = updated.role ?? ""
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     public func start() {
         guard !hasStarted else { return }
         hasStarted = true
@@ -166,6 +189,9 @@ public final class MenuBarViewModel: ObservableObject {
             summary = summaryValue
             agents = loadedAgentsValue
             notificationPermissionStatus = await permissionStatus
+            if roleDraft.isEmpty, let firstAgent = agents.first {
+                roleDraft = firstAgent.role ?? ""
+            }
             errorMessage = nil
 
             for candidate in candidates {

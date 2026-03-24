@@ -96,4 +96,10 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
         agent.notificationPolicy = policy
         return agent
     }
+
+    func updateRole(agentID: String, role: String) async throws -> Agent {
+        var agent = snapshot.agents.first { $0.id == agentID }!
+        agent.role = role
+        return agent
+    }
 }

@@ -153,6 +153,30 @@ func (r *Registry) UpdateNotificationPolicy(ctx context.Context, agentID string,
 	return core.Agent{}, fmt.Errorf("agent %q not found", agentID)
 }
 
+func (r *Registry) UpdateRole(ctx context.Context, agentID string, role string) (core.Agent, error) {
+	agents, err := r.store.LoadAgents(ctx)
+	if err != nil {
+		return core.Agent{}, err
+	}
+
+	trimmedRole := strings.TrimSpace(role)
+
+	for index, agent := range agents {
+		if agent.ID != agentID {
+			continue
+		}
+
+		agents[index].Role = trimmedRole
+		agents[index].LastEventAt = r.clock().UTC()
+		if err := r.store.SaveAgents(ctx, agents); err != nil {
+			return core.Agent{}, err
+		}
+		return agents[index], nil
+	}
+
+	return core.Agent{}, fmt.Errorf("agent %q not found", agentID)
+}
+
 func (r *Registry) Events(ctx context.Context, limit int) ([]core.Event, error) {
 	if r.eventStore == nil {
 		return []core.Event{}, nil

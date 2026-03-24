@@ -136,6 +136,12 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{Agent: &agent}, nil
+	case CommandSetRole:
+		agent, err := s.registry.UpdateRole(ctx, request.AgentID, request.Role)
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Agent: &agent}, nil
 	default:
 		return Response{}, fmt.Errorf("unsupported command %q", request.Command)
 	}
