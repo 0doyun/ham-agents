@@ -2,6 +2,7 @@ import SwiftUI
 import HamAppServices
 import HamCore
 import HamNotifications
+import AppKit
 
 @main
 struct HamMenuBarApp: App {
@@ -29,7 +30,8 @@ struct HamMenuBarApp: App {
         }
         let viewModel = MenuBarViewModel(
             client: client,
-            notificationSink: UserNotificationSink()
+            notificationSink: UserNotificationSink(),
+            projectOpener: WorkspaceProjectOpener()
         )
         viewModel.start()
         return viewModel
@@ -100,7 +102,10 @@ private struct MenuBarContentView: View {
 
             AgentDetailView(
                 agent: viewModel.agent(withID: selectedAgentID),
-                recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID)
+                recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID),
+                openProject: {
+                    viewModel.openProject(forAgentID: selectedAgentID)
+                }
             )
             .frame(minWidth: 140, maxWidth: .infinity, alignment: .topLeading)
         }
@@ -121,6 +126,7 @@ private struct MenuBarContentView: View {
 private struct AgentDetailView: View {
     let agent: Agent?
     let recentEvents: [AgentEventPayload]
+    let openProject: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -142,6 +148,11 @@ private struct AgentDetailView: View {
                     Text(summary)
                         .font(.caption)
                 }
+
+                Button("Open Project Folder") {
+                    openProject()
+                }
+                .buttonStyle(.bordered)
 
                 Text("Recent Events")
                     .font(.caption.weight(.semibold))
@@ -227,5 +238,11 @@ private struct PreviewDaemonClient: HamDaemonClientProtocol {
                 occurredAt: .now
             )
         ]
+    }
+}
+
+private struct WorkspaceProjectOpener: ProjectOpening {
+    func openProject(at path: String) {
+        NSWorkspace.shared.open(URL(fileURLWithPath: path))
     }
 }

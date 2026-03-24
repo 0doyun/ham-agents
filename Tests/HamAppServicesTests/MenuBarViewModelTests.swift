@@ -203,6 +203,37 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-2").count, 1)
         XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-2").first?.summary, "Other agent registered.")
     }
+
+    func testOpenProjectUsesInjectedOpener() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let opener = RecordingProjectOpener()
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            ),
+            projectOpener: opener
+        )
+
+        await viewModel.refresh()
+        viewModel.openProject(forAgentID: "agent-1")
+
+        XCTAssertEqual(opener.openedPaths, ["/tmp/app"])
+    }
 }
 
 private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
@@ -316,5 +347,13 @@ private final class RecordingNotificationSink: NotificationSink, @unchecked Send
         lock.lock()
         defer { lock.unlock() }
         candidates.append(candidate)
+    }
+}
+
+private final class RecordingProjectOpener: ProjectOpening, @unchecked Sendable {
+    private(set) var openedPaths: [String] = []
+
+    func openProject(at path: String) {
+        openedPaths.append(path)
     }
 }

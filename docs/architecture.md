@@ -134,3 +134,4 @@
 - `HamNotifications` now owns transition-based notification candidate generation and a sink boundary so later macOS notification delivery can attach without changing polling logic.
 - `HamNotifications` now also includes a `UserNotifications`-backed sink so the current polling/menu bar flow can emit real macOS notification requests.
 - The current popover baseline includes agent selection, detail metadata, and per-agent recent-event context without requiring a second backend query path.
+- Baseline popover actions currently start with project-folder opening via an injected opener boundary so later iTerm/session actions can follow the same pattern.
