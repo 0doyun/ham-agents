@@ -209,3 +209,13 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: real terminal write automation for iTerm, backend-persisted notification settings, live event stream/follow integration
+
+### 2026-03-25 (iTerm quick message write baseline)
+- `QuickMessagePlanner` 를 추가해 quick message path 가 terminal write 를 시도할지 clipboard handoff 로 갈지 분리했다.
+- app target sender 는 iTerm 이 준비되어 있으면 AppleScript `write text` automation 을 먼저 시도하고, 실패하면 clipboard + session/workspace opening fallback 으로 내려가도록 만들었다.
+- Swift tests로 quick message planner selection 규칙을 고정했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: richer iTerm session identification, actual send acknowledgement/error surfacing, backend-persisted notification settings

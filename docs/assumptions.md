@@ -31,4 +31,4 @@
 - 2026-03-24: permission UX baseline은 full settings screen 대신 popover에서 현재 status 표시 + explicit request button 제공으로 시작한다.
 - 2026-03-24: `sessionRef` 가 URL 로 주어지면 Swift opener는 그것을 직접 열어 session focus target 으로 취급한다. URL 이 아니면 workspace opening fallback 을 사용한다.
 - 2026-03-24: notification pause/resume baseline은 daemon persistence 대신 menu bar process-local override로 시작한다. backend settings schema가 생기면 거기로 이관한다.
-- 2026-03-25: quick message baseline은 direct terminal write automation 대신 clipboard + session opening handoff 로 시작한다. 실제 session write automation은 later iTerm slice에서 추가한다.
+- 2026-03-25: quick message baseline은 iTerm write automation을 우선 시도하고, 실패 시 clipboard + session opening handoff 로 fallback 한다.

@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **quick message action baseline** 다.
+현재 활성 범위는 **iTerm quick message write baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -58,13 +58,14 @@
 - [x] sessionRef URL 이 있으면 이를 우선 사용하고 없으면 workspace fallback 하도록 세분화
 - [x] popover에서 agent별 notification pause/resume action 추가
 - [x] popover에서 quick message baseline action 추가
+- [x] iTerm이 있는 경우 quick message를 실제 terminal write 로 보내는 baseline 추가
 
 ### Current Slice Checklist
 
-- [x] quick message sender boundary 추가
-- [x] popover detail pane에 draft input + send action 추가
-- [x] iTerm/clipboard fallback sender baseline 추가
-- [x] Swift tests로 message action wiring 보호
+- [x] iTerm write automation boundary 추가
+- [x] AppleScript/automation baseline sender 추가
+- [x] clipboard fallback 유지
+- [x] Swift tests로 write-vs-fallback selection 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 
