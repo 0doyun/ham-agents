@@ -98,6 +98,7 @@ func (r *Registry) RegisterManaged(ctx context.Context, input RegisterManagedInp
 		Role:                   strings.TrimSpace(input.Role),
 		Status:                 core.AgentStatusBooting,
 		StatusConfidence:       1,
+		StatusReason:           "Managed launch requested.",
 		LastEventAt:            now,
 		LastUserVisibleSummary: "Managed session registered.",
 		NotificationPolicy:     core.NotificationPolicyDefault,
@@ -160,6 +161,7 @@ func (r *Registry) RegisterAttached(ctx context.Context, input RegisterAttachedI
 		Role:                   strings.TrimSpace(input.Role),
 		Status:                 core.AgentStatusIdle,
 		StatusConfidence:       0.6,
+		StatusReason:           "Attached to an existing iTerm session.",
 		LastEventAt:            now,
 		LastUserVisibleSummary: "Attached session registered.",
 		NotificationPolicy:     core.NotificationPolicyDefault,
@@ -222,6 +224,7 @@ func (r *Registry) RegisterObserved(ctx context.Context, input RegisterObservedI
 		Role:                   strings.TrimSpace(input.Role),
 		Status:                 core.AgentStatusIdle,
 		StatusConfidence:       0.35,
+		StatusReason:           "Waiting for observed signals.",
 		LastEventAt:            now,
 		LastUserVisibleSummary: "Observed source registered.",
 		NotificationPolicy:     core.NotificationPolicyDefault,
@@ -526,6 +529,7 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 		case !attached && agent.Status != core.AgentStatusDisconnected:
 			refreshed[index].Status = core.AgentStatusDisconnected
 			refreshed[index].StatusConfidence = 0.75
+			refreshed[index].StatusReason = "Session missing from iTerm session list."
 			refreshed[index].SessionIsActive = false
 			refreshed[index].LastEventAt = now
 			refreshed[index].LastUserVisibleSummary = "Attached session disappeared from iTerm."
@@ -538,6 +542,7 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 		case attached && agent.Status == core.AgentStatusDisconnected:
 			refreshed[index].Status = core.AgentStatusIdle
 			refreshed[index].StatusConfidence = 0.6
+			refreshed[index].StatusReason = "Session reachable in iTerm again."
 			refreshed[index].LastEventAt = now
 			refreshed[index].LastUserVisibleSummary = "Attached session became reachable again."
 			events = append(events, core.Event{

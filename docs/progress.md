@@ -570,3 +570,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: lower-latency visual polish, stronger feed semantics, richer attached shell-state fidelity
+
+### 2026-03-25 (status reason baseline)
+- agent schema 에 `status_reason` 을 추가해 status/confidence 옆에 짧은 설명 문자열을 함께 보관할 수 있게 했다.
+- observed inference 와 attached transition paths 가 reason 을 채우도록 확장하고, registration baseline 도 간단한 initial reason 을 남기도록 정리했다.
+- Swift `Agent` decoding 과 detail UI 도 reason 을 표시하도록 맞췄고, Go/Swift tests 로 decode + observed/attached reason behavior 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: confidence/reason refinement baseline, stronger feed semantics, lower-latency visual polish

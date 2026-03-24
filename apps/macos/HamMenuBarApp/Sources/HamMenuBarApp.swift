@@ -485,6 +485,12 @@ private struct AgentDetailView: View {
                 Text("confidence \(confidenceText)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                if let statusReason = agent.statusReason, !statusReason.isEmpty {
+                    Text(statusReason)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
 
                 Text("Role")
                     .font(.caption.weight(.semibold))

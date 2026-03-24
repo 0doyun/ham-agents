@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **observed lifecycle event baseline** 다.
+현재 활성 범위는 **confidence/reason refinement baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -96,6 +96,8 @@
 - [x] attached shell-state heuristic refinement baseline 추가
 - [x] lower-latency visual polish baseline 추가
 - [x] observed lifecycle event baseline 추가
+- [x] status reason baseline 추가
+- [ ] confidence/reason refinement baseline 추가
 
 ### Current Slice Checklist
 
@@ -171,6 +173,13 @@
 - [x] observed status 변화 시 lifecycle event 기록 추가
 - [x] activity feed 가 observed lifecycle 변화를 반영하게 연결
 - [x] Go/Swift tests로 observed lifecycle event baseline 보호
+- [x] daemon/agent schema 에 status reason 추가
+- [x] observed/attached 상태 변화에 reason 채우기
+- [x] Swift UI 에 reason 일부 노출
+- [x] Go/Swift tests로 status reason baseline 보호
+- [ ] reason과 confidence를 함께 읽기 쉬운 형태로 UI refinement
+- [ ] mode별 low-confidence wording 정리
+- [ ] Go/Swift tests로 confidence/reason refinement baseline 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

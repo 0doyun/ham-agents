@@ -35,6 +35,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
     public var role: String?
     public var status: AgentStatus
     public var statusConfidence: Double
+    public var statusReason: String?
     public var lastEventAt: Date
     public var lastUserVisibleSummary: String?
     public var notificationPolicy: NotificationPolicy
@@ -58,6 +59,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         role: String? = nil,
         status: AgentStatus,
         statusConfidence: Double,
+        statusReason: String? = nil,
         lastEventAt: Date,
         lastUserVisibleSummary: String? = nil,
         notificationPolicy: NotificationPolicy = .default,
@@ -80,6 +82,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         self.role = role
         self.status = status
         self.statusConfidence = statusConfidence
+        self.statusReason = statusReason
         self.lastEventAt = lastEventAt
         self.lastUserVisibleSummary = lastUserVisibleSummary
         self.notificationPolicy = notificationPolicy
@@ -104,6 +107,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         case role
         case status
         case statusConfidence = "status_confidence"
+        case statusReason = "status_reason"
         case lastEventAt = "last_event_at"
         case lastUserVisibleSummary = "last_user_visible_summary"
         case notificationPolicy = "notification_policy"
