@@ -101,6 +101,77 @@ func TestParseLogsInputRejectsNonPositiveLimit(t *testing.T) {
 	}
 }
 
+func TestResolveUICommandPrefersEnvironmentOverride(t *testing.T) {
+	t.Parallel()
+
+	target, printOnly, asJSON, err := resolveUICommand(
+		[]string{"--json"},
+		func() (string, error) { return "/tmp/ham", nil },
+		func(key string) (string, bool) {
+			if key == "HAM_UI_EXECUTABLE" {
+				return "/tmp/custom/ham-menubar", true
+			}
+			return "", false
+		},
+		func() (string, error) { return "/tmp/project", nil },
+		func(string) (string, error) { return "", fmt.Errorf("missing") },
+	)
+	if err != nil {
+		t.Fatalf("resolve ui command: %v", err)
+	}
+	if target.Executable != "/tmp/custom/ham-menubar" {
+		t.Fatalf("unexpected target %#v", target)
+	}
+	if !asJSON || printOnly {
+		t.Fatalf("expected json true and print false")
+	}
+}
+
+func TestResolveUICommandUsesBuildArtifactFallback(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	buildPath := filepath.Join(root, ".build", "arm64-apple-macosx", "debug")
+	if err := os.MkdirAll(buildPath, 0o755); err != nil {
+		t.Fatalf("mkdir build path: %v", err)
+	}
+	expectedPath := filepath.Join(buildPath, "ham-menubar")
+	if err := os.WriteFile(expectedPath, []byte("binary"), 0o755); err != nil {
+		t.Fatalf("write build artifact: %v", err)
+	}
+
+	target, printOnly, asJSON, err := resolveUICommand(
+		[]string{"--print"},
+		func() (string, error) { return "/tmp/ham", nil },
+		func(string) (string, bool) { return "", false },
+		func() (string, error) { return root, nil },
+		func(string) (string, error) { return "", fmt.Errorf("missing") },
+	)
+	if err != nil {
+		t.Fatalf("resolve ui command: %v", err)
+	}
+	if target.Executable != expectedPath {
+		t.Fatalf("unexpected target %#v", target)
+	}
+	if !printOnly || asJSON {
+		t.Fatalf("expected print true and json false")
+	}
+}
+
+func TestResolveUICommandRejectsUnexpectedArgument(t *testing.T) {
+	t.Parallel()
+
+	if _, _, _, err := resolveUICommand(
+		[]string{"unexpected"},
+		func() (string, error) { return "/tmp/ham", nil },
+		func(string) (string, bool) { return "", false },
+		func() (string, error) { return "/tmp/project", nil },
+		func(string) (string, error) { return "", fmt.Errorf("missing") },
+	); err == nil {
+		t.Fatalf("expected unexpected ui argument to fail")
+	}
+}
+
 func TestRunDoctorRejectsUnexpectedArgument(t *testing.T) {
 	t.Parallel()
 
