@@ -335,6 +335,13 @@ private struct PreviewDaemonClient: HamDaemonClientProtocol {
             )
         ]
     }
+
+    func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
+        let agents = try await fetchAgents()
+        var agent = agents.first { $0.id == agentID } ?? agents.first!
+        agent.notificationPolicy = policy
+        return agent
+    }
 }
 
 private struct WorkspaceProjectOpener: ProjectOpening {
