@@ -65,6 +65,7 @@
 - 2026-03-25: runtime lifecycle transition baseline now uses a shared `Status changed to …` summary format for lifecycle transition events so feed phrasing stays consistent across observed and attached transitions.
 - 2026-03-25: runtime coordinator baseline currently means lightweight registry-side mutation/persistence/event helpers, not a separate long-lived orchestrator process or subsystem yet.
 - 2026-03-25: shared runtime coordinator helpers (`registerAgent`, `mutateAgent`, `saveAgentsAndEvents`) are intended to be the default mutation path inside `Registry`; one-off persistence should now be treated as an exception.
+- 2026-03-25: runtime transition consistency baseline now expects observed transitions triggered by poll, list, and snapshot paths to produce the same persisted state and lifecycle evidence.
 - 2026-03-25: attached shell-state heuristic refinement now prefers a non-shell foreground command on the tty when one exists, and only falls back to a generic `shell` label when the tty appears to contain shell-only noise.
 - 2026-03-25: status reason strings are currently concise backend-authored heuristics and the Swift UI uses confidence-aware wording (`likely ...`, `low/medium/high confidence`) to avoid overstating low-confidence inferred states.
 - 2026-03-25: status reason baseline stores a short operator-facing explanation alongside status/confidence; for now observed and attached reasons are heuristic strings, not provider-authored ground truth.

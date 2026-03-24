@@ -277,6 +277,43 @@ func TestSnapshotRefreshesObservedAgentAndPersistsLifecycleEvent(t *testing.T) {
 	}
 }
 
+func TestListObservedRefreshSavesExactlyOncePerObservedTransition(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	source := filepath.Join(root, "observed.log")
+	if err := os.WriteFile(source, []byte("question?"), 0o644); err != nil {
+		t.Fatalf("write observed source: %v", err)
+	}
+
+	countingStore := &countingAgentStore{
+		AgentStore: store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+	}
+	registry := runtime.NewRegistry(
+		countingStore,
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	if _, err := registry.RegisterObserved(ctx, runtime.RegisterObservedInput{
+		Provider:    "log",
+		DisplayName: "observer",
+		ProjectPath: "/tmp/project",
+		SessionRef:  source,
+	}); err != nil {
+		t.Fatalf("register observed: %v", err)
+	}
+
+	beforeListSaves := countingStore.saveCalls
+	if _, err := registry.List(ctx); err != nil {
+		t.Fatalf("list agents: %v", err)
+	}
+
+	if countingStore.saveCalls-beforeListSaves != 1 {
+		t.Fatalf("expected exactly one save during list-driven observed refresh, got %d", countingStore.saveCalls-beforeListSaves)
+	}
+}
+
 func TestOpenTargetPrefersSessionRefURL(t *testing.T) {
 	t.Parallel()
 
@@ -310,6 +347,16 @@ func TestOpenTargetPrefersSessionRefURL(t *testing.T) {
 	if target.SessionID != "abc" {
 		t.Fatalf("unexpected session id %q", target.SessionID)
 	}
+}
+
+type countingAgentStore struct {
+	store.AgentStore
+	saveCalls int
+}
+
+func (s *countingAgentStore) SaveAgents(ctx context.Context, agents []core.Agent) error {
+	s.saveCalls++
+	return s.AgentStore.SaveAgents(ctx, agents)
 }
 
 func TestRefreshAttachedMarksMissingSessionsDisconnected(t *testing.T) {
