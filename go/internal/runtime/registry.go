@@ -404,6 +404,21 @@ func (r *Registry) OpenTarget(ctx context.Context, agentID string) (core.OpenTar
 	return core.OpenTarget{}, fmt.Errorf("agent %q not found", agentID)
 }
 
+func (r *Registry) RefreshAttached(ctx context.Context, sessions []core.AttachableSession) error {
+	agents, err := r.store.LoadAgents(ctx)
+	if err != nil {
+		return err
+	}
+
+	now := r.clock().UTC()
+	refreshed, changed := refreshAttachedAgents(agents, sessions, now)
+	if !changed {
+		return nil
+	}
+
+	return r.store.SaveAgents(ctx, refreshed)
+}
+
 func openTargetFromSessionRef(sessionRef string) (core.OpenTarget, bool) {
 	parsed, err := url.Parse(sessionRef)
 	if err != nil || parsed.Scheme == "" {
@@ -426,6 +441,49 @@ func openTargetFromSessionRef(sessionRef string) (core.OpenTarget, bool) {
 		Kind:  core.OpenTargetKindExternalURL,
 		Value: sessionRef,
 	}, true
+}
+
+func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSession, now time.Time) ([]core.Agent, bool) {
+	if len(agents) == 0 {
+		return agents, false
+	}
+
+	activeSessionRefs := make(map[string]struct{}, len(sessions))
+	for _, session := range sessions {
+		activeSessionRefs[strings.TrimSpace(session.SessionRef)] = struct{}{}
+	}
+
+	refreshed := append([]core.Agent(nil), agents...)
+	changed := false
+
+	for index, agent := range refreshed {
+		if agent.Mode != core.AgentModeAttached {
+			continue
+		}
+
+		sessionRef := strings.TrimSpace(agent.SessionRef)
+		if sessionRef == "" {
+			continue
+		}
+
+		_, attached := activeSessionRefs[sessionRef]
+		switch {
+		case !attached && agent.Status != core.AgentStatusDisconnected:
+			refreshed[index].Status = core.AgentStatusDisconnected
+			refreshed[index].StatusConfidence = 0.75
+			refreshed[index].LastEventAt = now
+			refreshed[index].LastUserVisibleSummary = "Attached session disappeared from iTerm."
+			changed = true
+		case attached && agent.Status == core.AgentStatusDisconnected:
+			refreshed[index].Status = core.AgentStatusIdle
+			refreshed[index].StatusConfidence = 0.6
+			refreshed[index].LastEventAt = now
+			refreshed[index].LastUserVisibleSummary = "Attached session became reachable again."
+			changed = true
+		}
+	}
+
+	return refreshed, changed
 }
 
 func (r *Registry) RefreshObserved(ctx context.Context) error {
