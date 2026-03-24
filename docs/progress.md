@@ -758,6 +758,16 @@
 - 다음 우선순위 후보: richer lifecycle coverage, CLI/UI polish follow-up, daemon-backed lifecycle summary
 
 ### 2026-03-25 (CLI status attention subtitle contract baseline)
+- `ham status --json` 이 daemon-backed `attention_subtitles` map 을 함께 내보내도록 정리해, automation path 도 urgent row subtitle contract 를 직접 소비할 수 있게 만들었다.
+- human `ham status` output 은 기존 terse summary/attention line 형태를 그대로 유지하고, richer subtitle data 는 additive JSON field 로만 노출되게 분리했다.
+- Go tests 로 status JSON output 이 `attention_subtitles` 를 포함하면서 human summary wording 을 섞지 않는지 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: CLI ui baseline, richer lifecycle coverage, daemon-backed lifecycle summary
+
+### 2026-03-25 (CLI status attention subtitle contract baseline)
 - `ham status --json` 이 daemon-backed attention subtitle map 도 함께 내보내도록 정리해, automation path 에서도 urgent row subtitle contract 를 읽을 수 있게 만들었다.
 - human `ham status` output 은 기존 terse summary/attention line 형태를 유지하고, richer subtitle data 는 additive JSON field 로만 노출되게 분리했다.
 - Go tests 로 status JSON output 이 `attention_subtitles` 를 포함하면서 human summary wording 을 섞지 않는지 고정했다.

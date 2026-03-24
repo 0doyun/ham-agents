@@ -62,6 +62,8 @@ func run(args []string) error {
 		return runLogs(ctx, client, args[1:])
 	case "doctor":
 		return runDoctor(socketPath, args[1:])
+	case "ui":
+		return runUI(args[1:])
 	case "settings":
 		return runSettings(ctx, client, args[1:])
 	case "list":
@@ -99,6 +101,7 @@ Usage:
   ham stop <agent-id> [--json]
   ham logs <agent-id> [--json] [--limit N]
   ham doctor [--json]
+  ham ui [--json] [--print]
   ham settings [--json]
   ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--quiet-hours=true|false] [--quiet-start-hour=0-23] [--quiet-end-hour=0-23] [--preview-text=true|false]
   ham settings appearance [--theme=auto|day|night]
@@ -323,6 +326,27 @@ func runDoctor(socketPath string, args []string) error {
 		return err
 	}
 	return renderDoctorReport(os.Stdout, report, *asJSON)
+}
+
+func runUI(args []string) error {
+	target, printOnly, asJSON, err := resolveUICommand(args, os.Executable, os.LookupEnv, os.Getwd, exec.LookPath)
+	if err != nil {
+		return err
+	}
+
+	if asJSON {
+		return writeJSONTo(os.Stdout, target)
+	}
+	if printOnly {
+		_, err := fmt.Fprintln(os.Stdout, target.Executable)
+		return err
+	}
+
+	cmd := exec.Command(target.Executable)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("launch ham ui: %w", err)
+	}
+	return cmd.Process.Release()
 }
 
 func runSettings(ctx context.Context, client *ipc.Client, args []string) error {
@@ -852,6 +876,70 @@ func parseLogsInput(args []string) (agentID string, limit int, asJSON bool, err 
 	limit = *limitFlag
 	asJSON = *asJSONFlag
 	return
+}
+
+type uiLaunchTarget struct {
+	Executable string `json:"executable"`
+}
+
+func resolveUICommand(
+	args []string,
+	executablePath func() (string, error),
+	lookupEnv func(string) (string, bool),
+	getwd func() (string, error),
+	lookPath func(string) (string, error),
+) (target uiLaunchTarget, printOnly bool, asJSON bool, err error) {
+	flags := flag.NewFlagSet("ui", flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	asJSONFlag := flags.Bool("json", false, "emit JSON")
+	printFlag := flags.Bool("print", false, "print executable path")
+	if err = flags.Parse(args); err != nil {
+		return
+	}
+	if len(flags.Args()) > 0 {
+		err = fmt.Errorf("unexpected argument %q", flags.Args()[0])
+		return
+	}
+
+	executable, err := resolveUIExecutable(executablePath, lookupEnv, getwd, lookPath)
+	if err != nil {
+		return uiLaunchTarget{}, false, false, err
+	}
+
+	return uiLaunchTarget{Executable: executable}, *printFlag, *asJSONFlag, nil
+}
+
+func resolveUIExecutable(
+	executablePath func() (string, error),
+	lookupEnv func(string) (string, bool),
+	getwd func() (string, error),
+	lookPath func(string) (string, error),
+) (string, error) {
+	if override, ok := lookupEnv("HAM_UI_EXECUTABLE"); ok && strings.TrimSpace(override) != "" {
+		return strings.TrimSpace(override), nil
+	}
+
+	currentExecutable, err := executablePath()
+	if err == nil {
+		sibling := filepath.Join(filepath.Dir(currentExecutable), "ham-menubar")
+		if info, statErr := os.Stat(sibling); statErr == nil && !info.IsDir() {
+			return sibling, nil
+		}
+	}
+
+	workingDirectory, err := getwd()
+	if err == nil {
+		buildPath := filepath.Join(workingDirectory, ".build", "arm64-apple-macosx", "debug", "ham-menubar")
+		if info, statErr := os.Stat(buildPath); statErr == nil && !info.IsDir() {
+			return buildPath, nil
+		}
+	}
+
+	if found, lookErr := lookPath("ham-menubar"); lookErr == nil {
+		return found, nil
+	}
+
+	return "", fmt.Errorf("ham-menubar executable could not be resolved")
 }
 
 func parseBoolFlag(argument string, prefix string) (bool, error) {

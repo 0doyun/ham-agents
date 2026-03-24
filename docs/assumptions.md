@@ -91,4 +91,5 @@
 - 2026-03-25: daemon-backed attention ordering baseline lets the daemon provide the preferred urgent-agent order, but Swift still keeps a local severity/recency fallback for partial or older snapshot payloads.
 - 2026-03-25: daemon-backed attention subtitle baseline lets the daemon provide preferred urgent-row subtitle wording, but Swift keeps fallback wording generation so older/partial payloads and local follow-event rebuilds remain readable.
 - 2026-03-25: CLI status attention subtitle contract baseline keeps urgent subtitle data additive on the JSON path only; human `ham status` output stays compact and does not print the subtitle map inline.
+- 2026-03-25: CLI status attention subtitle contract baseline keeps urgent subtitle data additive on the JSON path only; human `ham status` output stays compact and does not print the subtitle map inline.
 - 2026-03-25: CLI status attention contract baseline keeps the richer attention data additive on the JSON path only; human `ham status` output stays terse and presentation-oriented.

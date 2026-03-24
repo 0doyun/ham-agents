@@ -119,7 +119,8 @@
 - [x] daemon-backed attention ordering baseline 추가
 - [x] daemon-backed attention subtitle baseline 추가
 - [x] CLI status attention contract baseline 추가
-- [ ] CLI status attention subtitle contract baseline 추가
+- [x] CLI status attention subtitle contract baseline 추가
+- [ ] CLI ui baseline 추가
 
 ### Current Slice Checklist
 
@@ -233,9 +234,12 @@
 - [x] `ham status --json` 에 attention summary fields 반영
 - [x] status JSON 이 human summary wording 없이 richer attention contract 를 제공
 - [x] Go tests로 CLI status attention contract baseline 보호
-- [ ] `ham status --json` 에 attention subtitle fields 반영
-- [ ] status JSON 이 daemon attention subtitle contract 를 함께 제공
-- [ ] Go tests로 CLI status attention subtitle contract baseline 보호
+- [x] `ham status --json` 에 attention subtitle fields 반영
+- [x] status JSON 이 daemon attention subtitle contract 를 함께 제공
+- [x] Go tests로 CLI status attention subtitle contract baseline 보호
+- [ ] `ham ui` baseline 추가
+- [ ] menu bar executable resolution/launch plan 정리
+- [ ] Go tests로 CLI ui baseline 보호
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호
