@@ -31,7 +31,8 @@ struct HamMenuBarApp: App {
         let viewModel = MenuBarViewModel(
             client: client,
             notificationSink: UserNotificationSink(),
-            projectOpener: WorkspaceProjectOpener()
+            projectOpener: WorkspaceProjectOpener(),
+            sessionOpener: ItermSessionOpener(projectOpener: WorkspaceProjectOpener())
         )
         viewModel.start()
         return viewModel
@@ -105,6 +106,9 @@ private struct MenuBarContentView: View {
                 recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID),
                 openProject: {
                     viewModel.openProject(forAgentID: selectedAgentID)
+                },
+                openSession: {
+                    viewModel.openSession(forAgentID: selectedAgentID)
                 }
             )
             .frame(minWidth: 140, maxWidth: .infinity, alignment: .topLeading)
@@ -127,6 +131,7 @@ private struct AgentDetailView: View {
     let agent: Agent?
     let recentEvents: [AgentEventPayload]
     let openProject: () -> Void
+    let openSession: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -153,6 +158,11 @@ private struct AgentDetailView: View {
                     openProject()
                 }
                 .buttonStyle(.bordered)
+
+                Button("Open in iTerm") {
+                    openSession()
+                }
+                .buttonStyle(.borderedProminent)
 
                 Text("Recent Events")
                     .font(.caption.weight(.semibold))
@@ -244,5 +254,23 @@ private struct PreviewDaemonClient: HamDaemonClientProtocol {
 private struct WorkspaceProjectOpener: ProjectOpening {
     func openProject(at path: String) {
         NSWorkspace.shared.open(URL(fileURLWithPath: path))
+    }
+}
+
+private struct ItermSessionOpener: SessionOpening {
+    let projectOpener: ProjectOpening
+
+    func openSession(for agent: Agent) {
+        let workspace = NSWorkspace.shared
+        let projectURL = URL(fileURLWithPath: agent.projectPath)
+
+        if let appPath = workspace.fullPath(forApplication: "iTerm") {
+            let appURL = URL(fileURLWithPath: appPath)
+            let configuration = NSWorkspace.OpenConfiguration()
+            workspace.open([projectURL], withApplicationAt: appURL, configuration: configuration) { _, _ in }
+            return
+        }
+
+        projectOpener.openProject(at: agent.projectPath)
     }
 }
