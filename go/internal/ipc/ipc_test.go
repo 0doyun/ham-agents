@@ -85,28 +85,41 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		t.Fatalf("unexpected mode %q", attached.Mode)
 	}
 
+	observed, err := client.ObserveSource(context.Background(), runtime.RegisterObservedInput{
+		Provider:    "log",
+		DisplayName: "observer",
+		ProjectPath: "/tmp/project",
+		SessionRef:  "/tmp/project/transcript.log",
+	})
+	if err != nil {
+		t.Fatalf("observe source via client: %v", err)
+	}
+	if observed.Mode != "observed" {
+		t.Fatalf("unexpected mode %q", observed.Mode)
+	}
+
 	agents, err := client.ListAgents(context.Background())
 	if err != nil {
 		t.Fatalf("list agents via client: %v", err)
 	}
-	if len(agents) != 2 {
-		t.Fatalf("expected 2 agents, got %d", len(agents))
+	if len(agents) != 3 {
+		t.Fatalf("expected 3 agents, got %d", len(agents))
 	}
 
 	snapshot, err := client.Status(context.Background())
 	if err != nil {
 		t.Fatalf("status via client: %v", err)
 	}
-	if snapshot.TotalCount() != 2 {
-		t.Fatalf("expected total count 2, got %d", snapshot.TotalCount())
+	if snapshot.TotalCount() != 3 {
+		t.Fatalf("expected total count 3, got %d", snapshot.TotalCount())
 	}
 
 	events, err := client.Events(context.Background(), 10)
 	if err != nil {
 		t.Fatalf("events via client: %v", err)
 	}
-	if len(events) != 2 {
-		t.Fatalf("expected 2 events, got %d", len(events))
+	if len(events) != 3 {
+		t.Fatalf("expected 3 events, got %d", len(events))
 	}
 	if events[0].AgentID != agent.ID {
 		t.Fatalf("unexpected event agent id %q", events[0].AgentID)
@@ -136,8 +149,13 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list after remove: %v", err)
 	}
-	if len(agentsAfterRemove) != 0 {
-		t.Fatalf("expected empty registry after remove, got %d", len(agentsAfterRemove))
+	if len(agentsAfterRemove) != 2 {
+		t.Fatalf("expected 2 remaining agents after remove, got %d", len(agentsAfterRemove))
+	}
+	for _, remaining := range agentsAfterRemove {
+		if remaining.ID == agent.ID {
+			t.Fatalf("managed agent %q should have been removed", agent.ID)
+		}
 	}
 
 	cancel()
