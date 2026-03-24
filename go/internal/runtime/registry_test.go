@@ -170,6 +170,14 @@ func TestListRefreshesObservedAgentFromSource(t *testing.T) {
 	if listed[0].Status != core.AgentStatusDone {
 		t.Fatalf("expected observed refresh to infer done, got %q", listed[0].Status)
 	}
+
+	events, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events: %v", err)
+	}
+	if events[len(events)-1].Type != core.EventTypeAgentStatusUpdated {
+		t.Fatalf("expected observed status event from list refresh, got %q", events[len(events)-1].Type)
+	}
 }
 
 func TestRefreshObservedUpdatesPersistedStatus(t *testing.T) {

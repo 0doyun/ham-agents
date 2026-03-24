@@ -632,9 +632,10 @@
 ### 2026-03-25 (runtime coordinator baseline)
 - registry mutation/save/event-append 경로의 중복을 줄이기 위해 shared mutation/persistence helpers (`mutateAgent`, `saveAgentsAndEvents`) 를 추가했다.
 - notification policy update, role update, removal, attached refresh, observed refresh 가 같은 persistence/event append boundary 를 재사용하도록 정리했다.
+- managed / attached / observed registration 도 shared `registerAgent` helper 로 정리해 registration path duplication 까지 줄였다.
 - 기존 Go/Swift verification 을 다시 돌려 refactor 후 behavior 가 유지되는지 확인했다.
 - 검증:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
-- 다음 우선순위 후보: richer attached shell-state fidelity, stronger feed semantics, lower-latency visual polish
+- 다음 우선순위 후보: runtime transition consistency baseline, stronger feed semantics, lower-latency visual polish
