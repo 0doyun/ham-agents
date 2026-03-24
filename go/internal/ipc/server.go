@@ -123,6 +123,12 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{Snapshot: &snapshot}, nil
+	case CommandEvents:
+		events, err := s.registry.Events(ctx, request.Limit)
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Events: events}, nil
 	default:
 		return Response{}, fmt.Errorf("unsupported command %q", request.Command)
 	}

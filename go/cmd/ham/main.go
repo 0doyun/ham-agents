@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/ipc"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
@@ -41,6 +42,8 @@ func run(args []string) error {
 		return runList(ctx, client, args[1:])
 	case "status":
 		return runStatus(ctx, client, args[1:])
+	case "events":
+		return runEvents(ctx, client, args[1:])
 	default:
 		return fmt.Errorf("unsupported command %q", args[0])
 	}
@@ -63,6 +66,7 @@ Usage:
   ham run <provider> [name] [--project path] [--role role]
   ham list [--json]
   ham status [--json]
+  ham events [--json] [--limit N]
 
 Daemon socket:
   %s
@@ -136,6 +140,32 @@ func runStatus(ctx context.Context, client *ipc.Client, args []string) error {
 	}
 
 	fmt.Printf("total=%d running=%d waiting=%d done=%d\n", snapshot.TotalCount(), snapshot.RunningCount(), snapshot.WaitingCount(), snapshot.DoneCount())
+	return nil
+}
+
+func runEvents(ctx context.Context, client *ipc.Client, args []string) error {
+	flags := flag.NewFlagSet("events", flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	asJSON := flags.Bool("json", false, "emit JSON")
+	limit := flags.Int("limit", 20, "maximum events to show")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+
+	events, err := client.Events(ctx, *limit)
+	if err != nil {
+		return err
+	}
+	if *asJSON {
+		return writeJSON(events)
+	}
+	if len(events) == 0 {
+		fmt.Println("no events")
+		return nil
+	}
+	for _, event := range events {
+		fmt.Printf("%s\t%s\t%s\t%s\n", event.OccurredAt.Format(time.RFC3339), event.Type, event.AgentID, event.Summary)
+	}
 	return nil
 }
 

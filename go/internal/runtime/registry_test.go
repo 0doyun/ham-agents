@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/ham-agents/ham-agents/go/internal/core"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
 	"github.com/ham-agents/ham-agents/go/internal/store"
 )
@@ -104,5 +105,39 @@ func TestRegisterManagedSucceedsWhenEventLogAppendFails(t *testing.T) {
 	}
 	if len(listed) != 1 {
 		t.Fatalf("expected persisted agent despite event failure, got %d", len(listed))
+	}
+}
+
+func TestEventsReturnsMostRecentEntriesWithinLimit(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	statePath := filepath.Join(root, "managed-agents.json")
+	eventPath := filepath.Join(root, "events.jsonl")
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(statePath),
+		store.NewFileEventStore(eventPath),
+	)
+
+	for _, name := range []string{"alpha", "beta"} {
+		if _, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+			Provider:    "claude",
+			DisplayName: name,
+			ProjectPath: "/tmp/project",
+		}); err != nil {
+			t.Fatalf("register managed %s: %v", name, err)
+		}
+	}
+
+	events, err := registry.Events(ctx, 1)
+	if err != nil {
+		t.Fatalf("load events: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	if events[0].Type != core.EventTypeAgentRegistered {
+		t.Fatalf("unexpected event type %q", events[0].Type)
 	}
 }

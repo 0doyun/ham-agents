@@ -130,3 +130,18 @@ func (r *Registry) Snapshot(ctx context.Context) (core.RuntimeSnapshot, error) {
 
 	return core.RuntimeSnapshot{Agents: agents, GeneratedAt: r.clock().UTC()}, nil
 }
+
+func (r *Registry) Events(ctx context.Context, limit int) ([]core.Event, error) {
+	if r.eventStore == nil {
+		return []core.Event{}, nil
+	}
+
+	events, err := r.eventStore.Load(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if limit <= 0 || len(events) <= limit {
+		return events, nil
+	}
+	return events[len(events)-limit:], nil
+}
