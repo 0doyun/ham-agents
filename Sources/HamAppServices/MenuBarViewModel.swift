@@ -34,11 +34,13 @@ public final class MenuBarViewModel: ObservableObject {
     private let sessionOpener: SessionOpening
     private let quickMessageSender: QuickMessageSending
     private let pollIntervalNanoseconds: UInt64
+    private let eventFollowWaitMilliseconds: Int
     private let sleep: @Sendable (UInt64) async throws -> Void
     private let now: @Sendable () -> Date
     private let calendar: Calendar
     private var hasStarted = false
     private var refreshTask: Task<Void, Never>?
+    private var eventFollowTask: Task<Void, Never>?
 
     public init(
         client: HamDaemonClientProtocol,
@@ -49,6 +51,7 @@ public final class MenuBarViewModel: ObservableObject {
         sessionOpener: SessionOpening = NoopSessionOpener(),
         quickMessageSender: QuickMessageSending = NoopQuickMessageSender(),
         pollIntervalNanoseconds: UInt64 = 15_000_000_000,
+        eventFollowWaitMilliseconds: Int = 15_000,
         now: @escaping @Sendable () -> Date = { Date() },
         calendar: Calendar = .autoupdatingCurrent,
         sleep: @escaping @Sendable (UInt64) async throws -> Void = { nanoseconds in
@@ -64,6 +67,7 @@ public final class MenuBarViewModel: ObservableObject {
         self.sessionOpener = sessionOpener
         self.quickMessageSender = quickMessageSender
         self.pollIntervalNanoseconds = pollIntervalNanoseconds
+        self.eventFollowWaitMilliseconds = eventFollowWaitMilliseconds
         self.now = now
         self.calendar = calendar
         self.sleep = sleep
@@ -258,11 +262,20 @@ public final class MenuBarViewModel: ObservableObject {
                 await self.refresh()
             }
         }
+
+        eventFollowTask = Task { [weak self] in
+            guard let self else { return }
+            while !Task.isCancelled {
+                await self.followLatestEvents(waitMilliseconds: self.eventFollowWaitMilliseconds)
+            }
+        }
     }
 
     public func stop() {
         refreshTask?.cancel()
         refreshTask = nil
+        eventFollowTask?.cancel()
+        eventFollowTask = nil
         hasStarted = false
     }
 
@@ -304,8 +317,25 @@ public final class MenuBarViewModel: ObservableObject {
         }
     }
 
+    public func followLatestEvents(eventLimit: Int = 5, waitMilliseconds: Int) async {
+        let afterEventID = summary?.recentEvents.last?.id ?? ""
+
+        do {
+            let events = try await client.followEvents(
+                afterEventID: afterEventID,
+                limit: eventLimit,
+                waitMilliseconds: waitMilliseconds
+            )
+            guard !events.isEmpty else { return }
+            await refresh(eventLimit: eventLimit)
+        } catch {
+            return
+        }
+    }
+
     deinit {
         refreshTask?.cancel()
+        eventFollowTask?.cancel()
     }
 
     private func filteredNotificationCandidates(

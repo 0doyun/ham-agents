@@ -564,6 +564,45 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.settings.integrations.itermEnabled)
     }
 
+    func testFollowLatestEventsRefreshesSummaryWhenNewEventsArrive() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let initialEvent = AgentEventPayload(
+            id: "event-1",
+            agentID: "agent-1",
+            type: "agent.registered",
+            summary: "Registered",
+            occurredAt: Date(timeIntervalSince1970: 1)
+        )
+        let followedEvent = AgentEventPayload(
+            id: "event-2",
+            agentID: "agent-1",
+            type: "agent.registered",
+            summary: "Followed",
+            occurredAt: Date(timeIntervalSince1970: 2)
+        )
+        let client = EventFollowingClient(
+            agent: agent,
+            initialEvents: [initialEvent],
+            followedEvents: [followedEvent]
+        )
+        let viewModel = MenuBarViewModel(client: client)
+
+        await viewModel.refresh()
+        await viewModel.followLatestEvents(eventLimit: 5, waitMilliseconds: 1)
+
+        XCTAssertEqual(viewModel.summary?.recentEvents.last?.id, "event-2")
+    }
+
     func testSaveRoleUpdatesSelectedAgent() async {
         let agent = Agent(
             id: "agent-1",
@@ -1234,6 +1273,70 @@ private actor TransitioningClient: HamDaemonClientProtocol {
             updated.notificationPolicy = policyOverride
             return updated
         }
+    }
+}
+
+private actor EventFollowingClient: HamDaemonClientProtocol {
+    private let agent: Agent
+    private let initialEvents: [AgentEventPayload]
+    private let followedEvents: [AgentEventPayload]
+    private var didFollow = false
+
+    init(agent: Agent, initialEvents: [AgentEventPayload], followedEvents: [AgentEventPayload]) {
+        self.agent = agent
+        self.initialEvents = initialEvents
+        self.followedEvents = followedEvents
+    }
+
+    func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload {
+        DaemonRuntimeSnapshotPayload(agents: [agent], generatedAt: Date(timeIntervalSince1970: 10))
+    }
+
+    func fetchAgents() async throws -> [Agent] {
+        [agent]
+    }
+
+    func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] {
+        []
+    }
+
+    func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
+        _ = limit
+        return didFollow ? followedEvents : initialEvents
+    }
+
+    func followEvents(afterEventID: String, limit: Int, waitMilliseconds: Int) async throws -> [AgentEventPayload] {
+        _ = afterEventID
+        _ = limit
+        _ = waitMilliseconds
+        didFollow = true
+        return followedEvents
+    }
+
+    func fetchSettings() async throws -> DaemonSettingsPayload {
+        .default
+    }
+
+    func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {
+        settings
+    }
+
+    func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
+        _ = agentID
+        var updated = agent
+        updated.notificationPolicy = policy
+        return updated
+    }
+
+    func updateRole(agentID: String, role: String) async throws -> Agent {
+        _ = agentID
+        var updated = agent
+        updated.role = role
+        return updated
+    }
+
+    func removeAgent(agentID: String) async throws {
+        _ = agentID
     }
 }
 
