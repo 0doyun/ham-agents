@@ -112,3 +112,13 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: live polling timer / reconnect behavior, popup agent detail actions, notification triggers, actual macOS app packaging
+
+### 2026-03-24 (menu bar polling / recovery refinement)
+- `MenuBarViewModel` 에 start/stop + polling task를 추가해 launch 이후에도 daemon state를 주기적으로 다시 읽도록 만들었다.
+- initial refresh failure 뒤에도 이후 poll cycle에서 recovery 할 수 있게 만들고, 관련 behavior를 Swift tests로 고정했다.
+- menu bar label이 popover를 열기 전에도 daemon-backed 상태로 갱신되도록 launch 시점 refresh를 유지한 채 polling 모델로 확장했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: popover agent detail actions, notification trigger hookup, live event follow / stream consumption

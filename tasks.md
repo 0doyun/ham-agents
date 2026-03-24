@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **menu bar executable bootstrap + baseline status surface** 다.
+현재 활성 범위는 **menu bar polling/reconnect behavior + liveliness refinement** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -48,13 +48,13 @@
 - [x] Swift가 daemon snapshot/event payload를 decode 할 수 있게 정렬
 - [x] Swift가 daemon socket/command surface를 통해 snapshot + events를 읽을 수 있게 연결
 - [x] Swift menu bar executable target과 baseline status surface 추가
+- [x] menu bar 상태 surface가 launch 이후에도 daemon 상태를 주기적으로 따라가게 만들기
 
 ### Current Slice Checklist
 
-- [x] menu bar executable target을 SwiftPM build graph에 연결
-- [x] baseline menu bar/popup view model 추가
-- [x] daemon-backed status/agent list 표시 기본 UI 추가
-- [x] Swift tests로 view model refresh behavior 보호
+- [x] polling/reconnect capable view model 추가
+- [x] timer/manual refresh interplay 정리
+- [x] 오류 후 recovery / retry behavior tests 추가
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 
