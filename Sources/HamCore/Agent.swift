@@ -72,4 +72,21 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         self.sessionRef = sessionRef
         self.avatarVariant = avatarVariant
     }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case displayName = "display_name"
+        case provider
+        case host
+        case mode
+        case projectPath = "project_path"
+        case role
+        case status
+        case statusConfidence = "status_confidence"
+        case lastEventAt = "last_event_at"
+        case lastUserVisibleSummary = "last_user_visible_summary"
+        case notificationPolicy = "notification_policy"
+        case sessionRef = "session_ref"
+        case avatarVariant = "avatar_variant"
+    }
 }
