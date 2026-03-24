@@ -159,7 +159,7 @@ private struct MenuBarContentView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(agent.displayName)
                                     .font(.body.weight(.medium))
-                                Text("\(agent.status.rawValue) · \(agent.mode.rawValue) · \(viewModel.confidenceText(for: agent))")
+                                Text("\(viewModel.statusDisplayText(for: agent)) · \(agent.mode.rawValue) · \(viewModel.confidenceLevelText(for: agent)) \(viewModel.confidenceText(for: agent))")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
@@ -180,7 +180,7 @@ private struct MenuBarContentView: View {
                 recentEventSummaryChips: viewModel.recentEventSummaryChips(forAgentID: selectedAgentID),
                 notificationsMuted: viewModel.isNotificationsMuted(forAgentID: selectedAgentID),
                 quickMessageFeedback: viewModel.quickMessageFeedback,
-                confidenceText: viewModel.confidenceText(for: viewModel.agent(withID: selectedAgentID)),
+                confidenceText: viewModel.confidenceSummaryText(for: viewModel.agent(withID: selectedAgentID)),
                 roleDraft: Binding(
                     get: { viewModel.roleDraft },
                     set: { viewModel.roleDraft = $0 }
@@ -482,11 +482,11 @@ private struct AgentDetailView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
-                Text("confidence \(confidenceText)")
+                Text(confidenceText)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 if let statusReason = agent.statusReason, !statusReason.isEmpty {
-                    Text(statusReason)
+                    Text("Reason: \(statusReason)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)

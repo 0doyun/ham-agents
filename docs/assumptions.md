@@ -63,4 +63,5 @@
 - 2026-03-25: stronger feed semantics now also surfaces a top-level recent-activity chip group in the popover, but the grouping is still a lightweight recent-window summary rather than a durable feed model.
 - 2026-03-25: observed lifecycle event baseline only emits `agent.status_updated` when observed status actually changes; it intentionally avoids logging every observed summary/content refresh to keep the event feed from becoming noisy.
 - 2026-03-25: attached shell-state heuristic refinement now prefers a non-shell foreground command on the tty when one exists, and only falls back to a generic `shell` label when the tty appears to contain shell-only noise.
+- 2026-03-25: status reason strings are currently concise backend-authored heuristics and the Swift UI uses confidence-aware wording (`likely ...`, `low/medium/high confidence`) to avoid overstating low-confidence inferred states.
 - 2026-03-25: status reason baseline stores a short operator-facing explanation alongside status/confidence; for now observed and attached reasons are heuristic strings, not provider-authored ground truth.

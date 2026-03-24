@@ -580,3 +580,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: confidence/reason refinement baseline, stronger feed semantics, lower-latency visual polish
+
+### 2026-03-25 (confidence/reason refinement baseline)
+- `MenuBarViewModel` 에 confidence level / confidence summary / low-confidence `likely` wording helpers 를 추가해 inferred states를 더 절제된 표현으로 보여주도록 만들었다.
+- agent list/detail UI 가 raw percentage만 보여주지 않고 `High/Medium/Low confidence` 표현과 concise reason 문구를 함께 보여주도록 정리했다.
+- Swift tests 로 medium/low confidence wording 과 reason display behavior 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: stronger feed semantics, lower-latency visual polish, richer attached shell-state fidelity
