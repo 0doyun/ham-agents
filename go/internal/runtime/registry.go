@@ -392,7 +392,8 @@ func (r *Registry) RefreshAttached(ctx context.Context, sessions []core.Attachab
 		return nil
 	}
 
-	return r.saveAgentsAndEvents(ctx, refreshed, changedEvents)
+	_, err = r.applyRefreshedAgents(ctx, agents, refreshed, changedEvents)
+	return err
 }
 
 func openTargetFromSessionRef(sessionRef string) (core.OpenTarget, bool) {
@@ -604,22 +605,7 @@ func (r *Registry) applyObservedRefresh(ctx context.Context, agents []core.Agent
 	if err != nil {
 		return nil, err
 	}
-	if len(events) == 0 && len(refreshed) == len(agents) {
-		same := true
-		for index := range refreshed {
-			if refreshed[index] != agents[index] {
-				same = false
-				break
-			}
-		}
-		if same {
-			return refreshed, nil
-		}
-	}
-	if err := r.saveAgentsAndEvents(ctx, refreshed, events); err != nil {
-		return nil, err
-	}
-	return refreshed, nil
+	return r.applyRefreshedAgents(ctx, agents, refreshed, events)
 }
 
 func (r *Registry) mutateAgent(
@@ -667,6 +653,21 @@ func (r *Registry) registerAgent(ctx context.Context, agents []core.Agent, agent
 	return agent, nil
 }
 
+func (r *Registry) applyRefreshedAgents(
+	ctx context.Context,
+	previous []core.Agent,
+	refreshed []core.Agent,
+	events []core.Event,
+) ([]core.Agent, error) {
+	if len(events) == 0 && agentsEqual(previous, refreshed) {
+		return refreshed, nil
+	}
+	if err := r.saveAgentsAndEvents(ctx, refreshed, events); err != nil {
+		return nil, err
+	}
+	return refreshed, nil
+}
+
 func (r *Registry) saveAgentsAndEvents(ctx context.Context, agents []core.Agent, events []core.Event) error {
 	if err := r.store.SaveAgents(ctx, agents); err != nil {
 		return err
@@ -690,4 +691,16 @@ func (r *Registry) appendEvent(ctx context.Context, agentID string, eventType co
 		OccurredAt: r.clock().UTC(),
 	}
 	_ = r.eventStore.Append(ctx, event)
+}
+
+func agentsEqual(lhs []core.Agent, rhs []core.Agent) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+	for index := range lhs {
+		if lhs[index] != rhs[index] {
+			return false
+		}
+	}
+	return true
 }

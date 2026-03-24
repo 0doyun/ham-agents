@@ -544,6 +544,40 @@ func TestRefreshAttachedSyncsMetadataWithoutDisconnect(t *testing.T) {
 	}
 }
 
+func TestRefreshAttachedDoesNotPersistWhenNothingChanged(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	countingStore := &countingAgentStore{
+		AgentStore: store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+	}
+	registry := runtime.NewRegistry(
+		countingStore,
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	if _, err := registry.RegisterAttached(ctx, runtime.RegisterAttachedInput{
+		Provider:    "iterm2",
+		DisplayName: "ops",
+		ProjectPath: "/tmp/project",
+		SessionRef:  "iterm2://session/abc",
+	}); err != nil {
+		t.Fatalf("register attached: %v", err)
+	}
+
+	before := countingStore.saveCalls
+	if err := registry.RefreshAttached(ctx, []core.AttachableSession{
+		{ID: "abc", Title: "ops", SessionRef: "iterm2://session/abc"},
+	}); err != nil {
+		t.Fatalf("refresh attached: %v", err)
+	}
+
+	if countingStore.saveCalls != before {
+		t.Fatalf("expected no extra save when nothing changed, got %d -> %d", before, countingStore.saveCalls)
+	}
+}
+
 func TestRegisterManagedSucceedsWhenEventLogAppendFails(t *testing.T) {
 	t.Parallel()
 

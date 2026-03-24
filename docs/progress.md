@@ -640,6 +640,15 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: runtime transition consistency baseline, stronger feed semantics, lower-latency visual polish
 
+### 2026-03-25 (runtime coordinator follow-up)
+- `RefreshAttached` 와 observed read/refresh paths 가 shared apply/persist helper 를 더 직접 재사용하도록 정리해 runtime-side mutation boundaries를 한 단계 더 통일했다.
+- attached refresh no-op persistence test 와 snapshot/list-driven observed persistence tests 를 추가해 helper reuse 범위가 실제 behavior로 고정되도록 만들었다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: runtime lifecycle coverage follow-up, stronger feed semantics, lower-latency visual polish
+
 ### 2026-03-25 (runtime transition consistency baseline)
 - observed refresh가 poll path뿐 아니라 list/snapshot read path에서도 같은 apply-and-persist helper 를 타도록 정리해 lifecycle evidence 가 호출 경로에 따라 달라지지 않게 했다.
 - snapshot-driven observed refresh regression test 를 추가했고, explicit poll/list/snapshot 경로가 모두 `agent.status_updated` event 를 남기는지 보호했다.
