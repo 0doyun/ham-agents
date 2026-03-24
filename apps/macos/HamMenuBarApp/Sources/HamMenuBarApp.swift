@@ -34,7 +34,10 @@ struct HamMenuBarApp: App {
             notificationSink: notificationSink,
             notificationPermissionController: notificationSink,
             projectOpener: WorkspaceProjectOpener(),
-            sessionOpener: ItermSessionOpener(projectOpener: WorkspaceProjectOpener())
+            sessionOpener: ItermSessionOpener(projectOpener: WorkspaceProjectOpener()),
+            quickMessageSender: ClipboardQuickMessageSender(
+                sessionOpener: ItermSessionOpener(projectOpener: WorkspaceProjectOpener())
+            )
         )
         viewModel.start()
         return viewModel
@@ -44,6 +47,7 @@ struct HamMenuBarApp: App {
 private struct MenuBarContentView: View {
     @ObservedObject var viewModel: MenuBarViewModel
     @State private var selectedAgentID: Agent.ID?
+    @State private var quickMessage = ""
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -114,6 +118,7 @@ private struct MenuBarContentView: View {
                 agent: viewModel.agent(withID: selectedAgentID),
                 recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID),
                 notificationsMuted: viewModel.isNotificationsMuted(forAgentID: selectedAgentID),
+                quickMessage: $quickMessage,
                 openProject: {
                     viewModel.openProject(forAgentID: selectedAgentID)
                 },
@@ -122,6 +127,10 @@ private struct MenuBarContentView: View {
                 },
                 toggleNotifications: {
                     viewModel.toggleNotificationPause(forAgentID: selectedAgentID)
+                },
+                sendQuickMessage: {
+                    viewModel.sendQuickMessage(quickMessage, forAgentID: selectedAgentID)
+                    quickMessage = ""
                 }
             )
             .frame(minWidth: 140, maxWidth: .infinity, alignment: .topLeading)
@@ -177,9 +186,11 @@ private struct AgentDetailView: View {
     let agent: Agent?
     let recentEvents: [AgentEventPayload]
     let notificationsMuted: Bool
+    @Binding var quickMessage: String
     let openProject: () -> Void
     let openSession: () -> Void
     let toggleNotifications: () -> Void
+    let sendQuickMessage: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -216,6 +227,18 @@ private struct AgentDetailView: View {
                     toggleNotifications()
                 }
                 .buttonStyle(.bordered)
+
+                Text("Quick Message Handoff")
+                    .font(.caption.weight(.semibold))
+                    .padding(.top, 4)
+                TextField("Draft message to copy…", text: $quickMessage, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(2 ... 4)
+                Button("Copy & Open Session") {
+                    sendQuickMessage()
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(quickMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                 Text("Recent Events")
                     .font(.caption.weight(.semibold))
@@ -330,5 +353,16 @@ private struct ItermSessionOpener: SessionOpening {
 
             projectOpener.openProject(at: path)
         }
+    }
+}
+
+private struct ClipboardQuickMessageSender: QuickMessageSending {
+    let sessionOpener: SessionOpening
+
+    func send(message: String, to agent: Agent) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(message, forType: .string)
+        sessionOpener.openSession(for: agent)
     }
 }

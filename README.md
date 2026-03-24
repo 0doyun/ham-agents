@@ -96,3 +96,4 @@ The current `ham-menubar` baseline:
 - shows current notification permission state and lets the user request permission from the popover
 - uses `sessionRef` as a URL-based session target when available, otherwise falls back to opening the workspace in iTerm or Finder
 - lets the user pause/resume notifications per selected agent inside the popover
+- includes a quick-message handoff field that copies the draft and opens the selected session/workspace as an honest baseline
