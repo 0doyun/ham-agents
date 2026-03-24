@@ -57,3 +57,4 @@
 - 2026-03-25: stronger event semantics baseline starts by enriching lifecycle/admin event taxonomy (`role updated`, `policy updated`, `removed`, `disconnected`, `reconnected`) without trying to infer fine-grained coding events yet.
 - 2026-03-25: lower-latency UI update baseline lets the follow-events lane rebuild summary counts from fetched agents plus merged events, avoiding an extra snapshot fetch while leaving polling as the source of full-state reconciliation.
 - 2026-03-25: richer event-driven UI semantics baseline currently maps richer event types to labeled/emphasized badges in the detail feed; this is presentation-level semantics, not a full event-priority/routing system yet.
+- 2026-03-25: lower-latency visual updates baseline currently prefixes the menu bar status line and shows a compact banner from the latest presented event semantics, rather than introducing animation/state machines yet.

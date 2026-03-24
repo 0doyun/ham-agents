@@ -519,3 +519,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: lower-latency visual updates, stronger feed semantics, richer attached shell-state fidelity
+
+### 2026-03-25 (lower-latency visual updates baseline)
+- `MenuBarViewModel` 이 latest presented event semantics 를 바로 드러낼 수 있도록 latest-event presentation/symbol surface 를 추가했다.
+- menu bar status line 이 warning/info/positive recent event에 맞춰 간단한 indicator prefix 를 붙이도록 만들고, popover 상단에도 compact latest-event banner 를 추가했다.
+- Swift tests 로 warning event 가 status line visual cue 로 바로 반영되는지 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: stronger feed semantics, lower-latency visual polish, richer attached shell-state fidelity
