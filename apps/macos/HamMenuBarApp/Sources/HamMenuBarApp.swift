@@ -113,11 +113,15 @@ private struct MenuBarContentView: View {
             AgentDetailView(
                 agent: viewModel.agent(withID: selectedAgentID),
                 recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID),
+                notificationsMuted: viewModel.isNotificationsMuted(forAgentID: selectedAgentID),
                 openProject: {
                     viewModel.openProject(forAgentID: selectedAgentID)
                 },
                 openSession: {
                     viewModel.openSession(forAgentID: selectedAgentID)
+                },
+                toggleNotifications: {
+                    viewModel.toggleNotificationPause(forAgentID: selectedAgentID)
                 }
             )
             .frame(minWidth: 140, maxWidth: .infinity, alignment: .topLeading)
@@ -172,8 +176,10 @@ private struct NotificationPermissionRow: View {
 private struct AgentDetailView: View {
     let agent: Agent?
     let recentEvents: [AgentEventPayload]
+    let notificationsMuted: Bool
     let openProject: () -> Void
     let openSession: () -> Void
+    let toggleNotifications: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -205,6 +211,11 @@ private struct AgentDetailView: View {
                     openSession()
                 }
                 .buttonStyle(.borderedProminent)
+
+                Button(notificationsMuted ? "Resume Notifications" : "Pause Notifications") {
+                    toggleNotifications()
+                }
+                .buttonStyle(.bordered)
 
                 Text("Recent Events")
                     .font(.caption.weight(.semibold))

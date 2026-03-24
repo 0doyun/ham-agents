@@ -137,3 +137,4 @@
 - Baseline popover actions currently start with project-folder opening via an injected opener boundary so later iTerm/session actions can follow the same pattern.
 - Notification permission state is now exposed back into the Swift view-model layer so the popover can surface permission UX without duplicating delivery logic.
 - Session opening now uses a small planning layer: if daemon data provides a URL-shaped `sessionRef`, Swift treats it as the preferred focus target; otherwise it falls back to workspace opening behavior.
+- Per-agent notification pause/resume currently lives as a local Swift override in the menu bar layer so the baseline UX can suppress noisy transitions before backend settings persistence exists.
