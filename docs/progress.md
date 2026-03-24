@@ -489,3 +489,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: stronger event semantics, lower-latency UI updates, richer attached shell-state fidelity
+
+### 2026-03-25 (stronger event semantics baseline)
+- daemon event taxonomy 를 확장해 role update, notification policy update, tracking removal, attached disconnect/reconnect 같은 richer lifecycle/admin events 를 기록하도록 만들었다.
+- runtime mutation paths 가 event log 에 해당 summaries 를 append 하도록 연결해 activity feed 가 `agent.registered` 하나에만 머물지 않게 했다.
+- Go tests 로 mutation/disconnect paths 가 기대한 richer event types 를 남기는지 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: lower-latency UI updates, richer event-driven UI semantics, richer attached shell-state fidelity

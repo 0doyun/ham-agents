@@ -65,7 +65,12 @@ type RuntimeSnapshot struct {
 type EventType string
 
 const (
-	EventTypeAgentRegistered EventType = "agent.registered"
+	EventTypeAgentRegistered                EventType = "agent.registered"
+	EventTypeAgentRoleUpdated               EventType = "agent.role_updated"
+	EventTypeAgentNotificationPolicyUpdated EventType = "agent.notification_policy_updated"
+	EventTypeAgentDisconnected              EventType = "agent.disconnected"
+	EventTypeAgentReconnected               EventType = "agent.reconnected"
+	EventTypeAgentRemoved                   EventType = "agent.removed"
 )
 
 type Event struct {
