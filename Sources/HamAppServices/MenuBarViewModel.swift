@@ -110,6 +110,27 @@ public final class MenuBarViewModel: ObservableObject {
         AgentEventPresenter.summarize(recentEvents(forAgentID: id))
     }
 
+    public var attentionAgents: [Agent] {
+        agents
+            .filter { attentionPriority(for: $0) != nil }
+            .sorted { lhs, rhs in
+                let lhsPriority = attentionPriority(for: lhs) ?? .max
+                let rhsPriority = attentionPriority(for: rhs) ?? .max
+                if lhsPriority == rhsPriority {
+                    if lhs.lastEventAt == rhs.lastEventAt {
+                        return lhs.displayName < rhs.displayName
+                    }
+                    return lhs.lastEventAt > rhs.lastEventAt
+                }
+                return lhsPriority < rhsPriority
+            }
+    }
+
+    public var nonAttentionAgents: [Agent] {
+        let attentionIDs = Set(attentionAgents.map(\.id))
+        return agents.filter { !attentionIDs.contains($0.id) }
+    }
+
     public func confidenceText(for agent: Agent?) -> String {
         guard let agent else { return "—" }
         return "\(Int((agent.statusConfidence * 100).rounded()))%"
@@ -504,6 +525,19 @@ public final class MenuBarViewModel: ObservableObject {
         case .info:
             return "•"
         case .neutral:
+            return nil
+        }
+    }
+
+    private func attentionPriority(for agent: Agent) -> Int? {
+        switch agent.status {
+        case .error:
+            return 0
+        case .waitingInput:
+            return 1
+        case .disconnected:
+            return 2
+        default:
             return nil
         }
     }

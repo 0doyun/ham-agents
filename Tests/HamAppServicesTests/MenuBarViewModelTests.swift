@@ -359,6 +359,57 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.confidenceSummaryText(for: agent), "low confidence (45%)")
     }
 
+    func testAttentionAgentsArePrioritizedByStatus() async {
+        let errorAgent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .error,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 3)
+        )
+        let waitingAgent = Agent(
+            id: "agent-2",
+            displayName: "reviewer",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2)
+        )
+        let thinkingAgent = Agent(
+            id: "agent-3",
+            displayName: "observer",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [thinkingAgent, waitingAgent, errorAgent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [thinkingAgent, waitingAgent, errorAgent]
+            )
+        )
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.attentionAgents.map(\.id), ["agent-1", "agent-2"])
+        XCTAssertEqual(viewModel.nonAttentionAgents.map(\.id), ["agent-3"])
+    }
+
     func testOpenProjectUsesInjectedOpener() async {
         let agent = Agent(
             id: "agent-1",
