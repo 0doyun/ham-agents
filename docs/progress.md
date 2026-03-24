@@ -705,6 +705,78 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer lifecycle coverage, daemon-backed attention model, printEvents empty-json writer consistency
 
+### 2026-03-25 (event JSON writer consistency baseline)
+- `printEvents(..., asJSON: true)` empty case 가 stdout 으로 새지 않고 caller-provided writer 를 그대로 사용하도록 정리했다.
+- empty JSON event output regression test 를 추가해, logs/events helper 가 buffer/pipe writer 를 쓰는 경로에서도 `[]` 가 올바른 target 에 기록되도록 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed attention model, CLI/UI polish follow-up
+
+### 2026-03-25 (daemon-backed attention summary baseline)
+- daemon snapshot payload 에 `attention_count` 와 `attention_breakdown` 을 추가해, attention summary 가 Swift-side 재계산만이 아니라 Go snapshot contract 에도 직접 실리게 만들었다.
+- Swift snapshot decoding 과 menu bar summary layer 를 이 새 payload 에 맞춰 정리하고, top summary badge row 에 daemon-backed `Attn` count 를 노출했다.
+- follow-events fallback summary builder 는 기존 agent list 로 같은 attention count 를 재구성하도록 유지해, snapshot-based refresh 와 partial-update refresh 가 같은 summary shape 를 공유하게 만들었다.
+- Go/Swift tests 로 runtime snapshot attention summary, daemon payload decoding, summary service / view model attention count surface 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed attention breakdown UI, CLI/UI polish follow-up
+
+### 2026-03-25 (daemon-backed attention breakdown UI baseline)
+- menu bar top summary 영역이 daemon-backed attention breakdown 을 summary chips 로 직접 보여주도록 정리해, error / needs input / disconnected 분포를 badge row 바로 아래에서 읽을 수 있게 만들었다.
+- 이 breakdown UI 는 `HamMenuBarSummary` 와 `MenuBarViewModel.topSummaryAttentionBreakdownChips` seam 을 통해 노출되며, follow-events partial refresh path 도 fetched agents 로 같은 breakdown 을 재구성하도록 보호했다.
+- 기존 row ordering / attention queue / status line semantics 는 유지하고, top summary 쪽에 additive scanability layer 만 추가했다.
+- Swift tests 로 summary service breakdown propagation, refresh/follow path breakdown surface, top summary chip seam 을 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, CLI/UI polish follow-up, daemon-backed attention ordering
+
+### 2026-03-25 (daemon-backed attention ordering baseline)
+- daemon snapshot contract 에 `attention_order` 를 추가해, urgency ordering 이 Swift-only heuristic 이 아니라 daemon summary contract 에도 직접 실리게 만들었다.
+- Swift summary/view model 은 daemon-provided attention order 를 우선 사용하고, missing/partial order 일 때만 기존 priority/recency fallback 을 쓰도록 정리했다.
+- follow-events partial refresh path 는 fetched agents 로 같은 ordering shape 를 재구성해, initial snapshot refresh 와 event-follow refresh 가 일관된 attention ordering 을 유지하게 만들었다.
+- Go/Swift tests 로 runtime snapshot attention ordering, payload decoding default/order preservation, summary propagation, view model daemon-order preference 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, CLI/UI polish follow-up, daemon-backed attention subtitle model
+
+### 2026-03-25 (daemon-backed attention subtitle baseline)
+- daemon snapshot contract 에 `attention_subtitles` 를 추가해, urgent row subtitle wording 이 Swift-only composition 이 아니라 daemon attention contract 에도 직접 실리게 만들었다.
+- Swift summary/view model 은 daemon-provided subtitle 을 우선 사용하고, older/partial payload 또는 follow-events local rebuild 경로에서는 기존 fallback wording 을 같은 shape 로 재구성하도록 정리했다.
+- Go/Swift tests 로 runtime snapshot subtitle population, payload decoding default/subtitle preservation, summary propagation, refresh/follow path subtitle usage 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, CLI/UI polish follow-up, daemon-backed lifecycle summary
+
+### 2026-03-25 (CLI status attention subtitle contract baseline)
+- `ham status --json` 이 daemon-backed attention subtitle map 도 함께 내보내도록 정리해, automation path 에서도 urgent row subtitle contract 를 읽을 수 있게 만들었다.
+- human `ham status` output 은 기존 terse summary/attention line 형태를 유지하고, richer subtitle data 는 additive JSON field 로만 노출되게 분리했다.
+- Go tests 로 status JSON output 이 `attention_subtitles` 를 포함하면서 human summary wording 을 섞지 않는지 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle summary, CLI/UI polish follow-up
+
+### 2026-03-25 (CLI status attention contract baseline)
+- `ham status --json` 이 daemon-backed attention summary fields (`attention_count`, `attention_breakdown`, `attention_order`) 를 함께 내보내도록 정리해, automation path 도 richer attention contract 를 읽을 수 있게 만들었다.
+- human status output wording은 그대로 유지하고, JSON path 만 additive summary fields 를 받도록 분리해 existing CLI scanability와 automation contract 를 함께 유지했다.
+- Go tests 로 status JSON output 이 attention fields 를 포함하면서도 human summary wording 을 섞지 않는지 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle summary, CLI/UI polish follow-up
+
 ### 2026-03-25 (severity-aware feed ordering baseline)
 - recent event feed ordering 을 severity-first, recency-second 로 정리해 warning/positive/info 계열 event 가 작은 recent-event window 에서 더 빠르게 보이도록 만들었다.
 - `MenuBarViewModel.recentEvents` 가 `AgentEventPresenter` ordering helper 를 사용하도록 연결하고, Swift tests 로 warning event 가 informational row 앞에 오는 ordering 을 보호했다.

@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **severity-aware feed scanning baseline** 다.
+현재 활성 범위는 **CLI status attention subtitle contract baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -92,9 +92,7 @@
 - [x] lower-latency visual updates baseline 추가
 - [x] stronger feed semantics baseline 추가
 - [x] lower-latency visual polish baseline 추가
-- [x] stronger feed semantics baseline 추가
 - [x] attached shell-state heuristic refinement baseline 추가
-- [x] lower-latency visual polish baseline 추가
 - [x] observed lifecycle event baseline 추가
 - [x] status reason baseline 추가
 - [x] confidence/reason refinement baseline 추가
@@ -115,6 +113,13 @@
 - [x] CLI list summary baseline 추가
 - [x] CLI doctor baseline 추가
 - [x] severity-aware feed scanning baseline 추가
+- [x] event JSON writer consistency baseline 추가
+- [x] daemon-backed attention summary baseline 추가
+- [x] daemon-backed attention breakdown UI baseline 추가
+- [x] daemon-backed attention ordering baseline 추가
+- [x] daemon-backed attention subtitle baseline 추가
+- [x] CLI status attention contract baseline 추가
+- [ ] CLI status attention subtitle contract baseline 추가
 
 ### Current Slice Checklist
 
@@ -210,6 +215,27 @@
 - [x] recent activity severity summary 추가
 - [x] feed summary 가 severity-first scan path 를 직접 제공
 - [x] Go/Swift tests로 severity-aware feed scanning baseline 보호
+- [x] empty JSON event output 이 caller writer 를 존중하게 정리
+- [x] event render helper regression test 추가
+- [x] Go tests로 event JSON writer consistency baseline 보호
+- [x] daemon snapshot 에 attention summary 추가
+- [x] Swift snapshot decoding / summary surface 에 attention count 연결
+- [x] Go/Swift tests로 daemon-backed attention summary baseline 보호
+- [x] daemon attention breakdown 을 top summary UI 에 노출
+- [x] Swift summary surface 에 daemon-backed breakdown 연결
+- [x] Go/Swift tests로 daemon-backed attention breakdown UI baseline 보호
+- [x] daemon snapshot 에 attention ordering 추가
+- [x] Swift attention list 가 daemon ordering 을 우선 사용
+- [x] Go/Swift tests로 daemon-backed attention ordering baseline 보호
+- [x] daemon snapshot 에 attention subtitle 추가
+- [x] Swift attention row 가 daemon subtitle 을 우선 사용
+- [x] Go/Swift tests로 daemon-backed attention subtitle baseline 보호
+- [x] `ham status --json` 에 attention summary fields 반영
+- [x] status JSON 이 human summary wording 없이 richer attention contract 를 제공
+- [x] Go tests로 CLI status attention contract baseline 보호
+- [ ] `ham status --json` 에 attention subtitle fields 반영
+- [ ] status JSON 이 daemon attention subtitle contract 를 함께 제공
+- [ ] Go tests로 CLI status attention subtitle contract baseline 보호
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호

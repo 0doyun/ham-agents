@@ -85,3 +85,10 @@
 - 2026-03-25: CLI list summary baseline keeps the top `summary ...` line human-only so operator scanability can improve without changing the JSON list array contract.
 - 2026-03-25: `ham doctor` baseline is currently a local path/socket inspection tool, not a full self-healing doctor; it reports resolved paths and socket reachability but does not attempt automatic repair yet.
 - 2026-03-25: severity-aware feed scanning baseline adds severity-level summary chips ahead of the existing label-group chips, but it does not replace the underlying recent-event ordering or introduce a persisted event priority model.
+- 2026-03-25: event JSON writer consistency baseline is an internal helper-contract fix only; it changes where empty JSON arrays are written, not the event JSON shape itself.
+- 2026-03-25: daemon-backed attention summary baseline currently limits the daemon contract to count + status-category breakdown; detailed attention ordering and subtitles remain UI-derived from the agent list.
+- 2026-03-25: daemon-backed attention breakdown UI baseline surfaces the daemon breakdown as top summary chips, but chip ordering/labels are still a Swift presentation choice layered on top of the daemon counts.
+- 2026-03-25: daemon-backed attention ordering baseline lets the daemon provide the preferred urgent-agent order, but Swift still keeps a local severity/recency fallback for partial or older snapshot payloads.
+- 2026-03-25: daemon-backed attention subtitle baseline lets the daemon provide preferred urgent-row subtitle wording, but Swift keeps fallback wording generation so older/partial payloads and local follow-event rebuilds remain readable.
+- 2026-03-25: CLI status attention subtitle contract baseline keeps urgent subtitle data additive on the JSON path only; human `ham status` output stays compact and does not print the subtitle map inline.
+- 2026-03-25: CLI status attention contract baseline keeps the richer attention data additive on the JSON path only; human `ham status` output stays terse and presentation-oriented.

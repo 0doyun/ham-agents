@@ -1163,11 +1163,15 @@ func modeBreakdown(agents []core.Agent) (managedCount, attachedCount, observedCo
 func renderStatus(out io.Writer, snapshot core.RuntimeSnapshot, asJSON bool) error {
 	if asJSON {
 		return writeJSONTo(out, map[string]any{
-			"total":       snapshot.TotalCount(),
-			"running":     snapshot.RunningCount(),
-			"waiting":     snapshot.WaitingCount(),
-			"done":        snapshot.DoneCount(),
-			"generatedAt": snapshot.GeneratedAt,
+			"total":               snapshot.TotalCount(),
+			"running":             snapshot.RunningCount(),
+			"waiting":             snapshot.WaitingCount(),
+			"done":                snapshot.DoneCount(),
+			"attention_count":     snapshot.AttentionCount,
+			"attention_breakdown": snapshot.AttentionBreakdown,
+			"attention_order":     snapshot.AttentionOrder,
+			"attention_subtitles": snapshot.AttentionSubtitles,
+			"generatedAt":         snapshot.GeneratedAt,
 		})
 	}
 
@@ -1287,7 +1291,7 @@ func attentionSeverity(status core.AgentStatus) int {
 func printEvents(out io.Writer, events []core.Event, asJSON bool) error {
 	if asJSON {
 		if len(events) == 0 {
-			return writeJSON([]core.Event{})
+			return writeJSONTo(out, []core.Event{})
 		}
 		for _, event := range events {
 			payload, err := json.Marshal(event)

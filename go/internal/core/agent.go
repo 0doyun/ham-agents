@@ -59,8 +59,18 @@ type Agent struct {
 }
 
 type RuntimeSnapshot struct {
-	Agents      []Agent   `json:"agents"`
-	GeneratedAt time.Time `json:"generated_at"`
+	Agents             []Agent            `json:"agents"`
+	GeneratedAt        time.Time          `json:"generated_at"`
+	AttentionCount     int                `json:"attention_count"`
+	AttentionBreakdown AttentionBreakdown `json:"attention_breakdown"`
+	AttentionOrder     []string           `json:"attention_order"`
+	AttentionSubtitles map[string]string  `json:"attention_subtitles"`
+}
+
+type AttentionBreakdown struct {
+	Error        int `json:"error"`
+	WaitingInput int `json:"waiting_input"`
+	Disconnected int `json:"disconnected"`
 }
 
 type EventType string

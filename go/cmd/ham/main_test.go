@@ -350,6 +350,18 @@ func TestPrintEventsWritesJSONLinesWhenRequested(t *testing.T) {
 	}
 }
 
+func TestPrintEventsWritesEmptyJSONArrayToProvidedWriter(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	if err := printEvents(&output, []core.Event{}, true); err != nil {
+		t.Fatalf("print empty events json: %v", err)
+	}
+	if strings.TrimSpace(output.String()) != "[]" {
+		t.Fatalf("expected empty json array on provided writer, got %q", output.String())
+	}
+}
+
 func TestFormatAgentListLineIncludesConfidenceAndReason(t *testing.T) {
 	t.Parallel()
 
@@ -684,7 +696,11 @@ func TestRenderStatusJSONKeepsMachineReadableShape(t *testing.T) {
 			{Status: core.AgentStatusWaitingInput},
 			{Status: core.AgentStatusDone},
 		},
-		GeneratedAt: time.Unix(10, 0).UTC(),
+		AttentionCount:     1,
+		AttentionBreakdown: core.AttentionBreakdown{Error: 0, WaitingInput: 1, Disconnected: 0},
+		AttentionOrder:     []string{"agent-2"},
+		AttentionSubtitles: map[string]string{"agent-2": "waiting_input · high confidence · Needs confirmation."},
+		GeneratedAt:        time.Unix(10, 0).UTC(),
 	}, true)
 	if err != nil {
 		t.Fatalf("render status json: %v", err)
@@ -694,7 +710,13 @@ func TestRenderStatusJSONKeepsMachineReadableShape(t *testing.T) {
 	if !strings.Contains(payload, `"total": 3`) || !strings.Contains(payload, `"running": 1`) || !strings.Contains(payload, `"waiting": 1`) || !strings.Contains(payload, `"done": 1`) {
 		t.Fatalf("expected machine-readable counts in payload %q", payload)
 	}
-	if strings.Contains(payload, "attention=") || strings.Contains(payload, "attention_breakdown") || strings.Contains(payload, "\n!") {
+	if !strings.Contains(payload, `"attention_count": 1`) || !strings.Contains(payload, `"waiting_input": 1`) || !strings.Contains(payload, `"attention_order": [`) || !strings.Contains(payload, `"attention_subtitles": {`) {
+		t.Fatalf("expected attention fields in payload %q", payload)
+	}
+	if !strings.Contains(payload, `"agent-2": "waiting_input · high confidence · Needs confirmation."`) {
+		t.Fatalf("expected attention subtitles in payload %q", payload)
+	}
+	if strings.Contains(payload, "attention=") || strings.Contains(payload, "\n!") {
 		t.Fatalf("expected json payload to avoid human summary wording, got %q", payload)
 	}
 }

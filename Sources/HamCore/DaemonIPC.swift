@@ -186,10 +186,25 @@ public struct DaemonIntegrationSettingsPayload: Codable, Equatable, Sendable {
 public struct DaemonRuntimeSnapshotPayload: Codable, Equatable, Sendable {
     public var agents: [Agent]
     public var generatedAt: Date
+    public var attentionCount: Int
+    public var attentionBreakdown: DaemonAttentionBreakdownPayload
+    public var attentionOrder: [String]
+    public var attentionSubtitles: [String: String]
 
-    public init(agents: [Agent], generatedAt: Date) {
+    public init(
+        agents: [Agent],
+        generatedAt: Date,
+        attentionCount: Int = 0,
+        attentionBreakdown: DaemonAttentionBreakdownPayload = .init(),
+        attentionOrder: [String] = [],
+        attentionSubtitles: [String: String] = [:]
+    ) {
         self.agents = agents
         self.generatedAt = generatedAt
+        self.attentionCount = attentionCount
+        self.attentionBreakdown = attentionBreakdown
+        self.attentionOrder = attentionOrder
+        self.attentionSubtitles = attentionSubtitles
     }
 
     public var totalCount: Int { agents.count }
@@ -206,6 +221,38 @@ public struct DaemonRuntimeSnapshotPayload: Codable, Equatable, Sendable {
     enum CodingKeys: String, CodingKey {
         case agents
         case generatedAt = "generated_at"
+        case attentionCount = "attention_count"
+        case attentionBreakdown = "attention_breakdown"
+        case attentionOrder = "attention_order"
+        case attentionSubtitles = "attention_subtitles"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        agents = try container.decode([Agent].self, forKey: .agents)
+        generatedAt = try container.decode(Date.self, forKey: .generatedAt)
+        attentionCount = try container.decodeIfPresent(Int.self, forKey: .attentionCount) ?? 0
+        attentionBreakdown = try container.decodeIfPresent(DaemonAttentionBreakdownPayload.self, forKey: .attentionBreakdown) ?? .init()
+        attentionOrder = try container.decodeIfPresent([String].self, forKey: .attentionOrder) ?? []
+        attentionSubtitles = try container.decodeIfPresent([String: String].self, forKey: .attentionSubtitles) ?? [:]
+    }
+}
+
+public struct DaemonAttentionBreakdownPayload: Codable, Equatable, Sendable {
+    public var error: Int
+    public var waitingInput: Int
+    public var disconnected: Int
+
+    public init(error: Int = 0, waitingInput: Int = 0, disconnected: Int = 0) {
+        self.error = error
+        self.waitingInput = waitingInput
+        self.disconnected = disconnected
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case error
+        case waitingInput = "waiting_input"
+        case disconnected
     }
 }
 

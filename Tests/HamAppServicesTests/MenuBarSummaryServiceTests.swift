@@ -26,12 +26,16 @@ final class MenuBarSummaryServiceTests: XCTestCase {
                         host: "localhost",
                         mode: .managed,
                         projectPath: "/tmp/app",
-                        status: .done,
+                        status: .error,
                         statusConfidence: 1,
                         lastEventAt: Date(timeIntervalSince1970: 2)
                     ),
                 ],
-                generatedAt: Date(timeIntervalSince1970: 10)
+                generatedAt: Date(timeIntervalSince1970: 10),
+                attentionCount: 1,
+                attentionBreakdown: .init(error: 1, waitingInput: 0, disconnected: 0),
+                attentionOrder: ["a2"],
+                attentionSubtitles: ["a2": "error · high confidence · Build failed."]
             ),
             events: [
                 AgentEventPayload(
@@ -48,8 +52,14 @@ final class MenuBarSummaryServiceTests: XCTestCase {
         let summary = try await service.refresh(eventLimit: 5)
 
         XCTAssertEqual(summary.totalAgents, 2)
+        XCTAssertEqual(summary.attentionAgents, 1)
+        XCTAssertEqual(summary.attentionBreakdown.error, 1)
+        XCTAssertEqual(summary.attentionBreakdown.waitingInput, 0)
+        XCTAssertEqual(summary.attentionBreakdown.disconnected, 0)
+        XCTAssertEqual(summary.attentionOrder, ["a2"])
+        XCTAssertEqual(summary.attentionSubtitles["a2"], "error · high confidence · Build failed.")
         XCTAssertEqual(summary.runningAgents, 1)
-        XCTAssertEqual(summary.doneAgents, 1)
+        XCTAssertEqual(summary.doneAgents, 0)
         XCTAssertEqual(summary.waitingAgents, 0)
         XCTAssertEqual(summary.recentEvents.count, 1)
         XCTAssertEqual(client.requestedEventLimit, 5)

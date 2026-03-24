@@ -45,6 +45,10 @@ public protocol HamDaemonClientProtocol: Sendable {
 public struct HamMenuBarSummary: Equatable, Sendable {
     public var generatedAt: Date
     public var totalAgents: Int
+    public var attentionAgents: Int
+    public var attentionBreakdown: DaemonAttentionBreakdownPayload
+    public var attentionOrder: [String]
+    public var attentionSubtitles: [String: String]
     public var runningAgents: Int
     public var waitingAgents: Int
     public var doneAgents: Int
@@ -53,6 +57,10 @@ public struct HamMenuBarSummary: Equatable, Sendable {
     public init(
         generatedAt: Date,
         totalAgents: Int,
+        attentionAgents: Int,
+        attentionBreakdown: DaemonAttentionBreakdownPayload,
+        attentionOrder: [String],
+        attentionSubtitles: [String: String],
         runningAgents: Int,
         waitingAgents: Int,
         doneAgents: Int,
@@ -60,6 +68,10 @@ public struct HamMenuBarSummary: Equatable, Sendable {
     ) {
         self.generatedAt = generatedAt
         self.totalAgents = totalAgents
+        self.attentionAgents = attentionAgents
+        self.attentionBreakdown = attentionBreakdown
+        self.attentionOrder = attentionOrder
+        self.attentionSubtitles = attentionSubtitles
         self.runningAgents = runningAgents
         self.waitingAgents = waitingAgents
         self.doneAgents = doneAgents
@@ -191,6 +203,10 @@ public struct MenuBarSummaryService: Sendable {
         return HamMenuBarSummary(
             generatedAt: snapshot.generatedAt,
             totalAgents: snapshot.totalCount,
+            attentionAgents: snapshot.attentionCount,
+            attentionBreakdown: snapshot.attentionBreakdown,
+            attentionOrder: snapshot.attentionOrder,
+            attentionSubtitles: snapshot.attentionSubtitles,
             runningAgents: snapshot.runningCount,
             waitingAgents: snapshot.waitingCount,
             doneAgents: snapshot.doneCount,

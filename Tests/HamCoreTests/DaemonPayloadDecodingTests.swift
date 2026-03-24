@@ -65,6 +65,52 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         XCTAssertEqual(status.waiting, 0)
     }
 
+    func testDaemonRuntimeSnapshotDecodesAttentionSummaryFromGoJSON() throws {
+        let payload = """
+        {
+          "agents": [],
+          "generated_at": "2026-03-24T14:02:18.139024Z",
+          "attention_count": 2,
+          "attention_breakdown": {
+            "error": 1,
+            "waiting_input": 1,
+            "disconnected": 0
+          },
+          "attention_order": ["agent-2", "agent-1"],
+          "attention_subtitles": {
+            "agent-2": "error · high confidence · Build failed."
+          }
+        }
+        """
+
+        let snapshot = try DaemonJSONDecoder.make().decode(DaemonRuntimeSnapshotPayload.self, from: Data(payload.utf8))
+
+        XCTAssertEqual(snapshot.attentionCount, 2)
+        XCTAssertEqual(snapshot.attentionBreakdown.error, 1)
+        XCTAssertEqual(snapshot.attentionBreakdown.waitingInput, 1)
+        XCTAssertEqual(snapshot.attentionBreakdown.disconnected, 0)
+        XCTAssertEqual(snapshot.attentionOrder, ["agent-2", "agent-1"])
+        XCTAssertEqual(snapshot.attentionSubtitles["agent-2"], "error · high confidence · Build failed.")
+    }
+
+    func testDaemonRuntimeSnapshotDefaultsMissingAttentionSummaryFields() throws {
+        let payload = """
+        {
+          "agents": [],
+          "generated_at": "2026-03-24T14:02:18.139024Z"
+        }
+        """
+
+        let snapshot = try DaemonJSONDecoder.make().decode(DaemonRuntimeSnapshotPayload.self, from: Data(payload.utf8))
+
+        XCTAssertEqual(snapshot.attentionCount, 0)
+        XCTAssertEqual(snapshot.attentionBreakdown.error, 0)
+        XCTAssertEqual(snapshot.attentionBreakdown.waitingInput, 0)
+        XCTAssertEqual(snapshot.attentionBreakdown.disconnected, 0)
+        XCTAssertEqual(snapshot.attentionOrder, [])
+        XCTAssertEqual(snapshot.attentionSubtitles, [:])
+    }
+
     func testAgentEventPayloadDecodesFromGoEventsJSON() throws {
         let payload = """
         [

@@ -248,7 +248,109 @@ func (r *Registry) Snapshot(ctx context.Context) (core.RuntimeSnapshot, error) {
 		return core.RuntimeSnapshot{}, err
 	}
 
-	return core.RuntimeSnapshot{Agents: agents, GeneratedAt: r.clock().UTC()}, nil
+	attentionBreakdown := snapshotAttentionBreakdown(agents)
+
+	return core.RuntimeSnapshot{
+		Agents:             agents,
+		GeneratedAt:        r.clock().UTC(),
+		AttentionCount:     attentionBreakdown.Error + attentionBreakdown.WaitingInput + attentionBreakdown.Disconnected,
+		AttentionBreakdown: attentionBreakdown,
+		AttentionOrder:     snapshotAttentionOrder(agents),
+		AttentionSubtitles: snapshotAttentionSubtitles(agents),
+	}, nil
+}
+
+func snapshotAttentionBreakdown(agents []core.Agent) core.AttentionBreakdown {
+	var breakdown core.AttentionBreakdown
+	for _, agent := range agents {
+		switch agent.Status {
+		case core.AgentStatusError:
+			breakdown.Error++
+		case core.AgentStatusWaitingInput:
+			breakdown.WaitingInput++
+		case core.AgentStatusDisconnected:
+			breakdown.Disconnected++
+		}
+	}
+	return breakdown
+}
+
+func snapshotAttentionOrder(agents []core.Agent) []string {
+	attentionAgents := make([]core.Agent, 0, len(agents))
+	for _, agent := range agents {
+		switch agent.Status {
+		case core.AgentStatusError, core.AgentStatusWaitingInput, core.AgentStatusDisconnected:
+			attentionAgents = append(attentionAgents, agent)
+		}
+	}
+
+	sort.SliceStable(attentionAgents, func(i, j int) bool {
+		left := attentionAgents[i]
+		right := attentionAgents[j]
+
+		leftSeverity := attentionSeverity(left.Status)
+		rightSeverity := attentionSeverity(right.Status)
+		if leftSeverity != rightSeverity {
+			return leftSeverity < rightSeverity
+		}
+		if !left.LastEventAt.Equal(right.LastEventAt) {
+			return left.LastEventAt.After(right.LastEventAt)
+		}
+		if left.DisplayName != right.DisplayName {
+			return left.DisplayName < right.DisplayName
+		}
+		return left.ID < right.ID
+	})
+
+	orderedIDs := make([]string, 0, len(attentionAgents))
+	for _, agent := range attentionAgents {
+		orderedIDs = append(orderedIDs, agent.ID)
+	}
+	return orderedIDs
+}
+
+func snapshotAttentionSubtitles(agents []core.Agent) map[string]string {
+	subtitles := map[string]string{}
+	for _, agent := range agents {
+		switch agent.Status {
+		case core.AgentStatusError, core.AgentStatusWaitingInput, core.AgentStatusDisconnected:
+			subtitles[agent.ID] = attentionSubtitle(agent)
+		}
+	}
+	return subtitles
+}
+
+func attentionSubtitle(agent core.Agent) string {
+	status := string(agent.Status)
+	if agent.StatusConfidence < 0.5 {
+		status = "likely " + status
+	}
+
+	confidenceLevel := "low"
+	switch {
+	case agent.StatusConfidence >= 0.8:
+		confidenceLevel = "high"
+	case agent.StatusConfidence >= 0.5:
+		confidenceLevel = "medium"
+	}
+
+	if trimmed := strings.TrimSpace(agent.StatusReason); trimmed != "" {
+		return fmt.Sprintf("%s · %s confidence · %s", status, confidenceLevel, trimmed)
+	}
+	return fmt.Sprintf("%s · %s confidence", status, confidenceLevel)
+}
+
+func attentionSeverity(status core.AgentStatus) int {
+	switch status {
+	case core.AgentStatusError:
+		return 0
+	case core.AgentStatusWaitingInput:
+		return 1
+	case core.AgentStatusDisconnected:
+		return 2
+	default:
+		return 3
+	}
 }
 
 func (r *Registry) UpdateNotificationPolicy(ctx context.Context, agentID string, policy core.NotificationPolicy) (core.Agent, error) {
