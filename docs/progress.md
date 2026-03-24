@@ -673,6 +673,16 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: broader operator-facing CLI scanability, richer lifecycle coverage, daemon-backed attention model
 
+### 2026-03-25 (CLI list summary baseline)
+- human-readable `ham list` 상단에 summary line 을 추가해 total / attention / managed / attached / observed count 를 먼저 스캔할 수 있게 만들었다.
+- summary line 은 human path 에만 붙고, JSON list output 은 기존 raw agent array contract 를 그대로 유지한다.
+- Go tests 로 summary wording, attention-first ordering과의 공존, JSON non-leakage 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed attention model, severity-aware feed scanning
+
 ### 2026-03-25 (severity-aware feed ordering baseline)
 - recent event feed ordering 을 severity-first, recency-second 로 정리해 warning/positive/info 계열 event 가 작은 recent-event window 에서 더 빠르게 보이도록 만들었다.
 - `MenuBarViewModel.recentEvents` 가 `AgentEventPresenter` ordering helper 를 사용하도록 연결하고, Swift tests 로 warning event 가 informational row 앞에 오는 ordering 을 보호했다.

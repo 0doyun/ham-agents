@@ -244,15 +244,22 @@ func TestRenderAgentsHumanReadableIncludesConfidenceAndReason(t *testing.T) {
 		t.Fatalf("render agents: %v", err)
 	}
 
-	line := output.String()
+	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected summary plus one agent line, got %d from %q", len(lines), output.String())
+	}
+	if !strings.Contains(lines[0], "summary total=1 attention=1 managed=0 attached=0 observed=1") {
+		t.Fatalf("expected summary line in output %q", output.String())
+	}
+	line := lines[1]
 	if !strings.Contains(line, "likely waiting_input") {
-		t.Fatalf("expected softened status in line %q", line)
+		t.Fatalf("expected softened status in line %q", output.String())
 	}
 	if !strings.Contains(line, "low 45%") {
-		t.Fatalf("expected confidence label in line %q", line)
+		t.Fatalf("expected confidence label in line %q", output.String())
 	}
 	if !strings.Contains(line, "Question-like output detected.") {
-		t.Fatalf("expected reason in line %q", line)
+		t.Fatalf("expected reason in line %q", output.String())
 	}
 }
 
@@ -297,6 +304,9 @@ func TestRenderAgentsJSONKeepsMachineReadableFields(t *testing.T) {
 	if strings.Contains(payload, "likely waiting_input") || strings.Contains(payload, "low 45%") {
 		t.Fatalf("expected json output to avoid human wording, got %q", payload)
 	}
+	if strings.Contains(payload, "summary total=") {
+		t.Fatalf("expected json output to avoid human summary wording, got %q", payload)
+	}
 }
 
 func TestRenderAgentsHumanReadablePrioritizesAttentionAgents(t *testing.T) {
@@ -332,10 +342,13 @@ func TestRenderAgentsHumanReadablePrioritizesAttentionAgents(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
-	if len(lines) != 3 {
-		t.Fatalf("expected 3 lines, got %d from %q", len(lines), output.String())
+	if len(lines) != 4 {
+		t.Fatalf("expected summary plus 3 lines, got %d from %q", len(lines), output.String())
 	}
-	if !strings.Contains(lines[0], "broken") || !strings.Contains(lines[1], "waiting") || !strings.Contains(lines[2], "calm") {
+	if !strings.Contains(lines[0], "summary total=3 attention=2 managed=0 attached=0 observed=0") {
+		t.Fatalf("expected summary line, got %q", output.String())
+	}
+	if !strings.Contains(lines[1], "broken") || !strings.Contains(lines[2], "waiting") || !strings.Contains(lines[3], "calm") {
 		t.Fatalf("expected attention-first ordering, got %q", output.String())
 	}
 }
@@ -363,11 +376,25 @@ func TestRenderAgentsHumanReadableUsesRecencyWithinSameSeverity(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
-	if len(lines) != 2 {
-		t.Fatalf("expected 2 lines, got %d from %q", len(lines), output.String())
+	if len(lines) != 3 {
+		t.Fatalf("expected summary plus 2 lines, got %d from %q", len(lines), output.String())
 	}
-	if !strings.Contains(lines[0], "newer") || !strings.Contains(lines[1], "older") {
+	if !strings.Contains(lines[1], "newer") || !strings.Contains(lines[2], "older") {
 		t.Fatalf("expected newer same-severity urgent agent first, got %q", output.String())
+	}
+}
+
+func TestFormatAgentListSummaryIncludesModeAndAttentionBreakdown(t *testing.T) {
+	t.Parallel()
+
+	summary := formatAgentListSummary([]core.Agent{
+		{Mode: core.AgentModeManaged, Status: core.AgentStatusThinking},
+		{Mode: core.AgentModeAttached, Status: core.AgentStatusError},
+		{Mode: core.AgentModeObserved, Status: core.AgentStatusWaitingInput},
+	})
+
+	if summary != "summary total=3 attention=2 managed=1 attached=1 observed=1" {
+		t.Fatalf("unexpected summary %q", summary)
 	}
 }
 
