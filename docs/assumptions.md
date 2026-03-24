@@ -65,3 +65,4 @@
 - 2026-03-25: attached shell-state heuristic refinement now prefers a non-shell foreground command on the tty when one exists, and only falls back to a generic `shell` label when the tty appears to contain shell-only noise.
 - 2026-03-25: status reason strings are currently concise backend-authored heuristics and the Swift UI uses confidence-aware wording (`likely ...`, `low/medium/high confidence`) to avoid overstating low-confidence inferred states.
 - 2026-03-25: status reason baseline stores a short operator-facing explanation alongside status/confidence; for now observed and attached reasons are heuristic strings, not provider-authored ground truth.
+- 2026-03-25: confidence/reason refinement baseline keeps the underlying confidence math unchanged and only changes Swift wording/presentation thresholds (`High/Medium/Low`, `likely ...`) for readability.

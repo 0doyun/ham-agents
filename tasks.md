@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **confidence/reason refinement baseline** 다.
+현재 활성 범위는 **attention queue baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -97,7 +97,8 @@
 - [x] lower-latency visual polish baseline 추가
 - [x] observed lifecycle event baseline 추가
 - [x] status reason baseline 추가
-- [ ] confidence/reason refinement baseline 추가
+- [x] confidence/reason refinement baseline 추가
+- [ ] attention queue baseline 추가
 
 ### Current Slice Checklist
 
@@ -177,9 +178,12 @@
 - [x] observed/attached 상태 변화에 reason 채우기
 - [x] Swift UI 에 reason 일부 노출
 - [x] Go/Swift tests로 status reason baseline 보호
-- [ ] reason과 confidence를 함께 읽기 쉬운 형태로 UI refinement
-- [ ] mode별 low-confidence wording 정리
-- [ ] Go/Swift tests로 confidence/reason refinement baseline 보호
+- [x] reason과 confidence를 함께 읽기 쉬운 형태로 UI refinement
+- [x] mode별 low-confidence wording 정리
+- [x] Go/Swift tests로 confidence/reason refinement baseline 보호
+- [ ] attention-required agent grouping/order baseline 추가
+- [ ] menu bar 에 attention queue/view 추가
+- [ ] Go/Swift tests로 attention queue baseline 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 
