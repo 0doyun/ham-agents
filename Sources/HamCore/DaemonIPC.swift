@@ -65,13 +65,25 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
     public var error: Bool
     public var waitingInput: Bool
     public var quietHoursEnabled: Bool
+    public var quietHoursStartHour: Int
+    public var quietHoursEndHour: Int
     public var previewText: Bool
 
-    public init(done: Bool, error: Bool, waitingInput: Bool, quietHoursEnabled: Bool, previewText: Bool) {
+    public init(
+        done: Bool,
+        error: Bool,
+        waitingInput: Bool,
+        quietHoursEnabled: Bool,
+        quietHoursStartHour: Int,
+        quietHoursEndHour: Int,
+        previewText: Bool
+    ) {
         self.done = done
         self.error = error
         self.waitingInput = waitingInput
         self.quietHoursEnabled = quietHoursEnabled
+        self.quietHoursStartHour = quietHoursStartHour
+        self.quietHoursEndHour = quietHoursEndHour
         self.previewText = previewText
     }
 
@@ -80,6 +92,8 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
         case error
         case waitingInput = "waiting_input"
         case quietHoursEnabled = "quiet_hours_enabled"
+        case quietHoursStartHour = "quiet_hours_start_hour"
+        case quietHoursEndHour = "quiet_hours_end_hour"
         case previewText = "preview_text"
     }
 }
@@ -97,6 +111,8 @@ public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
             error: true,
             waitingInput: true,
             quietHoursEnabled: false,
+            quietHoursStartHour: 22,
+            quietHoursEndHour: 8,
             previewText: false
         )
     )

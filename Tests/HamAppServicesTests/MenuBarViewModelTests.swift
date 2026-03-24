@@ -352,9 +352,15 @@ final class MenuBarViewModelTests: XCTestCase {
         )
 
         await viewModel.refresh()
-        await viewModel.updateNotificationSetting(quietHoursEnabled: true)
+        await viewModel.updateNotificationSetting(
+            quietHoursEnabled: true,
+            quietHoursStartHour: 21,
+            quietHoursEndHour: 7
+        )
 
         XCTAssertTrue(viewModel.settings.notifications.quietHoursEnabled)
+        XCTAssertEqual(viewModel.settings.notifications.quietHoursStartHour, 21)
+        XCTAssertEqual(viewModel.settings.notifications.quietHoursEndHour, 7)
     }
 
     func testSaveRoleUpdatesSelectedAgent() async {
@@ -591,6 +597,8 @@ final class MenuBarViewModelTests: XCTestCase {
                 error: true,
                 waitingInput: true,
                 quietHoursEnabled: false,
+                quietHoursStartHour: 22,
+                quietHoursEndHour: 8,
                 previewText: true
             )
         )
@@ -634,6 +642,8 @@ final class MenuBarViewModelTests: XCTestCase {
                 error: true,
                 waitingInput: true,
                 quietHoursEnabled: false,
+                quietHoursStartHour: 22,
+                quietHoursEndHour: 8,
                 previewText: false
             )
         )
@@ -647,7 +657,7 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(sink.candidates.first?.body, "Open ham-menubar for details.")
     }
 
-    func testQuietHoursSuppressAllNotificationCandidates() async {
+    func testQuietHoursSuppressNotificationCandidatesInsideOvernightWindow() async {
         let previous = Agent(
             id: "agent-1",
             displayName: "builder",
@@ -677,17 +687,79 @@ final class MenuBarViewModelTests: XCTestCase {
                 error: true,
                 waitingInput: true,
                 quietHoursEnabled: true,
+                quietHoursStartHour: 22,
+                quietHoursEndHour: 8,
                 previewText: true
             )
         )
         let client = TransitioningClient(initialAgents: [previous], nextAgents: [current], settings: settings)
         let sink = RecordingNotificationSink()
-        let viewModel = MenuBarViewModel(client: client, notificationSink: sink)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let viewModel = MenuBarViewModel(
+            client: client,
+            notificationSink: sink,
+            now: { Date(timeIntervalSince1970: 23 * 60 * 60) },
+            calendar: calendar
+        )
 
         await viewModel.refresh()
         await viewModel.refresh()
 
         XCTAssertTrue(sink.candidates.isEmpty)
+    }
+
+    func testQuietHoursAllowsNotificationsOutsideWindow() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .error,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2),
+            lastUserVisibleSummary: "Build failed."
+        )
+        let settings = DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: true,
+                error: true,
+                waitingInput: true,
+                quietHoursEnabled: true,
+                quietHoursStartHour: 22,
+                quietHoursEndHour: 8,
+                previewText: true
+            )
+        )
+        let client = TransitioningClient(initialAgents: [previous], nextAgents: [current], settings: settings)
+        let sink = RecordingNotificationSink()
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let viewModel = MenuBarViewModel(
+            client: client,
+            notificationSink: sink,
+            now: { Date(timeIntervalSince1970: 14 * 60 * 60) },
+            calendar: calendar
+        )
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertEqual(sink.candidates.count, 1)
+        XCTAssertEqual(sink.candidates.first?.title, "builder hit an error")
     }
 }
 

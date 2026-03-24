@@ -363,3 +363,14 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: broader backend-persisted settings state, richer iTerm session identification/send acknowledgement, live event stream/follow integration
+
+### 2026-03-25 (quiet hours schedule baseline)
+- Go settings schema 에 `quiet_hours_start_hour` / `quiet_hours_end_hour` 를 추가하고, legacy settings 파일도 default window (`22 -> 8`) 로 backfill 되도록 했다.
+- `ham settings notifications` CLI 가 quiet-hours on/off 와 start/end hour 를 수정할 수 있게 확장했고, Go tests 로 hour parsing / store / runtime / IPC round-trip 을 보호했다.
+- Swift daemon payload, menu bar settings section, `MenuBarViewModel` 을 업데이트해 quiet-hours start/end 을 UI 에서 조정하고 현재 시각 기준 window suppression 을 적용하도록 연결했다.
+- Swift tests 로 overnight quiet-hours suppression 과 outside-window delivery behavior 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer attached/iTerm session identification/send acknowledgement, broader settings sections, live event stream/follow integration

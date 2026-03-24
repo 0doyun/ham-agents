@@ -18,6 +18,8 @@ public final class MenuBarViewModel: ObservableObject {
             error: true,
             waitingInput: true,
             quietHoursEnabled: false,
+            quietHoursStartHour: 22,
+            quietHoursEndHour: 8,
             previewText: false
         )
     )
@@ -32,6 +34,8 @@ public final class MenuBarViewModel: ObservableObject {
     private let quickMessageSender: QuickMessageSending
     private let pollIntervalNanoseconds: UInt64
     private let sleep: @Sendable (UInt64) async throws -> Void
+    private let now: @Sendable () -> Date
+    private let calendar: Calendar
     private var hasStarted = false
     private var refreshTask: Task<Void, Never>?
 
@@ -44,6 +48,8 @@ public final class MenuBarViewModel: ObservableObject {
         sessionOpener: SessionOpening = NoopSessionOpener(),
         quickMessageSender: QuickMessageSending = NoopQuickMessageSender(),
         pollIntervalNanoseconds: UInt64 = 15_000_000_000,
+        now: @escaping @Sendable () -> Date = { Date() },
+        calendar: Calendar = .autoupdatingCurrent,
         sleep: @escaping @Sendable (UInt64) async throws -> Void = { nanoseconds in
             try await Task.sleep(nanoseconds: nanoseconds)
         }
@@ -57,6 +63,8 @@ public final class MenuBarViewModel: ObservableObject {
         self.sessionOpener = sessionOpener
         self.quickMessageSender = quickMessageSender
         self.pollIntervalNanoseconds = pollIntervalNanoseconds
+        self.now = now
+        self.calendar = calendar
         self.sleep = sleep
     }
 
@@ -143,6 +151,8 @@ public final class MenuBarViewModel: ObservableObject {
         error: Bool? = nil,
         waitingInput: Bool? = nil,
         quietHoursEnabled: Bool? = nil,
+        quietHoursStartHour: Int? = nil,
+        quietHoursEndHour: Int? = nil,
         previewText: Bool? = nil
     ) async {
         var updated = settings
@@ -150,6 +160,8 @@ public final class MenuBarViewModel: ObservableObject {
         if let error { updated.notifications.error = error }
         if let waitingInput { updated.notifications.waitingInput = waitingInput }
         if let quietHoursEnabled { updated.notifications.quietHoursEnabled = quietHoursEnabled }
+        if let quietHoursStartHour { updated.notifications.quietHoursStartHour = quietHoursStartHour }
+        if let quietHoursEndHour { updated.notifications.quietHoursEndHour = quietHoursEndHour }
         if let previewText { updated.notifications.previewText = previewText }
 
         do {
@@ -269,7 +281,7 @@ public final class MenuBarViewModel: ObservableObject {
         _ candidates: [NotificationCandidate],
         settings: DaemonSettingsPayload
     ) -> [NotificationCandidate] {
-        if settings.notifications.quietHoursEnabled {
+        if isQuietHoursActive(settings.notifications, at: now()) {
             return []
         }
 
@@ -293,5 +305,21 @@ public final class MenuBarViewModel: ObservableObject {
 
             return candidate
         }
+    }
+
+    private func isQuietHoursActive(_ settings: DaemonNotificationSettingsPayload, at date: Date) -> Bool {
+        guard settings.quietHoursEnabled else { return false }
+        guard let hour = calendar.dateComponents([.hour], from: date).hour else { return false }
+
+        let startHour = settings.quietHoursStartHour
+        let endHour = settings.quietHoursEndHour
+
+        if startHour == endHour {
+            return true
+        }
+        if startHour < endHour {
+            return hour >= startHour && hour < endHour
+        }
+        return hour >= startHour || hour < endHour
     }
 }
