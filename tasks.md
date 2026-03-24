@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **session send/error feedback baseline** 다.
+현재 활성 범위는 **daemon-persisted notification policy baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -60,12 +60,14 @@
 - [x] popover에서 quick message baseline action 추가
 - [x] iTerm이 있는 경우 quick message를 실제 terminal write 로 보내는 baseline 추가
 - [x] quick message 성공/실패 feedback baseline 추가
+- [x] notification pause/resume 을 daemon persistence 로 이관
 
 ### Current Slice Checklist
 
-- [x] quick message result surface 추가
-- [x] UI error/success state 표시 추가
-- [x] Swift tests로 send result handling 보호
+- [x] Go runtime/store 에 notification policy update 추가
+- [x] daemon IPC contract/client 에 policy update 추가
+- [x] Swift view model 이 backend policy update 를 사용하도록 전환
+- [x] Go/Swift tests 로 policy persistence 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

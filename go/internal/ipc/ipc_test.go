@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ham-agents/ham-agents/go/internal/core"
 	"github.com/ham-agents/ham-agents/go/internal/ipc"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
 	"github.com/ham-agents/ham-agents/go/internal/store"
@@ -96,6 +97,14 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	}
 	if events[0].AgentID != agent.ID {
 		t.Fatalf("unexpected event agent id %q", events[0].AgentID)
+	}
+
+	updated, err := client.UpdateNotificationPolicy(context.Background(), agent.ID, core.NotificationPolicyMuted)
+	if err != nil {
+		t.Fatalf("update notification policy via client: %v", err)
+	}
+	if updated.NotificationPolicy != core.NotificationPolicyMuted {
+		t.Fatalf("unexpected notification policy %q", updated.NotificationPolicy)
 	}
 
 	cancel()

@@ -229,3 +229,13 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: richer iTerm session identification, actual send acknowledgement from backend/runtime, backend-persisted notification settings
+
+### 2026-03-25 (daemon-persisted notification policy baseline)
+- Go runtime/IPC 에 agent notification policy update path를 추가해 mute state를 daemon-backed source of truth 로 옮겼다.
+- Swift `MenuBarViewModel` 은 더 이상 process-local override 에 의존하지 않고 daemon client 를 통해 notification policy 를 갱신한다.
+- Go/Swift tests 를 추가해 notification policy update 가 persistence 와 UI refresh 양쪽에서 유지되는지 보호했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: richer iTerm session identification, actual send acknowledgement from backend/runtime, backend-persisted broader settings state

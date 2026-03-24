@@ -379,6 +379,7 @@ final class MenuBarViewModelTests: XCTestCase {
 
         await viewModel.refresh()
         viewModel.toggleNotificationPause(forAgentID: "agent-1")
+        try? await Task.sleep(nanoseconds: 100_000_000)
 
         XCTAssertTrue(viewModel.isNotificationsMuted(forAgentID: "agent-1"))
     }
@@ -413,6 +414,7 @@ final class MenuBarViewModelTests: XCTestCase {
 
         await viewModel.refresh()
         viewModel.toggleNotificationPause(forAgentID: "agent-1")
+        try? await Task.sleep(nanoseconds: 100_000_000)
         await viewModel.refresh()
 
         XCTAssertTrue(sink.candidates.isEmpty)
@@ -434,6 +436,12 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload { snapshot }
     func fetchAgents() async throws -> [Agent] { agents }
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] { events }
+
+    func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
+        var agent = agents.first { $0.id == agentID } ?? snapshot.agents.first!
+        agent.notificationPolicy = policy
+        return agent
+    }
 }
 
 private struct FailingClient: HamDaemonClientProtocol, Sendable {
@@ -446,6 +454,12 @@ private struct FailingClient: HamDaemonClientProtocol, Sendable {
     }
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
+        throw HamDaemonClientError.transportFailed("unavailable")
+    }
+
+    func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
+        _ = agentID
+        _ = policy
         throw HamDaemonClientError.transportFailed("unavailable")
     }
 }
@@ -476,6 +490,13 @@ private actor CyclingClient: HamDaemonClientProtocol {
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
         []
     }
+
+    func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
+        _ = agentID
+        var updated = agent
+        updated.notificationPolicy = policy
+        return updated
+    }
 }
 
 private actor SleepController {
@@ -502,6 +523,7 @@ private actor TransitioningClient: HamDaemonClientProtocol {
     private let initialAgents: [Agent]
     private let nextAgents: [Agent]
     private var fetchAgentsCalls = 0
+    private var policyOverride: NotificationPolicy?
 
     init(initialAgents: [Agent], nextAgents: [Agent]) {
         self.initialAgents = initialAgents
@@ -509,17 +531,37 @@ private actor TransitioningClient: HamDaemonClientProtocol {
     }
 
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload {
-        let agents = fetchAgentsCalls == 0 ? initialAgents : nextAgents
+        let baseAgents = fetchAgentsCalls == 0 ? initialAgents : nextAgents
+        let agents = applyPolicyOverride(to: baseAgents)
         return DaemonRuntimeSnapshotPayload(agents: agents, generatedAt: Date(timeIntervalSince1970: 10))
     }
 
     func fetchAgents() async throws -> [Agent] {
         defer { fetchAgentsCalls += 1 }
-        return fetchAgentsCalls == 0 ? initialAgents : nextAgents
+        let baseAgents = fetchAgentsCalls == 0 ? initialAgents : nextAgents
+        return applyPolicyOverride(to: baseAgents)
     }
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
         []
+    }
+
+    func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
+        let agent = applyPolicyOverride(to: nextAgents).first { $0.id == agentID }
+            ?? applyPolicyOverride(to: initialAgents).first!
+        policyOverride = policy
+        var updated = agent
+        updated.notificationPolicy = policy
+        return updated
+    }
+
+    private func applyPolicyOverride(to agents: [Agent]) -> [Agent] {
+        guard let policyOverride else { return agents }
+        return agents.map { agent in
+            var updated = agent
+            updated.notificationPolicy = policyOverride
+            return updated
+        }
     }
 }
 

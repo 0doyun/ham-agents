@@ -22,7 +22,6 @@ public final class MenuBarViewModel: ObservableObject {
     private let quickMessageSender: QuickMessageSending
     private let pollIntervalNanoseconds: UInt64
     private let sleep: @Sendable (UInt64) async throws -> Void
-    private var notificationOverrides: [Agent.ID: NotificationPolicy] = [:]
     private var hasStarted = false
     private var refreshTask: Task<Void, Never>?
 
@@ -101,10 +100,19 @@ public final class MenuBarViewModel: ObservableObject {
     }
 
     public func toggleNotificationPause(forAgentID id: Agent.ID?) {
-        guard let agent = agent(withID: id) else { return }
+        guard let id, let agent = agent(withID: id) else { return }
         let nextPolicy: NotificationPolicy = agent.notificationPolicy == .muted ? .default : .muted
-        notificationOverrides[agent.id] = nextPolicy
-        agents = applyNotificationOverrides(to: agents)
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let updated = try await client.updateNotificationPolicy(agentID: id, policy: nextPolicy)
+                if let index = agents.firstIndex(where: { $0.id == updated.id }) {
+                    agents[index] = updated
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     public func requestNotificationPermission() async {
@@ -152,7 +160,7 @@ public final class MenuBarViewModel: ObservableObject {
             async let permissionStatus = notificationPermissionController.currentPermissionStatus()
 
             let summaryValue = try await loadedSummary
-            let loadedAgentsValue = applyNotificationOverrides(to: try await loadedAgents)
+            let loadedAgentsValue = try await loadedAgents
             let candidates = notificationEngine.candidates(previous: previousAgents, current: loadedAgentsValue)
 
             summary = summaryValue
@@ -170,14 +178,5 @@ public final class MenuBarViewModel: ObservableObject {
 
     deinit {
         refreshTask?.cancel()
-    }
-
-    private func applyNotificationOverrides(to agents: [Agent]) -> [Agent] {
-        agents.map { agent in
-            guard let override = notificationOverrides[agent.id] else { return agent }
-            var updated = agent
-            updated.notificationPolicy = override
-            return updated
-        }
     }
 }

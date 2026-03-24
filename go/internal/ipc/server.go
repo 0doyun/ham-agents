@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ham-agents/ham-agents/go/internal/core"
 	hamruntime "github.com/ham-agents/ham-agents/go/internal/runtime"
 )
 
@@ -129,6 +130,12 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{Events: events}, nil
+	case CommandSetNotificationPolicy:
+		agent, err := s.registry.UpdateNotificationPolicy(ctx, request.AgentID, core.NotificationPolicy(request.Policy))
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Agent: &agent}, nil
 	default:
 		return Response{}, fmt.Errorf("unsupported command %q", request.Command)
 	}

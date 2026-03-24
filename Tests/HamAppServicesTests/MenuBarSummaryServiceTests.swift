@@ -90,4 +90,10 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
         requestedEventLimit = limit
         return events
     }
+
+    func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
+        var agent = snapshot.agents.first { $0.id == agentID }!
+        agent.notificationPolicy = policy
+        return agent
+    }
 }
