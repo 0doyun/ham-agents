@@ -83,6 +83,11 @@ private struct MenuBarContentView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                if let presentation = viewModel.latestEventPresentation,
+                   let summary = viewModel.latestEventSummary {
+                    LatestEventBanner(presentation: presentation, summary: summary)
+                }
+
                 NotificationPermissionRow(
                     status: viewModel.notificationPermissionStatus,
                     requestPermission: {
@@ -350,6 +355,26 @@ private struct IntegrationSettingsSection: View {
             )
         }
         .toggleStyle(.checkbox)
+    }
+}
+
+private struct LatestEventBanner: View {
+    let presentation: AgentEventPresentation
+    let summary: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(presentation.label)
+                .font(.caption.weight(.semibold))
+            Text(summary)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(eventBadgeBackground(for: presentation.emphasis))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
 

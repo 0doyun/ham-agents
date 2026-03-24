@@ -619,6 +619,42 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(counts.followEvents, 1)
     }
 
+    func testStatusLineReflectsLatestWarningEvent() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "ops",
+            provider: "iterm2",
+            host: "localhost",
+            mode: .attached,
+            projectPath: "/tmp/app",
+            status: .disconnected,
+            statusConfidence: 0.75,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let client = StubClient(
+            snapshot: DaemonRuntimeSnapshotPayload(
+                agents: [agent],
+                generatedAt: Date(timeIntervalSince1970: 10)
+            ),
+            events: [
+                AgentEventPayload(
+                    id: "event-1",
+                    agentID: "agent-1",
+                    type: "agent.disconnected",
+                    summary: "Attached session disappeared from iTerm.",
+                    occurredAt: Date(timeIntervalSince1970: 2)
+                )
+            ],
+            agents: [agent]
+        )
+        let viewModel = MenuBarViewModel(client: client)
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.latestEventPresentation?.label, "Disconnected")
+        XCTAssertTrue(viewModel.statusLine.hasPrefix("⚠︎ ham"))
+    }
+
     func testSaveRoleUpdatesSelectedAgent() async {
         let agent = Agent(
             id: "agent-1",

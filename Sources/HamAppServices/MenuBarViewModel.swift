@@ -77,7 +77,18 @@ public final class MenuBarViewModel: ObservableObject {
         guard let summary else {
             return errorMessage == nil ? "ham idle" : "ham offline"
         }
-        return "ham \(summary.runningAgents)▶ \(summary.waitingAgents)? \(summary.doneAgents)✓"
+        let base = "ham \(summary.runningAgents)▶ \(summary.waitingAgents)? \(summary.doneAgents)✓"
+        guard let indicator = latestEventIndicator else { return base }
+        return "\(indicator) \(base)"
+    }
+
+    public var latestEventPresentation: AgentEventPresentation? {
+        guard let event = summary?.recentEvents.last else { return nil }
+        return AgentEventPresenter.present(event)
+    }
+
+    public var latestEventSummary: String? {
+        summary?.recentEvents.last?.summary
     }
 
     public func agent(withID id: Agent.ID?) -> Agent? {
@@ -452,5 +463,19 @@ public final class MenuBarViewModel: ObservableObject {
             return hour >= startHour && hour < endHour
         }
         return hour >= startHour || hour < endHour
+    }
+
+    private var latestEventIndicator: String? {
+        guard let presentation = latestEventPresentation else { return nil }
+        switch presentation.emphasis {
+        case .warning:
+            return "⚠︎"
+        case .positive:
+            return "✓"
+        case .info:
+            return "•"
+        case .neutral:
+            return nil
+        }
     }
 }
