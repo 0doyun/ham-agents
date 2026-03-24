@@ -71,9 +71,14 @@ private struct MenuBarContentView: View {
                 if let summary = viewModel.summary {
                     HStack {
                         SummaryBadge(title: "Total", value: summary.totalAgents)
+                        SummaryBadge(title: "Attn", value: summary.attentionAgents)
                         SummaryBadge(title: "Run", value: summary.runningAgents)
                         SummaryBadge(title: "Wait", value: summary.waitingAgents)
                         SummaryBadge(title: "Done", value: summary.doneAgents)
+                    }
+                    let attentionBreakdownChips = viewModel.topSummaryAttentionBreakdownChips
+                    if !attentionBreakdownChips.isEmpty {
+                        EventSummaryChipsView(chips: attentionBreakdownChips)
                     }
                 }
 

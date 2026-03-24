@@ -21,7 +21,11 @@ final class MenuBarViewModelTests: XCTestCase {
         let client = StubClient(
             snapshot: DaemonRuntimeSnapshotPayload(
                 agents: [agent],
-                generatedAt: Date(timeIntervalSince1970: 10)
+                generatedAt: Date(timeIntervalSince1970: 10),
+                attentionCount: 1,
+                attentionBreakdown: .init(error: 0, waitingInput: 1, disconnected: 0),
+                attentionOrder: ["agent-1"],
+                attentionSubtitles: ["agent-1": "waiting_input · high confidence · Needs confirmation."]
             ),
             events: [],
             agents: [agent]
@@ -32,6 +36,14 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.refresh()
 
         XCTAssertEqual(viewModel.summary?.totalAgents, 1)
+        XCTAssertEqual(viewModel.summary?.attentionAgents, 1)
+        XCTAssertEqual(viewModel.summary?.attentionBreakdown.waitingInput, 1)
+        XCTAssertEqual(viewModel.summary?.attentionBreakdown.error, 0)
+        XCTAssertEqual(viewModel.summary?.attentionOrder, ["agent-1"])
+        XCTAssertEqual(viewModel.summary?.attentionSubtitles["agent-1"], "waiting_input · high confidence · Needs confirmation.")
+        XCTAssertEqual(viewModel.topSummaryAttentionBreakdownChips.map(\.label), ["Needs Input"])
+        XCTAssertEqual(viewModel.topSummaryAttentionBreakdownChips.map(\.count), [1])
+        XCTAssertEqual(viewModel.attentionSubtitle(for: agent), "waiting_input · high confidence · Needs confirmation.")
         XCTAssertEqual(viewModel.agents.count, 1)
         XCTAssertEqual(viewModel.statusLine, "ham 1▶ 0? 0✓")
         XCTAssertNil(viewModel.errorMessage)
@@ -781,12 +793,246 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.followLatestEvents(eventLimit: 5, waitMilliseconds: 1)
 
         XCTAssertEqual(viewModel.summary?.recentEvents.last?.id, "event-2")
+        XCTAssertEqual(viewModel.summary?.attentionBreakdown.error, 0)
+        XCTAssertEqual(viewModel.summary?.attentionBreakdown.waitingInput, 0)
         let counts = await client.callCounts()
         XCTAssertEqual(counts.fetchSnapshot, 1)
         XCTAssertEqual(counts.fetchAgents, 2)
         XCTAssertEqual(counts.fetchSettings, 1)
         XCTAssertEqual(counts.fetchEvents, 1)
         XCTAssertEqual(counts.followEvents, 1)
+    }
+
+    func testFollowLatestEventsRebuildsAttentionBreakdownFromFetchedAgents() async {
+        var followedAgent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2)
+        )
+        followedAgent.statusReason = "Needs confirmation."
+
+        let client = TransitioningClient(
+            initialAgents: [
+                Agent(
+                    id: "agent-1",
+                    displayName: "builder",
+                    provider: "claude",
+                    host: "localhost",
+                    mode: .managed,
+                    projectPath: "/tmp/app",
+                    status: .thinking,
+                    statusConfidence: 1,
+                    lastEventAt: Date(timeIntervalSince1970: 1)
+                )
+            ],
+            nextAgents: [followedAgent],
+            followedEvents: [
+                AgentEventPayload(
+                    id: "event-2",
+                    agentID: "agent-1",
+                    type: "agent.status_updated",
+                    summary: "Needs confirmation.",
+                    occurredAt: Date(timeIntervalSince1970: 2)
+                )
+            ]
+        )
+        let viewModel = MenuBarViewModel(client: client)
+
+        await viewModel.refresh()
+        await viewModel.followLatestEvents(eventLimit: 5, waitMilliseconds: 1)
+
+        XCTAssertEqual(viewModel.summary?.attentionAgents, 1)
+        XCTAssertEqual(viewModel.summary?.attentionBreakdown.waitingInput, 1)
+        XCTAssertEqual(viewModel.summary?.attentionOrder, ["agent-1"])
+        XCTAssertEqual(viewModel.attentionAgents.map(\.id), ["agent-1"])
+        XCTAssertEqual(viewModel.summary?.attentionSubtitles["agent-1"], "waiting_input · high confidence · Needs confirmation.")
+        XCTAssertEqual(viewModel.attentionSubtitle(for: followedAgent), "waiting_input · high confidence · Needs confirmation.")
+        XCTAssertEqual(viewModel.topSummaryAttentionBreakdownChips.map(\.label), ["Needs Input"])
+    }
+
+    func testAttentionAgentsPreferDaemonProvidedOrdering() async {
+        let errorAgent = Agent(
+            id: "agent-1",
+            displayName: "erroring",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .error,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 3)
+        )
+        let waitingAgent = Agent(
+            id: "agent-2",
+            displayName: "waiting",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let client = StubClient(
+            snapshot: DaemonRuntimeSnapshotPayload(
+                agents: [errorAgent, waitingAgent],
+                generatedAt: Date(timeIntervalSince1970: 10),
+                attentionCount: 2,
+                attentionBreakdown: .init(error: 1, waitingInput: 1, disconnected: 0),
+                attentionOrder: ["agent-2", "agent-1"]
+            ),
+            events: [],
+            agents: [errorAgent, waitingAgent]
+        )
+        let viewModel = MenuBarViewModel(client: client)
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.attentionAgents.map(\.id), ["agent-2", "agent-1"])
+    }
+
+    func testAttentionAgentsFallbackUsesDeterministicIDTiebreak() async {
+        let firstAgent = Agent(
+            id: "agent-1",
+            displayName: "same",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let secondAgent = Agent(
+            id: "agent-2",
+            displayName: "same",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let client = StubClient(
+            snapshot: DaemonRuntimeSnapshotPayload(
+                agents: [secondAgent, firstAgent],
+                generatedAt: Date(timeIntervalSince1970: 10),
+                attentionCount: 2,
+                attentionBreakdown: .init(error: 0, waitingInput: 2, disconnected: 0),
+                attentionOrder: []
+            ),
+            events: [],
+            agents: [secondAgent, firstAgent]
+        )
+        let viewModel = MenuBarViewModel(client: client)
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.attentionAgents.map(\.id), ["agent-1", "agent-2"])
+    }
+
+    func testAttentionAgentsUseFallbackForIDsMissingFromDaemonOrder() async {
+        let providedAgent = Agent(
+            id: "agent-1",
+            displayName: "provided",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .error,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2)
+        )
+        let missingAgent = Agent(
+            id: "agent-2",
+            displayName: "missing",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let client = StubClient(
+            snapshot: DaemonRuntimeSnapshotPayload(
+                agents: [providedAgent, missingAgent],
+                generatedAt: Date(timeIntervalSince1970: 10),
+                attentionCount: 2,
+                attentionBreakdown: .init(error: 1, waitingInput: 1, disconnected: 0),
+                attentionOrder: ["agent-1"]
+            ),
+            events: [],
+            agents: [providedAgent, missingAgent]
+        )
+        let viewModel = MenuBarViewModel(client: client)
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.attentionAgents.map(\.id), ["agent-1", "agent-2"])
+    }
+
+    func testFollowLatestEventsRebuildsAttentionOrderFromFetchedAgents() async {
+        let initialAgent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let errorAgent = Agent(
+            id: "agent-2",
+            displayName: "erroring",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .error,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2)
+        )
+        let waitingAgent = Agent(
+            id: "agent-1",
+            displayName: "waiting",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 3)
+        )
+        let client = TransitioningClient(
+            initialAgents: [initialAgent],
+            nextAgents: [waitingAgent, errorAgent],
+            followedEvents: [
+                AgentEventPayload(
+                    id: "event-2",
+                    agentID: "agent-2",
+                    type: "agent.disconnected",
+                    summary: "Disconnected.",
+                    occurredAt: Date(timeIntervalSince1970: 4)
+                )
+            ]
+        )
+        let viewModel = MenuBarViewModel(client: client)
+
+        await viewModel.refresh()
+        await viewModel.followLatestEvents(eventLimit: 5, waitMilliseconds: 1)
+
+        XCTAssertEqual(viewModel.summary?.attentionOrder, ["agent-2", "agent-1"])
+        XCTAssertEqual(viewModel.attentionAgents.map(\.id), ["agent-2", "agent-1"])
     }
 
     func testStatusLineReflectsLatestWarningEvent() async {
@@ -1423,13 +1669,20 @@ private actor CancellingSleepController {
 private actor TransitioningClient: HamDaemonClientProtocol {
     private let initialAgents: [Agent]
     private let nextAgents: [Agent]
+    private let followedEvents: [AgentEventPayload]
     private var fetchAgentsCalls = 0
     private var policyOverride: NotificationPolicy?
     private let settings: DaemonSettingsPayload
 
-    init(initialAgents: [Agent], nextAgents: [Agent], settings: DaemonSettingsPayload = .default) {
+    init(
+        initialAgents: [Agent],
+        nextAgents: [Agent],
+        followedEvents: [AgentEventPayload] = [],
+        settings: DaemonSettingsPayload = .default
+    ) {
         self.initialAgents = initialAgents
         self.nextAgents = nextAgents
+        self.followedEvents = followedEvents
         self.settings = settings
     }
 
@@ -1453,7 +1706,7 @@ private actor TransitioningClient: HamDaemonClientProtocol {
         _ = afterEventID
         _ = limit
         _ = waitMilliseconds
-        return []
+        return followedEvents
     }
 
     func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] {

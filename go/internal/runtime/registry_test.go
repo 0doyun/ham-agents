@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
@@ -58,6 +59,9 @@ func TestRegisterManagedPersistsAndBuildsSnapshot(t *testing.T) {
 	if snapshot.RunningCount() != 1 {
 		t.Fatalf("expected running count 1, got %d", snapshot.RunningCount())
 	}
+	if snapshot.AttentionCount != 0 {
+		t.Fatalf("expected attention count 0, got %d", snapshot.AttentionCount)
+	}
 
 	events, err := store.NewFileEventStore(eventPath).Load(ctx)
 	if err != nil {
@@ -68,6 +72,145 @@ func TestRegisterManagedPersistsAndBuildsSnapshot(t *testing.T) {
 	}
 	if events[0].AgentID != agent.ID {
 		t.Fatalf("unexpected event agent id %q", events[0].AgentID)
+	}
+}
+
+func TestSnapshotBuildsAttentionSummary(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	_, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider:    "codex",
+		DisplayName: "erroring",
+		ProjectPath: "/tmp/project",
+		Role:        "reviewer",
+	})
+	if err != nil {
+		t.Fatalf("register erroring agent: %v", err)
+	}
+	_, err = registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider:    "codex",
+		DisplayName: "waiting",
+		ProjectPath: "/tmp/project",
+		Role:        "reviewer",
+	})
+	if err != nil {
+		t.Fatalf("register waiting agent: %v", err)
+	}
+
+	agents, err := registry.List(ctx)
+	if err != nil {
+		t.Fatalf("list agents: %v", err)
+	}
+	agents[0].Status = core.AgentStatusError
+	agents[1].Status = core.AgentStatusWaitingInput
+	if err := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")).SaveAgents(ctx, agents); err != nil {
+		t.Fatalf("save agents: %v", err)
+	}
+
+	snapshot, err := registry.Snapshot(ctx)
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+
+	if snapshot.AttentionCount != 2 {
+		t.Fatalf("expected attention count 2, got %d", snapshot.AttentionCount)
+	}
+	if snapshot.AttentionBreakdown.Error != 1 || snapshot.AttentionBreakdown.WaitingInput != 1 || snapshot.AttentionBreakdown.Disconnected != 0 {
+		t.Fatalf("unexpected attention breakdown %#v", snapshot.AttentionBreakdown)
+	}
+	if len(snapshot.AttentionOrder) != 2 || snapshot.AttentionOrder[0] != agents[0].ID || snapshot.AttentionOrder[1] != agents[1].ID {
+		t.Fatalf("unexpected attention order %#v", snapshot.AttentionOrder)
+	}
+	if snapshot.AttentionSubtitles[agents[0].ID] == "" || snapshot.AttentionSubtitles[agents[1].ID] == "" {
+		t.Fatalf("expected attention subtitles, got %#v", snapshot.AttentionSubtitles)
+	}
+}
+
+func TestSnapshotAttentionOrderUsesSeverityThenRecency(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	statePath := filepath.Join(root, "managed-agents.json")
+	eventPath := filepath.Join(root, "events.jsonl")
+	agentStore := store.NewFileAgentStore(statePath)
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(eventPath))
+
+	if err := agentStore.SaveAgents(ctx, []core.Agent{
+		{
+			ID:          "agent-1",
+			DisplayName: "waiting-older",
+			Status:      core.AgentStatusWaitingInput,
+			LastEventAt: time.Unix(1, 0).UTC(),
+		},
+		{
+			ID:          "agent-2",
+			DisplayName: "error",
+			Status:      core.AgentStatusError,
+			LastEventAt: time.Unix(2, 0).UTC(),
+		},
+		{
+			ID:          "agent-3",
+			DisplayName: "waiting-newer",
+			Status:      core.AgentStatusWaitingInput,
+			LastEventAt: time.Unix(3, 0).UTC(),
+		},
+		{
+			ID:          "agent-4",
+			DisplayName: "calm",
+			Status:      core.AgentStatusThinking,
+			LastEventAt: time.Unix(4, 0).UTC(),
+		},
+	}); err != nil {
+		t.Fatalf("save agents: %v", err)
+	}
+
+	snapshot, err := registry.Snapshot(ctx)
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+
+	if got, want := snapshot.AttentionOrder, []string{"agent-2", "agent-3", "agent-1"}; len(got) != len(want) || got[0] != want[0] || got[1] != want[1] || got[2] != want[2] {
+		t.Fatalf("unexpected attention order %#v", got)
+	}
+}
+
+func TestSnapshotAttentionSubtitleUsesConfidenceAndReason(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	statePath := filepath.Join(root, "managed-agents.json")
+	eventPath := filepath.Join(root, "events.jsonl")
+	agentStore := store.NewFileAgentStore(statePath)
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(eventPath))
+
+	if err := agentStore.SaveAgents(ctx, []core.Agent{
+		{
+			ID:               "agent-1",
+			DisplayName:      "waiting",
+			Status:           core.AgentStatusWaitingInput,
+			StatusConfidence: 0.45,
+			StatusReason:     "Needs approval.",
+		},
+	}); err != nil {
+		t.Fatalf("save agents: %v", err)
+	}
+
+	snapshot, err := registry.Snapshot(ctx)
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+
+	if got := snapshot.AttentionSubtitles["agent-1"]; got != "likely waiting_input · low confidence · Needs approval." {
+		t.Fatalf("unexpected subtitle %q", got)
 	}
 }
 

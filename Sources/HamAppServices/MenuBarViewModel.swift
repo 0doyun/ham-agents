@@ -114,20 +114,39 @@ public final class MenuBarViewModel: ObservableObject {
         AgentEventPresenter.summarizeBySeverity(recentEvents(forAgentID: id))
     }
 
+    public var topSummaryAttentionBreakdownChips: [AgentEventSummaryChip] {
+        guard let summary, summary.attentionAgents > 0 else { return [] }
+
+        let breakdown = summary.attentionBreakdown
+        return [
+            breakdown.error > 0 ? AgentEventSummaryChip(label: "Errors", emphasis: .warning, count: breakdown.error) : nil,
+            breakdown.waitingInput > 0 ? AgentEventSummaryChip(label: "Needs Input", emphasis: .info, count: breakdown.waitingInput) : nil,
+            breakdown.disconnected > 0 ? AgentEventSummaryChip(label: "Disconnected", emphasis: .neutral, count: breakdown.disconnected) : nil,
+        ].compactMap { $0 }
+    }
+
     public var attentionAgents: [Agent] {
-        agents
-            .filter { attentionPriority(for: $0) != nil }
-            .sorted { lhs, rhs in
-                let lhsPriority = attentionPriority(for: lhs) ?? .max
-                let rhsPriority = attentionPriority(for: rhs) ?? .max
-                if lhsPriority == rhsPriority {
-                    if lhs.lastEventAt == rhs.lastEventAt {
-                        return lhs.displayName < rhs.displayName
-                    }
-                    return lhs.lastEventAt > rhs.lastEventAt
-                }
-                return lhsPriority < rhsPriority
+        let filtered = agents.filter { attentionPriority(for: $0) != nil }
+        guard let summary else {
+            return sortAttentionAgents(filtered)
+        }
+
+        let orderIndex = Dictionary(uniqueKeysWithValues: summary.attentionOrder.enumerated().map { ($1, $0) })
+        return filtered.sorted { lhs, rhs in
+            let lhsOrder = orderIndex[lhs.id]
+            let rhsOrder = orderIndex[rhs.id]
+            switch (lhsOrder, rhsOrder) {
+            case let (.some(left), .some(right)):
+                if left != right { return left < right }
+            case (.some, .none):
+                return true
+            case (.none, .some):
+                return false
+            case (.none, .none):
+                break
             }
+            return compareAttentionAgents(lhs, rhs)
+        }
     }
 
     public var nonAttentionAgents: [Agent] {
@@ -136,6 +155,10 @@ public final class MenuBarViewModel: ObservableObject {
     }
 
     public func attentionSubtitle(for agent: Agent) -> String {
+        if let subtitle = summary?.attentionSubtitles[agent.id], !subtitle.isEmpty {
+            return subtitle
+        }
+
         let status = statusDisplayText(for: agent)
         let confidence = confidenceLevelText(for: agent).lowercased()
         if let reason = agent.statusReason, !reason.isEmpty {
@@ -474,6 +497,10 @@ public final class MenuBarViewModel: ObservableObject {
         HamMenuBarSummary(
             generatedAt: snapshot.generatedAt,
             totalAgents: snapshot.totalCount,
+            attentionAgents: snapshot.attentionCount,
+            attentionBreakdown: snapshot.attentionBreakdown,
+            attentionOrder: snapshot.attentionOrder,
+            attentionSubtitles: snapshot.attentionSubtitles,
             runningAgents: snapshot.runningCount,
             waitingAgents: snapshot.waitingCount,
             doneAgents: snapshot.doneCount,
@@ -483,6 +510,7 @@ public final class MenuBarViewModel: ObservableObject {
 
     private func makeSummary(agents: [Agent], recentEvents: [AgentEventPayload], generatedAt: Date) -> HamMenuBarSummary {
         let totalAgents = agents.count
+        let attentionAgents = agents.filter { attentionPriority(for: $0) != nil }.count
         let runningAgents = agents.filter { [.booting, .thinking, .reading, .runningTool].contains($0.status) }.count
         let waitingAgents = agents.filter { $0.status == .waitingInput }.count
         let doneAgents = agents.filter { $0.status == .done }.count
@@ -490,6 +518,18 @@ public final class MenuBarViewModel: ObservableObject {
         return HamMenuBarSummary(
             generatedAt: generatedAt,
             totalAgents: totalAgents,
+            attentionAgents: attentionAgents,
+            attentionBreakdown: .init(
+                error: agents.filter { $0.status == .error }.count,
+                waitingInput: agents.filter { $0.status == .waitingInput }.count,
+                disconnected: agents.filter { $0.status == .disconnected }.count
+            ),
+            attentionOrder: sortAttentionAgents(agents.filter { attentionPriority(for: $0) != nil }).map(\.id),
+            attentionSubtitles: Dictionary(
+                uniqueKeysWithValues: agents
+                    .filter { attentionPriority(for: $0) != nil }
+                    .map { ($0.id, attentionSubtitleFallback(for: $0)) }
+            ),
             runningAgents: runningAgents,
             waitingAgents: waitingAgents,
             doneAgents: doneAgents,
@@ -553,5 +593,33 @@ public final class MenuBarViewModel: ObservableObject {
         default:
             return nil
         }
+    }
+
+    private func sortAttentionAgents(_ agents: [Agent]) -> [Agent] {
+        agents.sorted(by: compareAttentionAgents)
+    }
+
+    private func compareAttentionAgents(_ lhs: Agent, _ rhs: Agent) -> Bool {
+        let lhsPriority = attentionPriority(for: lhs) ?? .max
+        let rhsPriority = attentionPriority(for: rhs) ?? .max
+        if lhsPriority == rhsPriority {
+            if lhs.lastEventAt == rhs.lastEventAt {
+                if lhs.displayName == rhs.displayName {
+                    return lhs.id < rhs.id
+                }
+                return lhs.displayName < rhs.displayName
+            }
+            return lhs.lastEventAt > rhs.lastEventAt
+        }
+        return lhsPriority < rhsPriority
+    }
+
+    private func attentionSubtitleFallback(for agent: Agent) -> String {
+        let status = statusDisplayText(for: agent)
+        let confidence = confidenceLevelText(for: agent).lowercased()
+        if let reason = agent.statusReason, !reason.isEmpty {
+            return "\(status) · \(confidence) confidence · \(reason)"
+        }
+        return "\(status) · \(confidence) confidence"
     }
 }
