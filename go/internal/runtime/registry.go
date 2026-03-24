@@ -227,7 +227,7 @@ func (r *Registry) List(ctx context.Context) ([]core.Agent, error) {
 		return nil, err
 	}
 
-	agents, _, err = r.refreshObservedAgents(ctx, agents)
+	agents, err = r.applyObservedRefresh(ctx, agents)
 	if err != nil {
 		return nil, err
 	}
@@ -549,11 +549,8 @@ func (r *Registry) RefreshObserved(ctx context.Context) error {
 		return err
 	}
 
-	_, events, err := r.refreshObservedAgents(ctx, agents)
-	if err != nil {
-		return err
-	}
-	return r.saveAgentsAndEvents(ctx, agents, events)
+	_, err = r.applyObservedRefresh(ctx, agents)
+	return err
 }
 
 func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agent) ([]core.Agent, []core.Event, error) {
@@ -592,6 +589,29 @@ func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agen
 	}
 
 	return refreshed, events, nil
+}
+
+func (r *Registry) applyObservedRefresh(ctx context.Context, agents []core.Agent) ([]core.Agent, error) {
+	refreshed, events, err := r.refreshObservedAgents(ctx, agents)
+	if err != nil {
+		return nil, err
+	}
+	if len(events) == 0 && len(refreshed) == len(agents) {
+		same := true
+		for index := range refreshed {
+			if refreshed[index] != agents[index] {
+				same = false
+				break
+			}
+		}
+		if same {
+			return refreshed, nil
+		}
+	}
+	if err := r.saveAgentsAndEvents(ctx, refreshed, events); err != nil {
+		return nil, err
+	}
+	return refreshed, nil
 }
 
 func (r *Registry) mutateAgent(
