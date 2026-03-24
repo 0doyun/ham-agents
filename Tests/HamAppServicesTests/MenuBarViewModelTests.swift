@@ -412,6 +412,7 @@ final class MenuBarViewModelTests: XCTestCase {
             projectPath: "/tmp/app",
             status: .error,
             statusConfidence: 1,
+            statusReason: "Build failed.",
             lastEventAt: Date(timeIntervalSince1970: 3)
         )
         let waitingAgent = Agent(
@@ -423,6 +424,7 @@ final class MenuBarViewModelTests: XCTestCase {
             projectPath: "/tmp/app",
             status: .waitingInput,
             statusConfidence: 1,
+            statusReason: "Needs confirmation.",
             lastEventAt: Date(timeIntervalSince1970: 2)
         )
         let thinkingAgent = Agent(
@@ -451,6 +453,8 @@ final class MenuBarViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.attentionAgents.map(\.id), ["agent-1", "agent-2"])
         XCTAssertEqual(viewModel.nonAttentionAgents.map(\.id), ["agent-3"])
+        XCTAssertEqual(viewModel.attentionSubtitle(for: errorAgent), "error · high confidence · Build failed.")
+        XCTAssertEqual(viewModel.attentionSubtitle(for: waitingAgent), "waiting_input · high confidence · Needs confirmation.")
     }
 
     func testOpenProjectUsesInjectedOpener() async {

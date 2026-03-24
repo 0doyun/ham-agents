@@ -157,8 +157,7 @@ private struct MenuBarContentView: View {
                         ForEach(viewModel.attentionAgents) { agent in
                             AttentionAgentRow(
                                 name: agent.displayName,
-                                status: viewModel.statusDisplayText(for: agent),
-                                confidence: viewModel.confidenceLevelText(for: agent)
+                                subtitle: viewModel.attentionSubtitle(for: agent)
                             )
                         }
                     }
@@ -242,17 +241,17 @@ private struct MenuBarContentView: View {
 
 private struct AttentionAgentRow: View {
     let name: String
-    let status: String
-    let confidence: String
+    let subtitle: String
 
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
                     .font(.caption.weight(.semibold))
-                Text("\(status) · \(confidence)")
+                Text(subtitle)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
+                    .lineLimit(2)
             }
             Spacer()
         }

@@ -131,6 +131,15 @@ public final class MenuBarViewModel: ObservableObject {
         return agents.filter { !attentionIDs.contains($0.id) }
     }
 
+    public func attentionSubtitle(for agent: Agent) -> String {
+        let status = statusDisplayText(for: agent)
+        let confidence = confidenceLevelText(for: agent).lowercased()
+        if let reason = agent.statusReason, !reason.isEmpty {
+            return "\(status) · \(confidence) confidence · \(reason)"
+        }
+        return "\(status) · \(confidence) confidence"
+    }
+
     public func confidenceText(for agent: Agent?) -> String {
         guard let agent else { return "—" }
         return "\(Int((agent.statusConfidence * 100).rounded()))%"

@@ -794,6 +794,54 @@ func TestUpdateNotificationPolicyPersistsChange(t *testing.T) {
 	}
 }
 
+func TestUpdateNotificationPolicyNoOpDoesNotPersistOrEmitEvent(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	countingStore := &countingAgentStore{
+		AgentStore: store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+	}
+	registry := runtime.NewRegistry(
+		countingStore,
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider:    "claude",
+		DisplayName: "builder",
+		ProjectPath: "/tmp/project",
+	})
+	if err != nil {
+		t.Fatalf("register managed: %v", err)
+	}
+
+	eventsBefore, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events before no-op policy update: %v", err)
+	}
+	saveCallsBefore := countingStore.saveCalls
+
+	updated, err := registry.UpdateNotificationPolicy(ctx, agent.ID, core.NotificationPolicyDefault)
+	if err != nil {
+		t.Fatalf("no-op update policy: %v", err)
+	}
+	if updated.NotificationPolicy != core.NotificationPolicyDefault {
+		t.Fatalf("expected unchanged default policy, got %q", updated.NotificationPolicy)
+	}
+	if countingStore.saveCalls != saveCallsBefore {
+		t.Fatalf("expected no extra save on no-op policy update, got %d -> %d", saveCallsBefore, countingStore.saveCalls)
+	}
+
+	eventsAfter, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events after no-op policy update: %v", err)
+	}
+	if len(eventsAfter) != len(eventsBefore) {
+		t.Fatalf("expected no extra event on no-op policy update, got %d -> %d", len(eventsBefore), len(eventsAfter))
+	}
+}
+
 func TestUpdateRolePersistsChange(t *testing.T) {
 	t.Parallel()
 
@@ -835,6 +883,55 @@ func TestUpdateRolePersistsChange(t *testing.T) {
 	}
 	if events[len(events)-1].Type != core.EventTypeAgentRoleUpdated {
 		t.Fatalf("expected role updated event, got %q", events[len(events)-1].Type)
+	}
+}
+
+func TestUpdateRoleNoOpDoesNotPersistOrEmitEvent(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	countingStore := &countingAgentStore{
+		AgentStore: store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+	}
+	registry := runtime.NewRegistry(
+		countingStore,
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider:    "claude",
+		DisplayName: "builder",
+		ProjectPath: "/tmp/project",
+		Role:        "reviewer",
+	})
+	if err != nil {
+		t.Fatalf("register managed: %v", err)
+	}
+
+	eventsBefore, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events before no-op role update: %v", err)
+	}
+	saveCallsBefore := countingStore.saveCalls
+
+	updated, err := registry.UpdateRole(ctx, agent.ID, "reviewer")
+	if err != nil {
+		t.Fatalf("no-op update role: %v", err)
+	}
+	if updated.Role != "reviewer" {
+		t.Fatalf("expected unchanged reviewer role, got %q", updated.Role)
+	}
+	if countingStore.saveCalls != saveCallsBefore {
+		t.Fatalf("expected no extra save on no-op role update, got %d -> %d", saveCallsBefore, countingStore.saveCalls)
+	}
+
+	eventsAfter, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events after no-op role update: %v", err)
+	}
+	if len(eventsAfter) != len(eventsBefore) {
+		t.Fatalf("expected no extra event on no-op role update, got %d -> %d", len(eventsBefore), len(eventsAfter))
 	}
 }
 
