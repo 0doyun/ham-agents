@@ -42,6 +42,8 @@ public enum AgentEventPresenter {
             return AgentEventPresentation(label: "Role", emphasis: .info)
         case "agent.notification_policy_updated":
             return AgentEventPresentation(label: "Notifications", emphasis: .info)
+        case "agent.status_updated":
+            return AgentEventPresentation(label: "Status", emphasis: .info)
         case "agent.disconnected":
             return AgentEventPresentation(label: "Disconnected", emphasis: .warning)
         case "agent.reconnected":

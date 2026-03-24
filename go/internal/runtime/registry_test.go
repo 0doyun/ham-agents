@@ -211,6 +211,14 @@ func TestRefreshObservedUpdatesPersistedStatus(t *testing.T) {
 	if listed[0].Status != core.AgentStatusWaitingInput {
 		t.Fatalf("expected waiting_input status, got %q", listed[0].Status)
 	}
+
+	events, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events: %v", err)
+	}
+	if events[len(events)-1].Type != core.EventTypeAgentStatusUpdated {
+		t.Fatalf("expected observed status event, got %q", events[len(events)-1].Type)
+	}
 }
 
 func TestOpenTargetPrefersSessionRefURL(t *testing.T) {

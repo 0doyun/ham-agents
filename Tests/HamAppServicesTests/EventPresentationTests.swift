@@ -36,9 +36,25 @@ final class EventPresentationTests: XCTestCase {
         XCTAssertFalse(presentation.showsTechnicalType)
     }
 
+    func testStatusUpdatedEventGetsInfoPresentation() {
+        let event = AgentEventPayload(
+            id: "event-3",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Observed question-like output.",
+            occurredAt: Date(timeIntervalSince1970: 3)
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Status")
+        XCTAssertEqual(presentation.emphasis, .info)
+        XCTAssertFalse(presentation.showsTechnicalType)
+    }
+
     func testUnknownEventKeepsTechnicalTypeVisible() {
         let event = AgentEventPayload(
-            id: "event-4",
+            id: "event-5",
             agentID: "agent-1",
             type: "agent.custom_event",
             summary: "Custom event.",

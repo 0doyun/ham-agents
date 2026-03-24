@@ -71,6 +71,7 @@ const (
 	EventTypeAgentDisconnected              EventType = "agent.disconnected"
 	EventTypeAgentReconnected               EventType = "agent.reconnected"
 	EventTypeAgentRemoved                   EventType = "agent.removed"
+	EventTypeAgentStatusUpdated             EventType = "agent.status_updated"
 )
 
 type Event struct {
