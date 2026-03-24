@@ -48,3 +48,19 @@ func TestSettingsServiceRejectsInvalidQuietHours(t *testing.T) {
 		t.Fatal("expected invalid quiet hours to be rejected")
 	}
 }
+
+func TestSettingsServiceRejectsInvalidTheme(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	service := runtime.NewSettingsService(
+		store.NewFileSettingsStore(filepath.Join(t.TempDir(), "settings.json")),
+	)
+
+	settings := core.DefaultSettings()
+	settings.Appearance.Theme = "purple"
+
+	if _, err := service.Update(ctx, settings); err == nil {
+		t.Fatal("expected invalid theme to be rejected")
+	}
+}

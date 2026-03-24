@@ -122,9 +122,14 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
 
 public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
     public var notifications: DaemonNotificationSettingsPayload
+    public var appearance: DaemonAppearanceSettingsPayload
 
-    public init(notifications: DaemonNotificationSettingsPayload) {
+    public init(
+        notifications: DaemonNotificationSettingsPayload,
+        appearance: DaemonAppearanceSettingsPayload = .default
+    ) {
         self.notifications = notifications
+        self.appearance = appearance
     }
 
     public static let `default` = DaemonSettingsPayload(
@@ -136,8 +141,19 @@ public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
             quietHoursStartHour: 22,
             quietHoursEndHour: 8,
             previewText: false
-        )
+        ),
+        appearance: .default
     )
+}
+
+public struct DaemonAppearanceSettingsPayload: Codable, Equatable, Sendable {
+    public var theme: String
+
+    public init(theme: String) {
+        self.theme = theme
+    }
+
+    public static let `default` = DaemonAppearanceSettingsPayload(theme: "auto")
 }
 
 public struct DaemonRuntimeSnapshotPayload: Codable, Equatable, Sendable {

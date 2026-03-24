@@ -173,6 +173,18 @@ public final class MenuBarViewModel: ObservableObject {
         }
     }
 
+    public func updateAppearanceSetting(theme: String) async {
+        var updated = settings
+        updated.appearance.theme = theme
+
+        do {
+            settings = try await client.updateSettings(updated)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     public func saveRole(forAgentID id: Agent.ID?) async {
         guard let id else {
             errorMessage = "No agent selected."

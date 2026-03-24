@@ -115,6 +115,13 @@ private struct MenuBarContentView: View {
                     }
                 )
 
+                AppearanceSettingsSection(
+                    settings: viewModel.settings.appearance,
+                    updateTheme: { value in
+                        Task { await viewModel.updateAppearanceSetting(theme: value) }
+                    }
+                )
+
                 if !viewModel.attachableSessions.isEmpty {
                     AttachableSessionsSection(sessions: viewModel.attachableSessions)
                 }
@@ -313,6 +320,31 @@ private struct AttachableSessionsSection: View {
                 }
                 .font(.caption)
             }
+        }
+    }
+}
+
+private struct AppearanceSettingsSection: View {
+    let settings: DaemonAppearanceSettingsPayload
+    let updateTheme: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Appearance")
+                .font(.caption.weight(.semibold))
+
+            Picker(
+                "Theme",
+                selection: Binding(
+                    get: { settings.theme },
+                    set: updateTheme
+                )
+            ) {
+                Text("Auto").tag("auto")
+                Text("Day").tag("day")
+                Text("Night").tag("night")
+            }
+            .labelsHidden()
         }
     }
 }
