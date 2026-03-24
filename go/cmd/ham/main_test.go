@@ -323,6 +323,9 @@ func TestRenderStatusHumanReadableIncludesAttentionSummary(t *testing.T) {
 	if !strings.Contains(line, "attention=2") {
 		t.Fatalf("expected attention summary in line %q", line)
 	}
+	if !strings.Contains(line, "attention_breakdown error=1 waiting_input=1 disconnected=0") {
+		t.Fatalf("expected attention breakdown in output %q", line)
+	}
 }
 
 func TestRenderStatusHumanReadableIncludesUrgentAgentDetails(t *testing.T) {
@@ -362,13 +365,16 @@ func TestRenderStatusHumanReadableIncludesUrgentAgentDetails(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
-	if len(lines) != 4 {
-		t.Fatalf("expected summary plus 3 urgent lines, got %d from %q", len(lines), output.String())
+	if len(lines) != 5 {
+		t.Fatalf("expected summary, breakdown, and 3 urgent lines, got %d from %q", len(lines), output.String())
 	}
-	if !strings.Contains(lines[1], "erroring") || !strings.Contains(lines[2], "waiting") || !strings.Contains(lines[3], "disconnected") {
+	if !strings.Contains(lines[1], "attention_breakdown error=1 waiting_input=1 disconnected=1") {
+		t.Fatalf("expected breakdown line, got %q", output.String())
+	}
+	if !strings.Contains(lines[2], "erroring") || !strings.Contains(lines[3], "waiting") || !strings.Contains(lines[4], "disconnected") {
 		t.Fatalf("expected severity-ordered urgent details, got %q", output.String())
 	}
-	if !strings.Contains(lines[1], "Tool failed.") || !strings.Contains(lines[2], "Needs approval.") {
+	if !strings.Contains(lines[2], "Tool failed.") || !strings.Contains(lines[3], "Needs approval.") {
 		t.Fatalf("expected reasons in urgent details, got %q", output.String())
 	}
 }
@@ -398,10 +404,10 @@ func TestRenderStatusHumanReadableUsesRecencyWithinSameSeverity(t *testing.T) {
 	}
 
 	lines := strings.Split(strings.TrimSpace(output.String()), "\n")
-	if len(lines) != 3 {
-		t.Fatalf("expected summary plus 2 urgent lines, got %d from %q", len(lines), output.String())
+	if len(lines) != 4 {
+		t.Fatalf("expected summary, breakdown, and 2 urgent lines, got %d from %q", len(lines), output.String())
 	}
-	if !strings.Contains(lines[1], "newer") || !strings.Contains(lines[2], "older") {
+	if !strings.Contains(lines[2], "newer") || !strings.Contains(lines[3], "older") {
 		t.Fatalf("expected newer same-severity urgent detail first, got %q", output.String())
 	}
 }
@@ -426,7 +432,7 @@ func TestRenderStatusJSONKeepsMachineReadableShape(t *testing.T) {
 	if !strings.Contains(payload, `"total": 3`) || !strings.Contains(payload, `"running": 1`) || !strings.Contains(payload, `"waiting": 1`) || !strings.Contains(payload, `"done": 1`) {
 		t.Fatalf("expected machine-readable counts in payload %q", payload)
 	}
-	if strings.Contains(payload, "attention=") || strings.Contains(payload, "\n!") {
+	if strings.Contains(payload, "attention=") || strings.Contains(payload, "attention_breakdown") || strings.Contains(payload, "\n!") {
 		t.Fatalf("expected json payload to avoid human summary wording, got %q", payload)
 	}
 }

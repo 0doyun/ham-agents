@@ -642,6 +642,16 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer lifecycle coverage, broader operator-facing CLI scanability, daemon-backed attention model
 
+### 2026-03-25 (CLI attention breakdown baseline)
+- `ham status` human-readable output 이 summary 아래에 `attention_breakdown` line 을 추가해, error / waiting_input / disconnected 분포를 한 번에 스캔할 수 있게 만들었다.
+- breakdown 은 human-readable path 에만 붙이고 JSON status output 은 기존 machine-readable shape 를 유지하도록 분리했다.
+- Go tests 로 breakdown line presence, JSON non-leakage, urgent detail ordering과의 공존을 함께 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, broader operator-facing CLI scanability, daemon-backed attention model
+
 ### 2026-03-25 (severity-aware feed ordering baseline)
 - recent event feed ordering 을 severity-first, recency-second 로 정리해 warning/positive/info 계열 event 가 작은 recent-event window 에서 더 빠르게 보이도록 만들었다.
 - `MenuBarViewModel.recentEvents` 가 `AgentEventPresenter` ordering helper 를 사용하도록 연결하고, Swift tests 로 warning event 가 informational row 앞에 오는 ordering 을 보호했다.

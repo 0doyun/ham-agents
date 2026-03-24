@@ -79,3 +79,4 @@
 - 2026-03-25: severity-aware feed ordering baseline sorts recent event rows by presented severity first and recency second, prioritizing urgent signals over strict chronology within the small recent-event window.
 - 2026-03-25: CLI confidence/reason visibility baseline keeps the richer wording (`likely ...`, `high|medium|low NN%`) in human-readable `ham list` output only; JSON output remains the stable machine-oriented contract.
 - 2026-03-25: CLI attention detail baseline also remains human-only — attention-first ordering and urgent detail rows affect `ham list` / `ham status` text output, while JSON responses keep their existing unsorted machine-oriented shape.
+- 2026-03-25: CLI attention breakdown baseline keeps `attention_breakdown` as a human-readable status affordance only; JSON status payloads stay unchanged so scripts do not need to learn presentation-only fields.
