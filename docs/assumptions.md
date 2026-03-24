@@ -58,4 +58,5 @@
 - 2026-03-25: lower-latency UI update baseline lets the follow-events lane rebuild summary counts from fetched agents plus merged events, avoiding an extra snapshot fetch while leaving polling as the source of full-state reconciliation.
 - 2026-03-25: richer event-driven UI semantics baseline currently maps richer event types to labeled/emphasized badges in the detail feed; this is presentation-level semantics, not a full event-priority/routing system yet.
 - 2026-03-25: lower-latency visual updates baseline currently prefixes the menu bar status line and shows a compact banner from the latest presented event semantics, rather than introducing animation/state machines yet.
+- 2026-03-25: lower-latency visual polish baseline still avoids animation/state-machine work; it focuses on clearer low-noise cues such as hiding raw event codes for known events and surfacing relative-time/context where possible.
 - 2026-03-25: stronger feed semantics baseline currently summarizes recent events into lightweight grouped chips by presented label/emphasis; this is a local UI aggregation, not persisted analytics.

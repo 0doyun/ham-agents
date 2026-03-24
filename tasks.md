@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **lower-latency visual polish baseline** 다.
+현재 활성 범위는 **stronger feed semantics baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -91,7 +91,8 @@
 - [x] richer event-driven UI semantics baseline 추가
 - [x] lower-latency visual updates baseline 추가
 - [x] stronger feed semantics baseline 추가
-- [ ] lower-latency visual polish baseline 추가
+- [x] lower-latency visual polish baseline 추가
+- [ ] stronger feed semantics baseline 추가
 
 ### Current Slice Checklist
 
@@ -142,9 +143,12 @@
 - [x] activity feed semantics를 더 구조적으로 분류/집계
 - [x] feed summary/visual grouping 을 더 직접 활용
 - [x] Go/Swift tests로 stronger feed semantics baseline 보호
-- [ ] latest-event / feed visuals 추가 polish
-- [ ] low-noise visual hierarchy refinement
-- [ ] Go/Swift tests로 visual polish baseline 보호
+- [x] latest-event / feed visuals 추가 polish
+- [x] low-noise visual hierarchy refinement
+- [x] Go/Swift tests로 visual polish baseline 보호
+- [ ] activity feed semantics를 더 구조적으로 분류/집계
+- [ ] feed summary/visual grouping 을 더 직접 활용
+- [ ] Go/Swift tests로 stronger feed semantics baseline 보호
 - [x] settings schema 에 appearance 외 추가 section 확장
 - [x] CLI/UI 에 새 settings section 일부를 더 노출
 - [x] Go/Swift tests로 stronger settings section round-trip 보호

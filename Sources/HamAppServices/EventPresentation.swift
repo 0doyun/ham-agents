@@ -11,10 +11,12 @@ public enum AgentEventEmphasis: String, Equatable, Sendable {
 public struct AgentEventPresentation: Equatable, Sendable {
     public var label: String
     public var emphasis: AgentEventEmphasis
+    public var showsTechnicalType: Bool
 
-    public init(label: String, emphasis: AgentEventEmphasis) {
+    public init(label: String, emphasis: AgentEventEmphasis, showsTechnicalType: Bool = false) {
         self.label = label
         self.emphasis = emphasis
+        self.showsTechnicalType = showsTechnicalType
     }
 }
 
@@ -47,7 +49,7 @@ public enum AgentEventPresenter {
         case "agent.removed":
             return AgentEventPresentation(label: "Stopped", emphasis: .neutral)
         default:
-            return AgentEventPresentation(label: event.type, emphasis: .neutral)
+            return AgentEventPresentation(label: event.type, emphasis: .neutral, showsTechnicalType: true)
         }
     }
 
