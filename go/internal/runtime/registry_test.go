@@ -232,6 +232,51 @@ func TestRefreshObservedUpdatesPersistedStatus(t *testing.T) {
 	}
 }
 
+func TestSnapshotRefreshesObservedAgentAndPersistsLifecycleEvent(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	source := filepath.Join(root, "observed.log")
+	if err := os.WriteFile(source, []byte("task failed with error"), 0o644); err != nil {
+		t.Fatalf("write observed source: %v", err)
+	}
+
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	_, err := registry.RegisterObserved(ctx, runtime.RegisterObservedInput{
+		Provider:    "log",
+		DisplayName: "observer",
+		ProjectPath: "/tmp/project",
+		SessionRef:  source,
+	})
+	if err != nil {
+		t.Fatalf("register observed: %v", err)
+	}
+
+	snapshot, err := registry.Snapshot(ctx)
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	if snapshot.Agents[0].Status != core.AgentStatusError {
+		t.Fatalf("expected error status, got %q", snapshot.Agents[0].Status)
+	}
+
+	events, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events: %v", err)
+	}
+	if events[len(events)-1].Type != core.EventTypeAgentStatusUpdated {
+		t.Fatalf("expected observed status event from snapshot refresh, got %q", events[len(events)-1].Type)
+	}
+	if events[len(events)-1].Summary != "Status changed to error. Error-like output detected." {
+		t.Fatalf("unexpected snapshot-driven status summary %q", events[len(events)-1].Summary)
+	}
+}
+
 func TestOpenTargetPrefersSessionRefURL(t *testing.T) {
 	t.Parallel()
 
