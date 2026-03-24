@@ -39,6 +39,8 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
     public var lastUserVisibleSummary: String?
     public var notificationPolicy: NotificationPolicy
     public var sessionRef: String?
+    public var sessionTitle: String?
+    public var sessionIsActive: Bool
     public var avatarVariant: String
 
     public init(
@@ -55,6 +57,8 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         lastUserVisibleSummary: String? = nil,
         notificationPolicy: NotificationPolicy = .default,
         sessionRef: String? = nil,
+        sessionTitle: String? = nil,
+        sessionIsActive: Bool = false,
         avatarVariant: String = "default"
     ) {
         self.id = id
@@ -70,6 +74,8 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         self.lastUserVisibleSummary = lastUserVisibleSummary
         self.notificationPolicy = notificationPolicy
         self.sessionRef = sessionRef
+        self.sessionTitle = sessionTitle
+        self.sessionIsActive = sessionIsActive
         self.avatarVariant = avatarVariant
     }
 
@@ -87,6 +93,8 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         case lastUserVisibleSummary = "last_user_visible_summary"
         case notificationPolicy = "notification_policy"
         case sessionRef = "session_ref"
+        case sessionTitle = "session_title"
+        case sessionIsActive = "session_is_active"
         case avatarVariant = "avatar_variant"
     }
 }

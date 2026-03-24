@@ -48,3 +48,4 @@
 - 2026-03-25: attached termination detection baseline treats disappearance from the polled iTerm session list as a disconnect signal and recovery to the same `session_ref` as enough evidence to restore the agent to idle.
 - 2026-03-25: broader settings baseline starts with an `appearance.theme` section (`auto|day|night`) so the daemon-backed settings document can grow beyond notifications without coupling this slice to full visual theming behavior.
 - 2026-03-25: live event follow baseline uses daemon long-polling over the existing request/response socket (`events.follow`) rather than introducing a persistent streaming transport yet.
+- 2026-03-25: richer attached metadata sync baseline currently limits itself to session title and current-session marker from iTerm polling; cwd/activity heuristics remain future work even though the task label mentions broader metadata.

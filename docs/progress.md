@@ -427,3 +427,14 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer attached metadata sync, stronger settings sections, higher-fidelity event-driven UI updates
+
+### 2026-03-25 (richer attached metadata sync baseline)
+- attached agent model 에 `session_title` / `session_is_active` metadata 를 추가하고, daemon attached refresh path 가 iTerm session listing 에서 이 값을 동기화하도록 확장했다.
+- attached disconnect/reconnect refresh 와 같은 path 에서 title/current-session marker 를 함께 갱신해 backend snapshot 이 richer attached metadata 를 담도록 만들었다.
+- Swift `Agent` decoding 과 detail pane 도 이 metadata 를 표시하도록 맞췄고, attached agent detail 에 current/background iTerm session 힌트를 노출했다.
+- Go/Swift tests 로 attached metadata sync, decoding, and UI surface behavior 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: stronger settings sections, higher-fidelity event-driven UI updates, richer attached cwd/activity metadata

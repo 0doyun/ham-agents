@@ -18,6 +18,8 @@ final class DaemonPayloadDecodingTests: XCTestCase {
           "last_event_at": "2026-03-24T14:02:18.002914Z",
           "last_user_visible_summary": "Managed session registered.",
           "notification_policy": "default",
+          "session_title": "Claude Review",
+          "session_is_active": true,
           "avatar_variant": "default"
         }
         """
@@ -29,6 +31,8 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         XCTAssertEqual(agent.projectPath, "/tmp/demo")
         XCTAssertEqual(agent.status, .booting)
         XCTAssertEqual(agent.notificationPolicy, .default)
+        XCTAssertEqual(agent.sessionTitle, "Claude Review")
+        XCTAssertTrue(agent.sessionIsActive)
     }
 
     func testDaemonStatusPayloadDecodesFromGoStatusJSON() throws {

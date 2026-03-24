@@ -47,6 +47,8 @@ type Agent struct {
 	LastUserVisibleSummary string             `json:"last_user_visible_summary,omitempty"`
 	NotificationPolicy     NotificationPolicy `json:"notification_policy"`
 	SessionRef             string             `json:"session_ref,omitempty"`
+	SessionTitle           string             `json:"session_title,omitempty"`
+	SessionIsActive        bool               `json:"session_is_active,omitempty"`
 	AvatarVariant          string             `json:"avatar_variant"`
 }
 

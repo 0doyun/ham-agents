@@ -323,6 +323,56 @@ func TestRefreshAttachedRestoresDisconnectedSessionsWhenReachable(t *testing.T) 
 	if listed[0].Status != core.AgentStatusIdle {
 		t.Fatalf("expected idle status after restore, got %q", listed[0].Status)
 	}
+	if listed[0].SessionTitle != "Claude" {
+		t.Fatalf("expected synced session title, got %q", listed[0].SessionTitle)
+	}
+	if !listed[0].SessionIsActive {
+		t.Fatal("expected restored session to be marked active")
+	}
+}
+
+func TestRefreshAttachedSyncsMetadataWithoutDisconnect(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterAttached(ctx, runtime.RegisterAttachedInput{
+		Provider:    "iterm2",
+		DisplayName: "ops",
+		ProjectPath: "/tmp/project",
+		SessionRef:  "iterm2://session/abc",
+	})
+	if err != nil {
+		t.Fatalf("register attached: %v", err)
+	}
+
+	if err := registry.RefreshAttached(ctx, []core.AttachableSession{
+		{ID: "abc", Title: "Claude Review", SessionRef: "iterm2://session/abc", IsActive: true},
+	}); err != nil {
+		t.Fatalf("refresh attached metadata: %v", err)
+	}
+
+	listed, err := registry.List(ctx)
+	if err != nil {
+		t.Fatalf("list agents: %v", err)
+	}
+	if listed[0].ID != agent.ID {
+		t.Fatalf("expected agent %q, got %q", agent.ID, listed[0].ID)
+	}
+	if listed[0].SessionTitle != "Claude Review" {
+		t.Fatalf("expected session title sync, got %q", listed[0].SessionTitle)
+	}
+	if !listed[0].SessionIsActive {
+		t.Fatal("expected session active marker to sync")
+	}
+	if listed[0].Status != core.AgentStatusIdle {
+		t.Fatalf("expected idle status, got %q", listed[0].Status)
+	}
 }
 
 func TestRegisterManagedSucceedsWhenEventLogAppendFails(t *testing.T) {

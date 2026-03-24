@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **richer attached metadata sync baseline** 다.
+현재 활성 범위는 **stronger settings sections baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -80,7 +80,8 @@
 - [x] attached session termination detection baseline 추가
 - [x] broader settings sections baseline 추가
 - [x] live event stream / follow baseline 추가
-- [ ] richer attached metadata sync baseline 추가
+- [x] richer attached metadata sync baseline 추가
+- [ ] stronger settings sections baseline 추가
 
 ### Current Slice Checklist
 
@@ -110,9 +111,12 @@
 - [x] daemon event follow/read stream surface 추가
 - [x] CLI 또는 Swift 가 polling 외의 follow path 를 사용할 수 있게 연결
 - [x] Go/Swift tests로 live event follow baseline 보호
-- [ ] attached session metadata(cwd/title/activity) sync baseline 추가
-- [ ] daemon/UI 에 richer attached metadata 일부 노출
-- [ ] Go/Swift tests로 attached metadata sync baseline 보호
+- [x] attached session metadata(cwd/title/activity) sync baseline 추가
+- [x] daemon/UI 에 richer attached metadata 일부 노출
+- [x] Go/Swift tests로 attached metadata sync baseline 보호
+- [ ] settings schema 에 appearance 외 추가 section 확장
+- [ ] CLI/UI 에 새 settings section 일부를 더 노출
+- [ ] Go/Swift tests로 stronger settings section round-trip 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

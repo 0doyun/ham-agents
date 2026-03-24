@@ -482,9 +482,9 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 		return agents, false
 	}
 
-	activeSessionRefs := make(map[string]struct{}, len(sessions))
+	sessionsByRef := make(map[string]core.AttachableSession, len(sessions))
 	for _, session := range sessions {
-		activeSessionRefs[strings.TrimSpace(session.SessionRef)] = struct{}{}
+		sessionsByRef[strings.TrimSpace(session.SessionRef)] = session
 	}
 
 	refreshed := append([]core.Agent(nil), agents...)
@@ -500,11 +500,23 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 			continue
 		}
 
-		_, attached := activeSessionRefs[sessionRef]
+		session, attached := sessionsByRef[sessionRef]
+		if attached {
+			if refreshed[index].SessionTitle != session.Title {
+				refreshed[index].SessionTitle = session.Title
+				changed = true
+			}
+			if refreshed[index].SessionIsActive != session.IsActive {
+				refreshed[index].SessionIsActive = session.IsActive
+				changed = true
+			}
+		}
+
 		switch {
 		case !attached && agent.Status != core.AgentStatusDisconnected:
 			refreshed[index].Status = core.AgentStatusDisconnected
 			refreshed[index].StatusConfidence = 0.75
+			refreshed[index].SessionIsActive = false
 			refreshed[index].LastEventAt = now
 			refreshed[index].LastUserVisibleSummary = "Attached session disappeared from iTerm."
 			changed = true
