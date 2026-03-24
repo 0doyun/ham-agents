@@ -513,6 +513,11 @@ private struct ItermSessionOpener: SessionOpening {
     func openSession(for agent: Agent) {
         let workspace = NSWorkspace.shared
         switch planner.target(for: agent) {
+        case .itermSession(let sessionID, let url):
+            if focusSession(id: sessionID) {
+                return
+            }
+            workspace.open(url)
         case .externalURL(let url):
             workspace.open(url)
         case .workspace(let path):
@@ -526,6 +531,26 @@ private struct ItermSessionOpener: SessionOpening {
 
             projectOpener.openProject(at: path)
         }
+    }
+
+    private func focusSession(id sessionID: String) -> Bool {
+        let source = """
+        tell application "iTerm"
+            activate
+            repeat with aWindow in windows
+                repeat with aTab in tabs of aWindow
+                    repeat with aSession in sessions of aTab
+                        if id of aSession is "\(appleScriptEscaped(sessionID))" then
+                            select aSession
+                            return
+                        end if
+                    end repeat
+                end repeat
+            end repeat
+        end tell
+        """
+
+        return executeAppleScript(source)
     }
 }
 
@@ -555,6 +580,9 @@ private struct ItermQuickMessageSender: QuickMessageSending {
         let workspace = NSWorkspace.shared
 
         switch target {
+        case .itermSession(let sessionID, let url):
+            workspace.open(url)
+            return executeAppleScript(targetedWriteSource(message: message, sessionID: sessionID))
         case .externalURL(let url):
             workspace.open(url)
         case .workspace(let path):
@@ -565,24 +593,7 @@ private struct ItermQuickMessageSender: QuickMessageSending {
             workspace.open([URL(fileURLWithPath: path)], withApplicationAt: appURL, configuration: configuration) { _, _ in }
         }
 
-        let source = """
-        tell application "iTerm"
-            activate
-            tell current window
-                tell current session
-                    write text "\(appleScriptEscaped(message))"
-                end tell
-            end tell
-        end tell
-        """
-
-        guard let script = NSAppleScript(source: source) else {
-            return false
-        }
-
-        var error: NSDictionary?
-        script.executeAndReturnError(&error)
-        return error == nil
+        return executeAppleScript(defaultWriteSource(message: message))
     }
 
     private func copyToClipboard(_ message: String) {
@@ -596,4 +607,57 @@ private struct ItermQuickMessageSender: QuickMessageSending {
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
     }
+
+    private func defaultWriteSource(message: String) -> String {
+        """
+        tell application "iTerm"
+            activate
+            tell current window
+                tell current session
+                    write text "\(appleScriptEscaped(message))"
+                end tell
+            end tell
+        end tell
+        """
+    }
+
+    private func targetedWriteSource(message: String, sessionID: String) -> String {
+        """
+        tell application "iTerm"
+            activate
+            repeat with aWindow in windows
+                repeat with aTab in tabs of aWindow
+                    repeat with aSession in sessions of aTab
+                        if id of aSession is "\(appleScriptEscaped(sessionID))" then
+                            tell aSession to write text "\(appleScriptEscaped(message))"
+                            return
+                        end if
+                    end repeat
+                end repeat
+            end repeat
+            tell current window
+                tell current session
+                    write text "\(appleScriptEscaped(message))"
+                end tell
+            end tell
+        end tell
+        """
+    }
+}
+
+@discardableResult
+private func executeAppleScript(_ source: String) -> Bool {
+    guard let script = NSAppleScript(source: source) else {
+        return false
+    }
+
+    var error: NSDictionary?
+    script.executeAndReturnError(&error)
+    return error == nil
+}
+
+private func appleScriptEscaped(_ text: String) -> String {
+    text
+        .replacingOccurrences(of: "\\", with: "\\\\")
+        .replacingOccurrences(of: "\"", with: "\\\"")
 }

@@ -568,7 +568,7 @@ func writeJSON(value any) error {
 
 var openTarget = func(target core.OpenTarget) error {
 	switch target.Kind {
-	case core.OpenTargetKindExternalURL, core.OpenTargetKindWorkspace:
+	case core.OpenTargetKindExternalURL, core.OpenTargetKindItermSession, core.OpenTargetKindWorkspace:
 		command := exec.Command("open", target.Value)
 		return command.Run()
 	default:

@@ -72,13 +72,16 @@ type Event struct {
 type OpenTargetKind string
 
 const (
-	OpenTargetKindExternalURL OpenTargetKind = "external_url"
-	OpenTargetKindWorkspace   OpenTargetKind = "workspace"
+	OpenTargetKindExternalURL  OpenTargetKind = "external_url"
+	OpenTargetKindItermSession OpenTargetKind = "iterm_session"
+	OpenTargetKindWorkspace    OpenTargetKind = "workspace"
 )
 
 type OpenTarget struct {
-	Kind  OpenTargetKind `json:"kind"`
-	Value string         `json:"value"`
+	Kind        OpenTargetKind `json:"kind"`
+	Value       string         `json:"value"`
+	Application string         `json:"application,omitempty"`
+	SessionID   string         `json:"session_id,omitempty"`
 }
 
 func (s RuntimeSnapshot) TotalCount() int {

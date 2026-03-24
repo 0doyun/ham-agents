@@ -21,7 +21,7 @@ final class SessionTargetPlannerTests: XCTestCase {
 
         let target = planner.target(for: agent)
 
-        XCTAssertEqual(target, .externalURL(URL(string: "iterm2://session/abc")!))
+        XCTAssertEqual(target, .itermSession(id: "abc", url: URL(string: "iterm2://session/abc")!))
     }
 
     func testFallsBackToWorkspaceWhenSessionRefMissing() {

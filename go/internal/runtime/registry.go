@@ -393,8 +393,8 @@ func (r *Registry) OpenTarget(ctx context.Context, agentID string) (core.OpenTar
 
 		sessionRef := strings.TrimSpace(agent.SessionRef)
 		if sessionRef != "" {
-			if parsed, err := url.Parse(sessionRef); err == nil && parsed.Scheme != "" {
-				return core.OpenTarget{Kind: core.OpenTargetKindExternalURL, Value: sessionRef}, nil
+			if target, ok := openTargetFromSessionRef(sessionRef); ok {
+				return target, nil
 			}
 		}
 
@@ -402,6 +402,30 @@ func (r *Registry) OpenTarget(ctx context.Context, agentID string) (core.OpenTar
 	}
 
 	return core.OpenTarget{}, fmt.Errorf("agent %q not found", agentID)
+}
+
+func openTargetFromSessionRef(sessionRef string) (core.OpenTarget, bool) {
+	parsed, err := url.Parse(sessionRef)
+	if err != nil || parsed.Scheme == "" {
+		return core.OpenTarget{}, false
+	}
+
+	if parsed.Scheme == "iterm2" && parsed.Host == "session" {
+		sessionID := strings.Trim(strings.TrimSpace(parsed.Path), "/")
+		if sessionID != "" {
+			return core.OpenTarget{
+				Kind:        core.OpenTargetKindItermSession,
+				Value:       sessionRef,
+				Application: "iTerm",
+				SessionID:   sessionID,
+			}, true
+		}
+	}
+
+	return core.OpenTarget{
+		Kind:  core.OpenTargetKindExternalURL,
+		Value: sessionRef,
+	}, true
 }
 
 func (r *Registry) RefreshObserved(ctx context.Context) error {
