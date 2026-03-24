@@ -15,6 +15,7 @@ let package = Package(
         .library(name: "HamNotifications", targets: ["HamNotifications"]),
         .library(name: "HamAdapters", targets: ["HamAdapters"]),
         .executable(name: "ham", targets: ["HamCLI"]),
+        .executable(name: "ham-menubar", targets: ["HamMenuBarApp"]),
     ],
     targets: [
         .target(
@@ -55,6 +56,11 @@ let package = Package(
             name: "HamCLI",
             dependencies: ["HamCore", "HamPersistence", "HamRuntime"],
             path: "Sources/HamCLI"
+        ),
+        .executableTarget(
+            name: "HamMenuBarApp",
+            dependencies: ["HamAppServices", "HamCore"],
+            path: "apps/macos/HamMenuBarApp/Sources"
         ),
         .testTarget(
             name: "HamCoreTests",
