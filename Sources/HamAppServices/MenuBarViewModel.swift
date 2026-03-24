@@ -142,12 +142,14 @@ public final class MenuBarViewModel: ObservableObject {
         done: Bool? = nil,
         error: Bool? = nil,
         waitingInput: Bool? = nil,
+        quietHoursEnabled: Bool? = nil,
         previewText: Bool? = nil
     ) async {
         var updated = settings
         if let done { updated.notifications.done = done }
         if let error { updated.notifications.error = error }
         if let waitingInput { updated.notifications.waitingInput = waitingInput }
+        if let quietHoursEnabled { updated.notifications.quietHoursEnabled = quietHoursEnabled }
         if let previewText { updated.notifications.previewText = previewText }
 
         do {
@@ -267,7 +269,11 @@ public final class MenuBarViewModel: ObservableObject {
         _ candidates: [NotificationCandidate],
         settings: DaemonSettingsPayload
     ) -> [NotificationCandidate] {
-        candidates.compactMap { candidate in
+        if settings.notifications.quietHoursEnabled {
+            return []
+        }
+
+        return candidates.compactMap { candidate -> NotificationCandidate? in
             switch candidate.event {
             case .done:
                 guard settings.notifications.done else { return nil }

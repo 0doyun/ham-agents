@@ -101,6 +101,9 @@ private struct MenuBarContentView: View {
                     updateWaiting: { value in
                         Task { await viewModel.updateNotificationSetting(waitingInput: value) }
                     },
+                    updateQuietHours: { value in
+                        Task { await viewModel.updateNotificationSetting(quietHoursEnabled: value) }
+                    },
                     updatePreviewText: { value in
                         Task { await viewModel.updateNotificationSetting(previewText: value) }
                     }
@@ -188,6 +191,7 @@ private struct NotificationSettingsSection: View {
     let updateDone: (Bool) -> Void
     let updateError: (Bool) -> Void
     let updateWaiting: (Bool) -> Void
+    let updateQuietHours: (Bool) -> Void
     let updatePreviewText: (Bool) -> Void
 
     var body: some View {
@@ -198,6 +202,7 @@ private struct NotificationSettingsSection: View {
             Toggle("Done", isOn: Binding(get: { settings.done }, set: updateDone))
             Toggle("Error", isOn: Binding(get: { settings.error }, set: updateError))
             Toggle("Waiting Input", isOn: Binding(get: { settings.waitingInput }, set: updateWaiting))
+            Toggle("Quiet Hours", isOn: Binding(get: { settings.quietHoursEnabled }, set: updateQuietHours))
             Toggle("Preview Text", isOn: Binding(get: { settings.previewText }, set: updatePreviewText))
         }
         .toggleStyle(.checkbox)
