@@ -529,3 +529,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: stronger feed semantics, lower-latency visual polish, richer attached shell-state fidelity
+
+### 2026-03-25 (stronger feed semantics baseline)
+- `AgentEventPresenter` 에 recent event summary aggregation 을 추가해 event feed 가 richer event semantics를 label/emphasis 기준으로 구조적으로 묶을 수 있게 했다.
+- agent detail 의 recent event section 에 grouped summary chips 를 추가해 raw chronological list 위에 “Disconnected 2”, “Reconnected 1” 같은 semantic grouping 을 바로 보여주도록 만들었다.
+- Swift tests 로 event summary grouping 과 view-model recent-event summary surface 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: lower-latency visual polish, stronger feed semantics, richer attached shell-state fidelity
