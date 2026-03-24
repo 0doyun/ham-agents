@@ -142,6 +142,11 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{Agent: &agent}, nil
+	case CommandRemoveAgent:
+		if err := s.registry.Remove(ctx, request.AgentID); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
 	default:
 		return Response{}, fmt.Errorf("unsupported command %q", request.Command)
 	}

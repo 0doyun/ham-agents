@@ -213,3 +213,35 @@ func TestUpdateRolePersistsChange(t *testing.T) {
 		t.Fatalf("expected persisted reviewer role, got %q", listed[0].Role)
 	}
 }
+
+func TestRemoveDeletesAgentFromRegistry(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider:    "claude",
+		DisplayName: "builder",
+		ProjectPath: "/tmp/project",
+	})
+	if err != nil {
+		t.Fatalf("register managed: %v", err)
+	}
+
+	if err := registry.Remove(ctx, agent.ID); err != nil {
+		t.Fatalf("remove agent: %v", err)
+	}
+
+	listed, err := registry.List(ctx)
+	if err != nil {
+		t.Fatalf("list agents: %v", err)
+	}
+	if len(listed) != 0 {
+		t.Fatalf("expected empty registry, got %d agents", len(listed))
+	}
+}

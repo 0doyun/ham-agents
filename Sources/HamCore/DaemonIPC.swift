@@ -7,6 +7,7 @@ public enum DaemonCommand: String, Codable, Sendable {
     case events = "events.list"
     case setNotificationPolicy = "agents.set_notification_policy"
     case setRole = "agents.set_role"
+    case removeAgent = "agents.remove"
 }
 
 public struct DaemonRequest: Codable, Equatable, Sendable {

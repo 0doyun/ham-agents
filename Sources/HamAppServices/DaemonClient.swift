@@ -35,6 +35,7 @@ public protocol HamDaemonClientProtocol: Sendable {
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload]
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent
     func updateRole(agentID: String, role: String) async throws -> Agent
+    func removeAgent(agentID: String) async throws
 }
 
 public struct HamMenuBarSummary: Equatable, Sendable {
@@ -120,6 +121,15 @@ public final class HamDaemonClient: HamDaemonClientProtocol, @unchecked Sendable
             throw HamDaemonClientError.missingPayload("agent")
         }
         return agent
+    }
+
+    public func removeAgent(agentID: String) async throws {
+        let response = try await transport.send(
+            .init(command: .removeAgent, agentID: agentID)
+        )
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
     }
 }
 
