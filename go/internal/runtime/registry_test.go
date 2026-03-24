@@ -393,6 +393,12 @@ func TestRefreshAttachedMarksMissingSessionsDisconnected(t *testing.T) {
 	if listed[0].Status != core.AgentStatusDisconnected {
 		t.Fatalf("expected disconnected status, got %q", listed[0].Status)
 	}
+	if listed[0].SessionTTY != "" || listed[0].SessionWorkingDirectory != "" || listed[0].SessionActivity != "" {
+		t.Fatalf("expected stale shell-state metadata to be cleared, got tty=%q cwd=%q activity=%q", listed[0].SessionTTY, listed[0].SessionWorkingDirectory, listed[0].SessionActivity)
+	}
+	if listed[0].SessionProcessID != 0 || listed[0].SessionCommand != "" {
+		t.Fatalf("expected stale process metadata to be cleared, got pid=%d command=%q", listed[0].SessionProcessID, listed[0].SessionCommand)
+	}
 
 	events, err := registry.Events(ctx, 0)
 	if err != nil {

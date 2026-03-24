@@ -3,6 +3,8 @@ package adapters
 import (
 	"errors"
 	"testing"
+
+	"github.com/ham-agents/ham-agents/go/internal/core"
 )
 
 func TestIterm2AdapterListsSessions(t *testing.T) {
@@ -96,6 +98,26 @@ func TestSessionActivityFallsBackToShellLabelWhenOnlyShellPresent(t *testing.T) 
 	}
 	if command != "/bin/zsh -l" {
 		t.Fatalf("unexpected shell command %q", command)
+	}
+}
+
+func TestNormalizeAttachableSessionDropsShellCommandNoise(t *testing.T) {
+	t.Parallel()
+
+	session := normalizeAttachableSession(core.AttachableSession{
+		ID:         "abc",
+		Title:      "Shell",
+		SessionRef: "iterm2://session/abc",
+		TTY:        "ttys001",
+		Activity:   "shell",
+		Command:    "/bin/zsh -l",
+	})
+
+	if session.Command != "" {
+		t.Fatalf("expected shell command to be hidden, got %q", session.Command)
+	}
+	if session.TTY == "" {
+		t.Fatal("expected tty to remain when shell context still exists")
 	}
 }
 
