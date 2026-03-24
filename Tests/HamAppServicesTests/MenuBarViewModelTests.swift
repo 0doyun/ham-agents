@@ -334,6 +334,29 @@ final class MenuBarViewModelTests: XCTestCase {
         let viewModel = MenuBarViewModel(client: FailingClient())
 
         XCTAssertEqual(viewModel.confidenceText(for: agent), "72%")
+        XCTAssertEqual(viewModel.confidenceLevelText(for: agent), "Medium")
+        XCTAssertEqual(viewModel.statusDisplayText(for: agent), "reading")
+        XCTAssertEqual(viewModel.confidenceSummaryText(for: agent), "medium confidence (72%)")
+    }
+
+    func testLowConfidenceStatusUsesLikelyLanguage() {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "observer",
+            provider: "log",
+            host: "localhost",
+            mode: .observed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 0.45,
+            statusReason: "Question-like output detected.",
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(client: FailingClient())
+
+        XCTAssertEqual(viewModel.confidenceLevelText(for: agent), "Low")
+        XCTAssertEqual(viewModel.statusDisplayText(for: agent), "likely waiting_input")
+        XCTAssertEqual(viewModel.confidenceSummaryText(for: agent), "low confidence (45%)")
     }
 
     func testOpenProjectUsesInjectedOpener() async {

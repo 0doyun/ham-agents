@@ -115,6 +115,31 @@ public final class MenuBarViewModel: ObservableObject {
         return "\(Int((agent.statusConfidence * 100).rounded()))%"
     }
 
+    public func confidenceLevelText(for agent: Agent?) -> String {
+        guard let agent else { return "Unknown" }
+        switch agent.statusConfidence {
+        case 0.8...:
+            return "High"
+        case 0.5..<0.8:
+            return "Medium"
+        default:
+            return "Low"
+        }
+    }
+
+    public func statusDisplayText(for agent: Agent?) -> String {
+        guard let agent else { return "unknown" }
+        if agent.statusConfidence < 0.5 {
+            return "likely \(agent.status.rawValue)"
+        }
+        return agent.status.rawValue
+    }
+
+    public func confidenceSummaryText(for agent: Agent?) -> String {
+        guard let agent else { return "unknown confidence" }
+        return "\(confidenceLevelText(for: agent).lowercased()) confidence (\(confidenceText(for: agent)))"
+    }
+
     public func openProject(forAgentID id: Agent.ID?) {
         guard let agent = agent(withID: id) else { return }
         projectOpener.openProject(at: agent.projectPath)
