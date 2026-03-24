@@ -326,8 +326,8 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.agent(withID: "agent-2")?.displayName, "reviewer")
         XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-2").count, 1)
         XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-2").first?.summary, "Other agent registered.")
-        XCTAssertEqual(viewModel.recentEventSummaryChips(forAgentID: "agent-2").first?.label, "Registered")
-        XCTAssertEqual(viewModel.recentEventSummaryChips(forAgentID: nil).first?.label, "Registered")
+        XCTAssertEqual(viewModel.recentEventSummaryChips(forAgentID: "agent-2").first?.label, "Managed")
+        XCTAssertEqual(viewModel.recentEventSummaryChips(forAgentID: nil).first?.label, "Managed")
         XCTAssertEqual(viewModel.recentEventSummaryChips(forAgentID: nil).first?.count, 2)
     }
 
@@ -372,6 +372,50 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.refresh()
 
         XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-1").map(\.id), ["event-2", "event-1"])
+    }
+
+    func testRecentEventsPrioritizeWarningStatusUpdatesOverRegistrations() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [
+                    AgentEventPayload(
+                        id: "event-1",
+                        agentID: "agent-1",
+                        type: "agent.registered",
+                        summary: "Managed session registered.",
+                        occurredAt: Date(timeIntervalSince1970: 3)
+                    ),
+                    AgentEventPayload(
+                        id: "event-2",
+                        agentID: "agent-1",
+                        type: "agent.status_updated",
+                        summary: "Status changed to waiting_input. Needs confirmation.",
+                        occurredAt: Date(timeIntervalSince1970: 1)
+                    )
+                ],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-1").map(\.id), ["event-2", "event-1"])
+        XCTAssertEqual(viewModel.recentEventSeverityChips(forAgentID: "agent-1").map(\.label), ["Needs Attention", "Info"])
     }
 
     func testRecentEventSeverityChipsPrioritizeWarningsBeforeInfo() async {

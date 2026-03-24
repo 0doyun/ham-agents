@@ -41,13 +41,61 @@ final class EventPresentationTests: XCTestCase {
             id: "event-3",
             agentID: "agent-1",
             type: "agent.status_updated",
-            summary: "Observed question-like output.",
+            summary: "Status changed to idle. Observed recent output.",
             occurredAt: Date(timeIntervalSince1970: 3)
         )
 
         let presentation = AgentEventPresenter.present(event)
 
-        XCTAssertEqual(presentation.label, "Status")
+        XCTAssertEqual(presentation.label, "Idle")
+        XCTAssertEqual(presentation.emphasis, .info)
+        XCTAssertFalse(presentation.showsTechnicalType)
+    }
+
+    func testStatusUpdatedWaitingInputGetsWarningPresentation() {
+        let event = AgentEventPayload(
+            id: "event-4",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to waiting_input. Needs confirmation.",
+            occurredAt: Date(timeIntervalSince1970: 4)
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Needs Input")
+        XCTAssertEqual(presentation.emphasis, .warning)
+        XCTAssertFalse(presentation.showsTechnicalType)
+    }
+
+    func testManagedRegisteredEventGetsManagedPresentation() {
+        let event = AgentEventPayload(
+            id: "event-5",
+            agentID: "agent-1",
+            type: "agent.registered",
+            summary: "Managed session registered.",
+            occurredAt: Date(timeIntervalSince1970: 5)
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Managed")
+        XCTAssertEqual(presentation.emphasis, .info)
+        XCTAssertFalse(presentation.showsTechnicalType)
+    }
+
+    func testAttachedRegisteredEventGetsAttachedPresentation() {
+        let event = AgentEventPayload(
+            id: "event-6",
+            agentID: "agent-1",
+            type: "agent.registered",
+            summary: "Attached session registered.",
+            occurredAt: Date(timeIntervalSince1970: 6)
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Attached")
         XCTAssertEqual(presentation.emphasis, .info)
         XCTAssertFalse(presentation.showsTechnicalType)
     }
@@ -65,6 +113,38 @@ final class EventPresentationTests: XCTestCase {
 
         XCTAssertEqual(presentation.label, "agent.custom_event")
         XCTAssertTrue(presentation.showsTechnicalType)
+    }
+
+    func testPresentationHintOverridesSummaryInference() {
+        let event = AgentEventPayload(
+            id: "event-7",
+            agentID: "agent-1",
+            type: "agent.registered",
+            summary: "Managed session registered.",
+            occurredAt: Date(timeIntervalSince1970: 7),
+            presentationLabel: "Observed",
+            presentationEmphasis: "info",
+            presentationSummary: "Observed source registered."
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Observed")
+        XCTAssertEqual(presentation.emphasis, .info)
+        XCTAssertFalse(presentation.showsTechnicalType)
+        XCTAssertEqual(AgentEventPresenter.displaySummary(for: event), "Observed source registered.")
+    }
+
+    func testDisplaySummaryFallsBackToRawSummary() {
+        let event = AgentEventPayload(
+            id: "event-8",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to idle. Observed recent output.",
+            occurredAt: Date(timeIntervalSince1970: 8)
+        )
+
+        XCTAssertEqual(AgentEventPresenter.displaySummary(for: event), "Status changed to idle. Observed recent output.")
     }
 
     func testSummarizeGroupsEventsByPresentation() {

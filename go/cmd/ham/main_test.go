@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -374,10 +375,10 @@ func TestEventsForAgentFiltersAndLimitsToMostRecentMatches(t *testing.T) {
 	t.Parallel()
 
 	filtered := eventsForAgent([]core.Event{
-		{ID: "event-1", AgentID: "agent-1"},
+		{ID: "event-1", AgentID: "agent-1", PresentationLabel: "Managed", PresentationEmphasis: "info", PresentationSummary: "Managed session registered."},
 		{ID: "event-2", AgentID: "agent-2"},
-		{ID: "event-3", AgentID: "agent-1"},
-		{ID: "event-4", AgentID: "agent-1"},
+		{ID: "event-3", AgentID: "agent-1", PresentationLabel: "Needs Input", PresentationEmphasis: "warning", PresentationSummary: "Needs confirmation."},
+		{ID: "event-4", AgentID: "agent-1", PresentationLabel: "Done", PresentationEmphasis: "positive", PresentationSummary: "Completed successfully."},
 	}, "agent-1", 2)
 
 	if len(filtered) != 2 {
@@ -385,6 +386,18 @@ func TestEventsForAgentFiltersAndLimitsToMostRecentMatches(t *testing.T) {
 	}
 	if filtered[0].ID != "event-3" || filtered[1].ID != "event-4" {
 		t.Fatalf("unexpected filtered events %#v", filtered)
+	}
+	if filtered[0].PresentationLabel != "Needs Input" || filtered[0].PresentationEmphasis != "warning" {
+		t.Fatalf("expected filtered event 0 to retain presentation hints %#v", filtered[0])
+	}
+	if filtered[0].PresentationSummary != "Needs confirmation." {
+		t.Fatalf("expected filtered event 0 to retain presentation summary %#v", filtered[0])
+	}
+	if filtered[1].PresentationLabel != "Done" || filtered[1].PresentationEmphasis != "positive" {
+		t.Fatalf("expected filtered event 1 to retain presentation hints %#v", filtered[1])
+	}
+	if filtered[1].PresentationSummary != "Completed successfully." {
+		t.Fatalf("expected filtered event 1 to retain presentation summary %#v", filtered[1])
 	}
 }
 
@@ -405,11 +418,14 @@ func TestPrintEventsWritesJSONLinesWhenRequested(t *testing.T) {
 	var output bytes.Buffer
 	events := []core.Event{
 		{
-			ID:         "event-1",
-			AgentID:    "agent-1",
-			Type:       core.EventTypeAgentRegistered,
-			Summary:    "Registered.",
-			OccurredAt: time.Unix(1, 0).UTC(),
+			ID:                   "event-1",
+			AgentID:              "agent-1",
+			Type:                 core.EventTypeAgentRegistered,
+			Summary:              "Registered.",
+			OccurredAt:           time.Unix(1, 0).UTC(),
+			PresentationLabel:    "Managed",
+			PresentationEmphasis: "info",
+			PresentationSummary:  "Managed session registered.",
 		},
 	}
 
@@ -418,6 +434,12 @@ func TestPrintEventsWritesJSONLinesWhenRequested(t *testing.T) {
 	}
 	if !strings.Contains(output.String(), `"id":"event-1"`) {
 		t.Fatalf("expected json line output, got %q", output.String())
+	}
+	if !strings.Contains(output.String(), `"presentation_label":"Managed"`) || !strings.Contains(output.String(), `"presentation_emphasis":"info"`) {
+		t.Fatalf("expected presentation hints in json line output, got %q", output.String())
+	}
+	if !strings.Contains(output.String(), `"presentation_summary":"Managed session registered."`) {
+		t.Fatalf("expected presentation summary in json line output, got %q", output.String())
 	}
 }
 

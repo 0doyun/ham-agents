@@ -119,7 +119,10 @@ final class DaemonPayloadDecodingTests: XCTestCase {
             "agent_id": "managed-123",
             "type": "agent.registered",
             "summary": "Managed session registered.",
-            "occurred_at": "2026-03-24T14:02:18.002914Z"
+            "occurred_at": "2026-03-24T14:02:18.002914Z",
+            "presentation_label": "Managed",
+            "presentation_emphasis": "info",
+            "presentation_summary": "Managed session registered."
           }
         ]
         """
@@ -129,5 +132,8 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         XCTAssertEqual(events.count, 1)
         XCTAssertEqual(events[0].agentID, "managed-123")
         XCTAssertEqual(events[0].type, "agent.registered")
+        XCTAssertEqual(events[0].presentationLabel, "Managed")
+        XCTAssertEqual(events[0].presentationEmphasis, "info")
+        XCTAssertEqual(events[0].presentationSummary, "Managed session registered.")
     }
 }

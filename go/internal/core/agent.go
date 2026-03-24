@@ -86,11 +86,14 @@ const (
 )
 
 type Event struct {
-	ID         string    `json:"id"`
-	AgentID    string    `json:"agent_id"`
-	Type       EventType `json:"type"`
-	Summary    string    `json:"summary"`
-	OccurredAt time.Time `json:"occurred_at"`
+	ID                   string    `json:"id"`
+	AgentID              string    `json:"agent_id"`
+	Type                 EventType `json:"type"`
+	Summary              string    `json:"summary"`
+	OccurredAt           time.Time `json:"occurred_at"`
+	PresentationLabel    string    `json:"presentation_label,omitempty"`
+	PresentationEmphasis string    `json:"presentation_emphasis,omitempty"`
+	PresentationSummary  string    `json:"presentation_summary,omitempty"`
 }
 
 type OpenTargetKind string

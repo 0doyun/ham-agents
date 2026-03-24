@@ -630,7 +630,7 @@ private struct AgentDetailView: View {
                                         .foregroundStyle(.secondary)
                                 }
                             }
-                            Text(event.summary)
+                            Text(AgentEventPresenter.displaySummary(for: event))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
