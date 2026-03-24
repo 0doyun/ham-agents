@@ -75,4 +75,5 @@
 - 2026-03-25: status reason baseline stores a short operator-facing explanation alongside status/confidence; for now observed and attached reasons are heuristic strings, not provider-authored ground truth.
 - 2026-03-25: confidence/reason refinement baseline keeps the underlying confidence math unchanged and only changes Swift wording/presentation thresholds (`High/Medium/Low`, `likely ...`) for readability.
 - 2026-03-25: attention queue baseline is currently a Swift-side derived grouping over existing agent statuses (`error`, `waiting_input`, `disconnected`) rather than a daemon-persisted attention model.
+- 2026-03-25: attention queue follow-up keeps prioritization status-derived, but now includes concise reason text in row subtitles so the queue can explain urgency without adding a separate attention-reason model.
 - 2026-03-25: severity-aware feed ordering baseline sorts recent event rows by presented severity first and recency second, prioritizing urgent signals over strict chronology within the small recent-event window.

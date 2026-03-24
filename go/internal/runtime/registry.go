@@ -253,6 +253,9 @@ func (r *Registry) Snapshot(ctx context.Context) (core.RuntimeSnapshot, error) {
 
 func (r *Registry) UpdateNotificationPolicy(ctx context.Context, agentID string, policy core.NotificationPolicy) (core.Agent, error) {
 	return r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		if agent.NotificationPolicy == policy {
+			return nil, nil
+		}
 		agent.NotificationPolicy = policy
 		agent.LastEventAt = now
 		return &core.Event{
@@ -266,6 +269,9 @@ func (r *Registry) UpdateNotificationPolicy(ctx context.Context, agentID string,
 func (r *Registry) UpdateRole(ctx context.Context, agentID string, role string) (core.Agent, error) {
 	trimmedRole := strings.TrimSpace(role)
 	return r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		if strings.TrimSpace(agent.Role) == trimmedRole {
+			return nil, nil
+		}
 		agent.Role = trimmedRole
 		agent.LastEventAt = now
 		summary := "Role cleared."
@@ -624,6 +630,7 @@ func (r *Registry) mutateAgent(
 			continue
 		}
 
+		before := agents[index]
 		event, err := mutate(&agents[index], now)
 		if err != nil {
 			return core.Agent{}, err
@@ -631,6 +638,9 @@ func (r *Registry) mutateAgent(
 		events := make([]core.Event, 0, 1)
 		if event != nil {
 			events = append(events, *event)
+		}
+		if event == nil && agents[index] == before {
+			return agents[index], nil
 		}
 		if err := r.saveAgentsAndEvents(ctx, agents, events); err != nil {
 			return core.Agent{}, err

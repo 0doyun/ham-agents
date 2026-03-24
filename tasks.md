@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **runtime lifecycle coverage follow-up** 다.
+현재 활성 범위는 **attention queue follow-up** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -105,7 +105,8 @@
 - [x] runtime transition consistency baseline 추가
 - [x] richer attached shell-state fidelity follow-up 추가
 - [x] runtime coordinator follow-up 추가
-- [ ] runtime lifecycle coverage follow-up 추가
+- [x] runtime lifecycle coverage follow-up 추가
+- [ ] attention queue follow-up 추가
 
 ### Current Slice Checklist
 
@@ -171,9 +172,12 @@
 - [x] runtime coordinator helper 적용 범위 추가 확장
 - [x] read/write transition consistency 추가 정리
 - [x] Go tests로 runtime coordinator follow-up 보호
-- [ ] lifecycle coverage 추가 확장
-- [ ] transition summary consistency 유지
-- [ ] Go tests로 lifecycle coverage follow-up 보호
+- [x] lifecycle coverage 추가 확장
+- [x] transition summary consistency 유지
+- [x] Go tests로 lifecycle coverage follow-up 보호
+- [ ] attention row context/reason 강화
+- [ ] attention queue scanability 개선
+- [ ] Go/Swift tests로 attention queue follow-up 보호
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호

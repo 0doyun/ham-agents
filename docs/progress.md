@@ -611,6 +611,15 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: severity-aware feed ordering, runtime lifecycle transition baseline, richer feed semantics
 
+### 2026-03-25 (attention queue follow-up)
+- attention queue row subtitle 이 status reason 을 포함하도록 정리해, urgent agent 가 왜 attention 대상인지 list-level 에서 바로 보이게 만들었다.
+- Swift tests 로 urgent agent subtitle wording 이 expected attention context 를 포함하는지 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: stronger feed semantics, lower-latency visual polish, richer attached shell-state fidelity
+
 ### 2026-03-25 (severity-aware feed ordering baseline)
 - recent event feed ordering 을 severity-first, recency-second 로 정리해 warning/positive/info 계열 event 가 작은 recent-event window 에서 더 빠르게 보이도록 만들었다.
 - `MenuBarViewModel.recentEvents` 가 `AgentEventPresenter` ordering helper 를 사용하도록 연결하고, Swift tests 로 warning event 가 informational row 앞에 오는 ordering 을 보호했다.
