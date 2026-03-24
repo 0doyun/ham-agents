@@ -324,13 +324,11 @@ public final class MenuBarViewModel: ObservableObject {
             guard !followedEvents.isEmpty else { return }
 
             let previousAgents = agents
-            async let loadedSnapshot = client.fetchSnapshot()
             async let loadedAgents = client.fetchAgents()
 
-            let snapshot = try await loadedSnapshot
             let loadedAgentsValue = try await loadedAgents
             let mergedEvents = mergedRecentEvents(current: summary?.recentEvents ?? [], followed: followedEvents, limit: eventLimit)
-            let summaryValue = makeSummary(snapshot: snapshot, recentEvents: mergedEvents)
+            let summaryValue = makeSummary(agents: loadedAgentsValue, recentEvents: mergedEvents, generatedAt: now())
 
             applyRefreshedState(
                 summary: summaryValue,
@@ -405,6 +403,22 @@ public final class MenuBarViewModel: ObservableObject {
             runningAgents: snapshot.runningCount,
             waitingAgents: snapshot.waitingCount,
             doneAgents: snapshot.doneCount,
+            recentEvents: recentEvents
+        )
+    }
+
+    private func makeSummary(agents: [Agent], recentEvents: [AgentEventPayload], generatedAt: Date) -> HamMenuBarSummary {
+        let totalAgents = agents.count
+        let runningAgents = agents.filter { [.booting, .thinking, .reading, .runningTool].contains($0.status) }.count
+        let waitingAgents = agents.filter { $0.status == .waitingInput }.count
+        let doneAgents = agents.filter { $0.status == .done }.count
+
+        return HamMenuBarSummary(
+            generatedAt: generatedAt,
+            totalAgents: totalAgents,
+            runningAgents: runningAgents,
+            waitingAgents: waitingAgents,
+            doneAgents: doneAgents,
             recentEvents: recentEvents
         )
     }
