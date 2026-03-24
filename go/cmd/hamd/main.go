@@ -70,7 +70,7 @@ func run(args []string) error {
 		}
 
 		server := ipc.NewServer(ipcConfig.SocketPath, registry, settingsService, itermAdapter)
-		go pollObserved(ctx, registry, 2*time.Second)
+		go pollRuntimeState(ctx, registry, itermAdapter, 2*time.Second)
 		fmt.Printf("hamd serving on %s\n", ipcConfig.SocketPath)
 		return server.Serve(ctx)
 	case "snapshot":
@@ -89,7 +89,7 @@ func run(args []string) error {
 	}
 }
 
-func pollObserved(ctx context.Context, registry *runtime.Registry, interval time.Duration) {
+func pollRuntimeState(ctx context.Context, registry *runtime.Registry, itermAdapter adapters.Iterm2Adapter, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -99,6 +99,10 @@ func pollObserved(ctx context.Context, registry *runtime.Registry, interval time
 			return
 		case <-ticker.C:
 			_ = registry.RefreshObserved(ctx)
+			sessions, err := itermAdapter.ListSessions()
+			if err == nil {
+				_ = registry.RefreshAttached(ctx, sessions)
+			}
 		}
 	}
 }

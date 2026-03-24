@@ -45,3 +45,4 @@
 - 2026-03-25: quiet hours evaluation uses local current-hour checks in Swift notification filtering; when start and end hours are equal, the baseline treats that as all-day suppression instead of inventing minute-level semantics.
 - 2026-03-25: richer iTerm session identification baseline treats `iterm2://session/<id>` as a structured session target instead of a generic URL, so open/ask can aim at a specific session before falling back to current-session behavior.
 - 2026-03-25: attach picker baseline reads a lightweight iTerm session snapshot via AppleScript and only trusts session id/title/current-session marker for now; richer cwd/layout/termination metadata remains a later slice.
+- 2026-03-25: attached termination detection baseline treats disappearance from the polled iTerm session list as a disconnect signal and recovery to the same `session_ref` as enough evidence to restore the agent to idle.

@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **attached session termination detection baseline** 다.
+현재 활성 범위는 **broader settings sections baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -77,7 +77,8 @@
 - [x] quiet hours 시간대 범위를 저장/적용하는 baseline 추가
 - [x] richer attached/iTerm session identification baseline 추가
 - [x] attach picker / iTerm session listing baseline 추가
-- [ ] attached session termination detection baseline 추가
+- [x] attached session termination detection baseline 추가
+- [ ] broader settings sections baseline 추가
 
 ### Current Slice Checklist
 
@@ -98,9 +99,12 @@
 - [x] iTerm session listing adapter baseline 추가
 - [x] attach 가능한 session list surface 를 CLI/UI 쪽에 노출
 - [x] Go/Swift tests로 attach picker/listing behavior 보호
-- [ ] attached session disconnect/termination heuristic 추가
-- [ ] daemon polling 또는 refresh path 에 disconnect detection 연결
-- [ ] Go/Swift tests로 attached disconnect behavior 보호
+- [x] attached session disconnect/termination heuristic 추가
+- [x] daemon polling 또는 refresh path 에 disconnect detection 연결
+- [x] Go/Swift tests로 attached disconnect behavior 보호
+- [ ] backend settings schema 에 non-notification section 추가
+- [ ] CLI/UI 에서 새 settings section 일부를 수정 가능하게 연결
+- [ ] Go/Swift tests로 broader settings section round-trip 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

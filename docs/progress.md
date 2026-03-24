@@ -396,3 +396,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: attached session termination detection baseline, broader settings sections, live event stream/follow integration
+
+### 2026-03-25 (attached session termination detection baseline)
+- runtime registry 에 attached-session refresh path 를 추가해 polled iTerm session snapshot 에서 사라진 attached agent 를 `disconnected` 로 표시하고, 같은 `session_ref` 가 다시 보이면 `idle` 로 복구하도록 만들었다.
+- `hamd serve` background poll loop 가 observed refresh와 함께 iTerm session listing 을 읽어 attached disconnect detection 을 주기적으로 갱신하도록 연결했다.
+- Swift tests 로 disconnected attached agent surface 를 보호하고, Go tests 로 disconnect/reconnect refresh behavior 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: broader settings sections baseline, live event stream/follow integration, richer attached metadata sync
