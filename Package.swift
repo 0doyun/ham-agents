@@ -24,7 +24,7 @@ let package = Package(
         ),
         .target(
             name: "HamAppServices",
-            dependencies: ["HamCore"],
+            dependencies: ["HamCore", "HamNotifications"],
             path: "Sources/HamAppServices"
         ),
         .target(
@@ -69,8 +69,13 @@ let package = Package(
         ),
         .testTarget(
             name: "HamAppServicesTests",
-            dependencies: ["HamAppServices", "HamCore"],
+            dependencies: ["HamAppServices", "HamCore", "HamNotifications"],
             path: "Tests/HamAppServicesTests"
+        ),
+        .testTarget(
+            name: "HamNotificationsTests",
+            dependencies: ["HamNotifications", "HamCore"],
+            path: "Tests/HamNotificationsTests"
         ),
         .testTarget(
             name: "HamRuntimeTests",
