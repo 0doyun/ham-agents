@@ -141,4 +141,4 @@
 - Quick-message UI now routes through a dedicated sender boundary, with the current app-edge implementation preferring iTerm write automation and falling back to clipboard + session opening.
 - Quick-message result feedback currently stays in the Swift view-model layer so the popover can surface delivery vs fallback outcomes without requiring backend acknowledgements yet.
 - Selected-agent role editing now uses the same daemon mutation pattern as notification policy changes so role state remains backend-backed rather than Swift-local.
-- Selected-agent role editing now follows the same daemon mutation pattern as notification policy changes so role state remains backend-backed rather than Swift-local.
+- Stop-tracking now also uses a daemon mutation path, keeping agent removal authoritative in the backend rather than deleting rows only in Swift UI state.

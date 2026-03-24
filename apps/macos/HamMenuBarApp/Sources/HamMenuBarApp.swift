@@ -139,6 +139,10 @@ private struct MenuBarContentView: View {
                 saveRole: {
                     await viewModel.saveRole(forAgentID: selectedAgentID)
                 },
+                stopTracking: {
+                    await viewModel.stopTracking(forAgentID: selectedAgentID)
+                    selectedAgentID = viewModel.agents.first?.id
+                },
                 sendQuickMessage: {
                     viewModel.sendQuickMessage(quickMessage, forAgentID: selectedAgentID)
                     quickMessage = ""
@@ -206,6 +210,7 @@ private struct AgentDetailView: View {
     let openSession: () -> Void
     let toggleNotifications: () -> Void
     let saveRole: () async -> Void
+    let stopTracking: () async -> Void
     let sendQuickMessage: () -> Void
 
     var body: some View {
@@ -249,6 +254,12 @@ private struct AgentDetailView: View {
                     openSession()
                 }
                 .buttonStyle(.borderedProminent)
+
+                Button("Stop Tracking") {
+                    Task { await stopTracking() }
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
 
                 Button(notificationsMuted ? "Resume Notifications" : "Pause Notifications") {
                     toggleNotifications()
@@ -370,6 +381,10 @@ private struct PreviewDaemonClient: HamDaemonClientProtocol {
         var agent = agents.first { $0.id == agentID } ?? agents.first!
         agent.role = role
         return agent
+    }
+
+    func removeAgent(agentID: String) async throws {
+        _ = agentID
     }
 }
 

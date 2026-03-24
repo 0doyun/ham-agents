@@ -313,6 +313,36 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.roleDraft, "lead")
     }
 
+    func testStopTrackingRemovesSelectedAgent() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            role: "reviewer",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.stopTracking(forAgentID: "agent-1")
+
+        XCTAssertTrue(viewModel.agents.isEmpty)
+    }
+
     func testSendQuickMessageUsesInjectedSender() async {
         let agent = Agent(
             id: "agent-1",
@@ -481,6 +511,10 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
         agent.role = role
         return agent
     }
+
+    func removeAgent(agentID: String) async throws {
+        _ = agentID
+    }
 }
 
 private struct FailingClient: HamDaemonClientProtocol, Sendable {
@@ -505,6 +539,11 @@ private struct FailingClient: HamDaemonClientProtocol, Sendable {
     func updateRole(agentID: String, role: String) async throws -> Agent {
         _ = agentID
         _ = role
+        throw HamDaemonClientError.transportFailed("unavailable")
+    }
+
+    func removeAgent(agentID: String) async throws {
+        _ = agentID
         throw HamDaemonClientError.transportFailed("unavailable")
     }
 }
@@ -548,6 +587,10 @@ private actor CyclingClient: HamDaemonClientProtocol {
         var updated = agent
         updated.role = role
         return updated
+    }
+
+    func removeAgent(agentID: String) async throws {
+        _ = agentID
     }
 }
 
@@ -612,6 +655,10 @@ private actor TransitioningClient: HamDaemonClientProtocol {
         var updated = applyPolicyOverride(to: nextAgents).first ?? applyPolicyOverride(to: initialAgents).first!
         updated.role = role
         return updated
+    }
+
+    func removeAgent(agentID: String) async throws {
+        _ = agentID
     }
 
     private func applyPolicyOverride(to agents: [Agent]) -> [Agent] {

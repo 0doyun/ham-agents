@@ -102,4 +102,8 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
         agent.role = role
         return agent
     }
+
+    func removeAgent(agentID: String) async throws {
+        _ = agentID
+    }
 }
