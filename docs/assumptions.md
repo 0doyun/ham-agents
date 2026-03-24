@@ -18,4 +18,6 @@
 - 2026-03-24: attached / observed mode는 최종 목표에 포함되지만, 첫 실구현 slice는 managed mode foundation으로 제한한다.
 - 2026-03-24: 현재 작업 폴더는 Git 워크트리이며 origin/main push가 가능한 상태다.
 - 2026-03-24: 첫 Go persistence는 SQLite 대신 file-based JSON registry로 시작한다. 이유는 dependency 없이 managed slice를 검증 가능한 상태로 만들기 쉽기 때문이다.
-- 2026-03-24: `ham` CLI는 초기 Go slice에서 daemon IPC를 생략하고 runtime/store를 직접 호출한다. `hamd`는 socket/config bootstrap을 제공하고 다음 slice에서 실제 IPC server로 확장한다.
+- 2026-03-24: 첫 daemon IPC는 Unix domain socket + JSON request/response 1-connection-per-command 방식으로 시작한다. event stream/multiplexing은 이후 slice에서 확장한다.
+- 2026-03-24: Codex sandbox에서는 Unix socket bind가 차단될 수 있으므로 daemon-backed smoke 검증은 필요 시 unsandboxed 실행으로 보완한다.
+- 2026-03-24: event log는 현재 registry save와 transaction을 공유하지 않으므로 best-effort 로깅으로 취급한다. authoritative state는 agent registry다.

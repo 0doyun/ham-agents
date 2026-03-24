@@ -54,3 +54,34 @@ func TestFileAgentStoreRoundTrip(t *testing.T) {
 		t.Fatalf("unexpected display name %q", reloaded[0].DisplayName)
 	}
 }
+
+func TestFileEventStoreRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	eventPath := filepath.Join(t.TempDir(), "events.jsonl")
+	eventStore := store.NewFileEventStore(eventPath)
+
+	event := core.Event{
+		ID:         "event-1",
+		AgentID:    "agent-1",
+		Type:       core.EventTypeAgentRegistered,
+		Summary:    "Managed session registered.",
+		OccurredAt: time.Unix(1700000100, 0).UTC(),
+	}
+
+	if err := eventStore.Append(ctx, event); err != nil {
+		t.Fatalf("append event: %v", err)
+	}
+
+	events, err := eventStore.Load(ctx)
+	if err != nil {
+		t.Fatalf("load events: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	if events[0].Type != core.EventTypeAgentRegistered {
+		t.Fatalf("unexpected event type %q", events[0].Type)
+	}
+}

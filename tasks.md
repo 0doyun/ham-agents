@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **hybrid repository realignment + Go managed-session foundation 첫 vertical slice** 다.
+현재 활성 범위는 **Go daemon IPC + runtime event flow foundation 다음 vertical slice** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -42,17 +42,18 @@
 - [x] 저장소 레이아웃을 Swift UI / Go runtime 방향으로 실제 정렬
 - [x] Go workspace bootstrap 추가: `go/cmd/ham`, `go/cmd/hamd`, `go/internal/{core,runtime,store,ipc,adapters}`
 - [x] 첫 hybrid implementation slice 완료: managed session registry + `ham status/list`
+- [x] `ham` ↔ `hamd` 실제 IPC 연결로 direct store path 축소
+- [x] runtime event log / lifecycle foundation 추가
 
 ### Current Slice Checklist
 
-- [x] Go module/bootstrap 추가
-- [x] managed agent domain model을 Go core로 이관
-- [x] file-backed registry store 추가
-- [x] Go runtime registry + snapshot 구현
-- [x] `ham run` / `ham list` / `ham status` 구현
-- [x] `hamd` bootstrap entrypoint 추가
+- [x] IPC request/response contract 정의
+- [x] Unix socket daemon server 구현
+- [x] `ham` CLI가 daemon client를 통해 `run/list/status` 호출
+- [x] managed agent event log 구조 추가
+- [x] daemon-backed integration tests 추가
 - [x] Swift bootstrap build/test green 유지
-- [x] Go tests + CLI smoke checks green
+- [x] Go tests + daemon smoke checks green
 
 ## Out of Scope For Current Slice
 
@@ -93,13 +94,13 @@
 
 ### Epic 3: Local Runtime and Event Flow
 - [ ] runtime coordinator 구현
-- [ ] event log 구조 정의
+- [x] event log 구조 정의
 - [ ] lifecycle transition 정리
-- [ ] runtime snapshot 제공
+- [x] runtime snapshot 제공
 
 #### Acceptance Criteria
 - [ ] runtime이 agent 상태를 일관되게 관리함
-- [ ] 이벤트 기반으로 상태 변경 추적 가능
+- [x] 이벤트 기반으로 상태 변경 추적 가능
 - [ ] 테스트로 주요 전이 보호
 
 ### Epic 4: Menu Bar Baseline

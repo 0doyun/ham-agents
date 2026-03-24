@@ -47,3 +47,21 @@
     - `go run ./go/cmd/ham list` / `status` → persisted agent + counts 확인
     - `go run ./go/cmd/hamd serve --once` → bootstrap socket/state 경로 출력
 - 다음 우선순위: `ham` ↔ `hamd` 실제 IPC 연결, event/runtime coordinator, menu bar baseline이 읽을 snapshot contract 고정
+
+### 2026-03-24 (daemon IPC + event flow foundation)
+- `go/internal/ipc`에 JSON request/response contract, Unix socket client/server, daemon dispatch를 추가했다.
+- `go/cmd/ham`은 더 이상 store를 직접 읽지 않고 `hamd` daemon client를 통해 `run`, `list`, `status` 를 호출한다.
+- `go/internal/store`에 JSONL event log를 추가하고, managed agent 등록 시 `agent.registered` 이벤트를 기록하도록 runtime을 확장했다.
+- `go/cmd/hamd serve --once=false` 는 실제 socket server를 띄우고, `serve --once` / `snapshot` 은 bootstrap inspection 용도로 유지했다.
+- architect review에서 지적된 unsafe socket cleanup 을 수정해 stale unix socket만 제거하도록 바꿨다.
+- event append 실패가 `ham run` 을 false-negative 로 만들지 않도록 registry 저장을 authoritative path로 유지하고 event logging은 best-effort 로 정리했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - unsandboxed smoke:
+    - `go run ./go/cmd/hamd serve --once=false` 백그라운드 실행 ✅
+    - `go run ./go/cmd/ham list` → `no tracked agents` ✅
+    - `go run ./go/cmd/ham run claude reviewer --project /tmp/demo --role reviewer` → daemon 경유 등록 ✅
+    - `go run ./go/cmd/ham status --json` → runtime snapshot 반환 ✅
+- 남은 갭: long-lived event stream, richer lifecycle transitions, menu bar app runtime consumption

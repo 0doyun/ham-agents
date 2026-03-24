@@ -23,8 +23,8 @@ go test ./...
 ## Planned Verification Matrix
 
 ### Repository Bootstrap
-- `swift build`
-- `swift test`
+- `swift build --disable-sandbox`
+- `swift test --disable-sandbox`
 - Source layout matches architecture docs
 
 ### Hybrid Architecture Baseline
@@ -41,6 +41,7 @@ go test ./...
 - Lifecycle transition tests
 - Persistence round-trip tests
 - Snapshot generation tests
+- Daemon-backed smoke checks for `hamd serve --once=false` + `ham run/list/status`
 
 ### Notifications
 - Unit tests for trigger selection
@@ -64,7 +65,7 @@ go test ./...
 
 - Active slice checkbox state updated in `tasks.md`
 - Relevant docs updated
-- `swift build` passes
-- `swift test` passes
+- `swift build --disable-sandbox` passes
+- `swift test --disable-sandbox` passes
 - Diagnostics on changed files are clean
 - Git commit happens only when repository is a real worktree

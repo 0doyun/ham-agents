@@ -64,7 +64,6 @@ The Go bootstrap slice adds:
 
 ```bash
 go test ./...
-go run ./go/cmd/ham list
-go run ./go/cmd/ham status
-go run ./go/cmd/hamd serve --once
 ```
+
+Daemon-backed smoke verification currently requires running `hamd serve --once=false` outside the Codex sandbox because Unix socket binding is blocked inside the sandboxed test environment.
