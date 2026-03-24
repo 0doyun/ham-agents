@@ -21,3 +21,4 @@
 - 2026-03-24: 첫 daemon IPC는 Unix domain socket + JSON request/response 1-connection-per-command 방식으로 시작한다. event stream/multiplexing은 이후 slice에서 확장한다.
 - 2026-03-24: Codex sandbox에서는 Unix socket bind가 차단될 수 있으므로 daemon-backed smoke 검증은 필요 시 unsandboxed 실행으로 보완한다.
 - 2026-03-24: event log는 현재 registry save와 transaction을 공유하지 않으므로 best-effort 로깅으로 취급한다. authoritative state는 agent registry다.
+- 2026-03-24: Swift menu bar/app surfaces는 별도 DTO를 재발명하지 않고 Go daemon JSON payload를 우선 공용 계약으로 사용한다.

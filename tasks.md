@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **daemon event query + feed-ready backend surface 다음 vertical slice** 다.
+현재 활성 범위는 **Swift daemon payload decoding + menu bar baseline prep 다음 vertical slice** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -45,15 +45,15 @@
 - [x] `ham` ↔ `hamd` 실제 IPC 연결로 direct store path 축소
 - [x] runtime event log / lifecycle foundation 추가
 - [x] event feed를 CLI/daemon에서 조회 가능하게 노출
+- [x] Swift가 daemon snapshot/event payload를 decode 할 수 있게 정렬
 
 ### Current Slice Checklist
 
-- [x] recent events query contract 추가
-- [x] `ham events` CLI 추가
-- [x] daemon event query handler 추가
-- [x] event list tests/smoke 추가
+- [x] Swift agent/status/event payload 모델 정렬
+- [x] Go JSON fixture 기반 decoding tests 추가
+- [x] menu bar prep용 bridge surface 최소화
 - [x] Swift bootstrap build/test green 유지
-- [x] Go tests + daemon smoke checks green
+- [x] Go tests green 유지
 
 ## Out of Scope For Current Slice
 

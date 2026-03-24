@@ -81,3 +81,13 @@
     - `go run ./go/cmd/ham events --json --limit 5` → `agent.registered` event 반환 ✅
     - `go run ./go/cmd/ham status --json` ✅
 - 다음 우선순위 후보: event stream/follow mode, menu bar baseline target, runtime lifecycle transition enrichment
+
+### 2026-03-24 (Swift daemon payload decoding prep)
+- `HamCore.Agent` 에 Go daemon JSON과 맞는 `CodingKeys` 를 추가해 Swift UI 쪽이 backend payload를 직접 decode 할 수 있게 맞췄다.
+- `DaemonStatusPayload`, `AgentEventPayload`, `DaemonJSONDecoder` 를 추가해 menu bar baseline이 재사용할 최소 bridge surface를 만들었다.
+- Go smoke output 형식과 맞춘 fixture 기반 decoding tests를 추가해 Swift가 agent/status/event payload를 읽을 수 있음을 고정했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: actual Swift daemon client transport, menu bar target/app bootstrap, event follow/stream surface
