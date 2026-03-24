@@ -32,6 +32,12 @@ func TestIterm2AdapterListsSessions(t *testing.T) {
 	if sessions[0].Activity != "claude" {
 		t.Fatalf("expected activity claude, got %q", sessions[0].Activity)
 	}
+	if sessions[0].ProcessID != 12345 {
+		t.Fatalf("expected process id 12345, got %d", sessions[0].ProcessID)
+	}
+	if sessions[0].Command != "/usr/local/bin/claude" {
+		t.Fatalf("unexpected command %q", sessions[0].Command)
+	}
 	if sessions[0].WorkingDirectory != "/Users/User/projects/demo" {
 		t.Fatalf("unexpected working directory %q", sessions[0].WorkingDirectory)
 	}

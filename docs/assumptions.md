@@ -53,3 +53,4 @@
 - 2026-03-25: event-driven UI refresh baseline keeps the existing poll loop as a safety net and layers a separate `followEvents` trigger lane on top, rather than replacing polling outright in one slice.
 - 2026-03-25: richer attached cwd/activity metadata baseline derives tty/foreground-command/cwd heuristics from the iTerm session tty via `ps` + `lsof`; this is good enough for menu bar context but not a guaranteed canonical shell state model.
 - 2026-03-25: higher-fidelity event-driven UI update baseline keeps settings/attachable-session refreshes on the slower polling path and uses follow-events only for cheaper snapshot/agent/event refreshes after new events arrive.
+- 2026-03-25: richer attached shell-state fidelity baseline extends the same tty-based heuristic with pid and full command string, but still treats it as advisory context rather than a canonical shell process model.

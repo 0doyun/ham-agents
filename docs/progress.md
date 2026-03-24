@@ -479,3 +479,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer attached shell-state fidelity, stronger event semantics, lower-latency UI updates
+
+### 2026-03-25 (richer attached shell-state fidelity baseline)
+- attached shell-state metadata 를 pid + full command string까지 확장해 iTerm tty 기반 heuristic 이 richer process context 를 담도록 만들었다.
+- iTerm adapter 는 `ps` 결과에서 pid/command 를 읽고, attached refresh path 는 이를 agent snapshot 으로 동기화하도록 확장했다.
+- Swift decoding/detail UI 도 pid/command 를 함께 표시하도록 맞췄고, Go/Swift tests 로 sync + decode + UI surface behavior 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: stronger event semantics, lower-latency UI updates, richer attached shell-state fidelity

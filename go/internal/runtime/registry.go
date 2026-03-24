@@ -522,6 +522,14 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 				refreshed[index].SessionActivity = session.Activity
 				changed = true
 			}
+			if refreshed[index].SessionProcessID != session.ProcessID {
+				refreshed[index].SessionProcessID = session.ProcessID
+				changed = true
+			}
+			if refreshed[index].SessionCommand != session.Command {
+				refreshed[index].SessionCommand = session.Command
+				changed = true
+			}
 		}
 
 		switch {

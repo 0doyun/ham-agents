@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **richer attached shell-state fidelity baseline** 다.
+현재 활성 범위는 **stronger event semantics baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -85,7 +85,8 @@
 - [x] event-driven UI refresh baseline 추가
 - [x] richer attached cwd/activity metadata baseline 추가
 - [x] higher-fidelity event-driven UI update baseline 추가
-- [ ] richer attached shell-state fidelity baseline 추가
+- [x] richer attached shell-state fidelity baseline 추가
+- [ ] stronger event semantics baseline 추가
 
 ### Current Slice Checklist
 
@@ -118,6 +119,12 @@
 - [x] attached session metadata(cwd/title/activity) sync baseline 추가
 - [x] daemon/UI 에 richer attached metadata 일부 노출
 - [x] Go/Swift tests로 attached metadata sync baseline 보호
+- [x] attached shell pid / command metadata 추가
+- [x] daemon/UI 에 shell command / pid 일부 노출
+- [x] Go/Swift tests로 shell-state fidelity baseline 보호
+- [ ] daemon event taxonomy 확장 또는 richer event summary 추가
+- [ ] UI 가 richer event semantics 를 더 직접 활용하게 연결
+- [ ] Go/Swift tests로 stronger event semantics baseline 보호
 - [x] settings schema 에 appearance 외 추가 section 확장
 - [x] CLI/UI 에 새 settings section 일부를 더 노출
 - [x] Go/Swift tests로 stronger settings section round-trip 보호

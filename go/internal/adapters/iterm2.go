@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
@@ -153,22 +154,24 @@ func enrichAttachableSessions(sessions []core.AttachableSession, runner ScriptOu
 		if strings.TrimSpace(session.TTY) == "" {
 			continue
 		}
-		activity, pid := sessionActivityForTTY(runner, session.TTY)
+		activity, pid, command := sessionActivityForTTY(runner, session.TTY)
 		if activity != "" {
 			sessions[index].Activity = activity
 		}
-		if pid != "" {
-			sessions[index].WorkingDirectory = workingDirectoryForPID(runner, pid)
+		if pid > 0 {
+			sessions[index].ProcessID = pid
+			sessions[index].Command = command
+			sessions[index].WorkingDirectory = workingDirectoryForPID(runner, strconv.Itoa(pid))
 		}
 	}
 
 	return sessions
 }
 
-func sessionActivityForTTY(runner ScriptOutputRunner, tty string) (activity string, pid string) {
-	output, err := runner.Output("ps", "-ax", "-o", "tty=,pid=,comm=")
+func sessionActivityForTTY(runner ScriptOutputRunner, tty string) (activity string, pid int, command string) {
+	output, err := runner.Output("ps", "-ax", "-o", "tty=,pid=,command=")
 	if err != nil {
-		return "", ""
+		return "", 0, ""
 	}
 
 	normalizedTTY := strings.TrimPrefix(strings.TrimSpace(tty), "/dev/")
@@ -178,11 +181,16 @@ func sessionActivityForTTY(runner ScriptOutputRunner, tty string) (activity stri
 		if len(fields) < 3 || fields[0] != normalizedTTY {
 			continue
 		}
-		pid = fields[1]
-		activity = filepath.Base(strings.Join(fields[2:], " "))
+		parsedPID, err := strconv.Atoi(fields[1])
+		if err != nil {
+			continue
+		}
+		pid = parsedPID
+		command = strings.Join(fields[2:], " ")
+		activity = filepath.Base(command)
 	}
 
-	return activity, pid
+	return activity, pid, command
 }
 
 func workingDirectoryForPID(runner ScriptOutputRunner, pid string) string {

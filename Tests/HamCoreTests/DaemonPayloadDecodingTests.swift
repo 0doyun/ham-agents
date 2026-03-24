@@ -23,6 +23,8 @@ final class DaemonPayloadDecodingTests: XCTestCase {
           "session_tty": "ttys001",
           "session_working_directory": "/tmp/demo",
           "session_activity": "claude",
+          "session_process_id": 12345,
+          "session_command": "/usr/local/bin/claude",
           "avatar_variant": "default"
         }
         """
@@ -39,6 +41,8 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         XCTAssertEqual(agent.sessionTTY, "ttys001")
         XCTAssertEqual(agent.sessionWorkingDirectory, "/tmp/demo")
         XCTAssertEqual(agent.sessionActivity, "claude")
+        XCTAssertEqual(agent.sessionProcessID, 12345)
+        XCTAssertEqual(agent.sessionCommand, "/usr/local/bin/claude")
     }
 
     func testDaemonStatusPayloadDecodesFromGoStatusJSON() throws {
