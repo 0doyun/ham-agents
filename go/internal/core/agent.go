@@ -34,22 +34,25 @@ const (
 )
 
 type Agent struct {
-	ID                     string             `json:"id"`
-	DisplayName            string             `json:"display_name"`
-	Provider               string             `json:"provider"`
-	Host                   string             `json:"host"`
-	Mode                   AgentMode          `json:"mode"`
-	ProjectPath            string             `json:"project_path"`
-	Role                   string             `json:"role,omitempty"`
-	Status                 AgentStatus        `json:"status"`
-	StatusConfidence       float64            `json:"status_confidence"`
-	LastEventAt            time.Time          `json:"last_event_at"`
-	LastUserVisibleSummary string             `json:"last_user_visible_summary,omitempty"`
-	NotificationPolicy     NotificationPolicy `json:"notification_policy"`
-	SessionRef             string             `json:"session_ref,omitempty"`
-	SessionTitle           string             `json:"session_title,omitempty"`
-	SessionIsActive        bool               `json:"session_is_active,omitempty"`
-	AvatarVariant          string             `json:"avatar_variant"`
+	ID                      string             `json:"id"`
+	DisplayName             string             `json:"display_name"`
+	Provider                string             `json:"provider"`
+	Host                    string             `json:"host"`
+	Mode                    AgentMode          `json:"mode"`
+	ProjectPath             string             `json:"project_path"`
+	Role                    string             `json:"role,omitempty"`
+	Status                  AgentStatus        `json:"status"`
+	StatusConfidence        float64            `json:"status_confidence"`
+	LastEventAt             time.Time          `json:"last_event_at"`
+	LastUserVisibleSummary  string             `json:"last_user_visible_summary,omitempty"`
+	NotificationPolicy      NotificationPolicy `json:"notification_policy"`
+	SessionRef              string             `json:"session_ref,omitempty"`
+	SessionTitle            string             `json:"session_title,omitempty"`
+	SessionIsActive         bool               `json:"session_is_active,omitempty"`
+	SessionTTY              string             `json:"session_tty,omitempty"`
+	SessionWorkingDirectory string             `json:"session_working_directory,omitempty"`
+	SessionActivity         string             `json:"session_activity,omitempty"`
+	AvatarVariant           string             `json:"avatar_variant"`
 }
 
 type RuntimeSnapshot struct {
@@ -87,10 +90,13 @@ type OpenTarget struct {
 }
 
 type AttachableSession struct {
-	ID         string `json:"id"`
-	Title      string `json:"title"`
-	SessionRef string `json:"session_ref"`
-	IsActive   bool   `json:"is_active"`
+	ID               string `json:"id"`
+	Title            string `json:"title"`
+	SessionRef       string `json:"session_ref"`
+	IsActive         bool   `json:"is_active"`
+	TTY              string `json:"tty,omitempty"`
+	WorkingDirectory string `json:"working_directory,omitempty"`
+	Activity         string `json:"activity,omitempty"`
 }
 
 func (s RuntimeSnapshot) TotalCount() int {

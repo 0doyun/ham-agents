@@ -459,3 +459,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer attached cwd/activity metadata baseline, stronger settings sections, higher-fidelity event-driven UI updates
+
+### 2026-03-25 (richer attached cwd/activity metadata baseline)
+- iTerm session listing baseline 을 확장해 session tty 를 읽고, `ps` + `lsof` 기반 heuristic 으로 foreground command/activity 와 working directory 를 attachable session metadata 로 보강했다.
+- attached agent refresh path 가 title/current-session marker 뿐 아니라 tty, working directory, activity metadata 도 함께 sync 하도록 확장했다.
+- Swift `Agent` decoding 과 detail UI 도 tty / working directory / activity 를 표시하도록 맞췄고, Go/Swift tests 로 sync + decode + UI surface behavior 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: higher-fidelity event-driven UI updates, stronger settings sections, richer attached shell-state fidelity

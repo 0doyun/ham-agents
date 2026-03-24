@@ -510,6 +510,18 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 				refreshed[index].SessionIsActive = session.IsActive
 				changed = true
 			}
+			if refreshed[index].SessionTTY != session.TTY {
+				refreshed[index].SessionTTY = session.TTY
+				changed = true
+			}
+			if refreshed[index].SessionWorkingDirectory != session.WorkingDirectory {
+				refreshed[index].SessionWorkingDirectory = session.WorkingDirectory
+				changed = true
+			}
+			if refreshed[index].SessionActivity != session.Activity {
+				refreshed[index].SessionActivity = session.Activity
+				changed = true
+			}
 		}
 
 		switch {

@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **richer attached cwd/activity metadata baseline** 다.
+현재 활성 범위는 **higher-fidelity event-driven UI update baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -83,7 +83,8 @@
 - [x] richer attached metadata sync baseline 추가
 - [x] stronger settings sections baseline 추가
 - [x] event-driven UI refresh baseline 추가
-- [ ] richer attached cwd/activity metadata baseline 추가
+- [x] richer attached cwd/activity metadata baseline 추가
+- [ ] higher-fidelity event-driven UI update baseline 추가
 
 ### Current Slice Checklist
 
@@ -122,9 +123,12 @@
 - [x] Swift view model 에 followEvents 기반 refresh lane 추가
 - [x] menu bar 가 일부 event-driven update path 를 사용하게 연결
 - [x] Go/Swift tests로 event-driven UI refresh baseline 보호
-- [ ] attached session cwd/activity metadata heuristic 추가
-- [ ] daemon/UI 에 cwd/activity metadata 일부 노출
-- [ ] Go/Swift tests로 cwd/activity metadata baseline 보호
+- [x] attached session cwd/activity metadata heuristic 추가
+- [x] daemon/UI 에 cwd/activity metadata 일부 노출
+- [x] Go/Swift tests로 cwd/activity metadata baseline 보호
+- [ ] follow event payload 로 partial UI update 범위 넓히기
+- [ ] polling fallback 대비 event-driven refresh cost 줄이기
+- [ ] Go/Swift tests로 higher-fidelity event-driven update baseline 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

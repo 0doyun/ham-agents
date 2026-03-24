@@ -8,8 +8,12 @@ import (
 func TestIterm2AdapterListsSessions(t *testing.T) {
 	t.Parallel()
 
-	adapter := NewIterm2Adapter(staticOutputRunner{
-		payload: []byte("abc\ttrue\tClaude Review\nxyz\tfalse\tShell\n"),
+	adapter := NewIterm2Adapter(recordingOutputRunner{
+		outputs: map[string][]byte{
+			"osascript|-e":                []byte("abc\ttrue\tClaude Review\tttys001\nxyz\tfalse\tShell\t\n"),
+			"ps|-ax|-o|tty=,pid=,comm=":   []byte("ttys001 12345 /usr/local/bin/claude\n"),
+			"lsof|-a|-d|cwd|-p|12345|-Fn": []byte("p12345\nn/Users/User/projects/demo\n"),
+		},
 	})
 
 	sessions, err := adapter.ListSessions()
@@ -25,12 +29,18 @@ func TestIterm2AdapterListsSessions(t *testing.T) {
 	if !sessions[0].IsActive {
 		t.Fatal("expected first session to be active")
 	}
+	if sessions[0].Activity != "claude" {
+		t.Fatalf("expected activity claude, got %q", sessions[0].Activity)
+	}
+	if sessions[0].WorkingDirectory != "/Users/User/projects/demo" {
+		t.Fatalf("unexpected working directory %q", sessions[0].WorkingDirectory)
+	}
 }
 
 func TestIterm2AdapterListSessionsReturnsRunnerError(t *testing.T) {
 	t.Parallel()
 
-	adapter := NewIterm2Adapter(staticOutputRunner{err: errors.New("boom")})
+	adapter := NewIterm2Adapter(recordingOutputRunner{err: errors.New("boom")})
 	if _, err := adapter.ListSessions(); err == nil {
 		t.Fatal("expected list sessions error")
 	}
@@ -44,16 +54,18 @@ func TestParseAttachableSessionsRejectsMalformedRows(t *testing.T) {
 	}
 }
 
-type staticOutputRunner struct {
-	payload []byte
+type recordingOutputRunner struct {
+	outputs map[string][]byte
 	err     error
 }
 
-func (r staticOutputRunner) Output(name string, args ...string) ([]byte, error) {
-	_ = name
-	_ = args
+func (r recordingOutputRunner) Output(name string, args ...string) ([]byte, error) {
 	if r.err != nil {
 		return nil, r.err
 	}
-	return r.payload, nil
+	key := name
+	for _, arg := range args {
+		key += "|" + arg
+	}
+	return r.outputs[key], nil
 }

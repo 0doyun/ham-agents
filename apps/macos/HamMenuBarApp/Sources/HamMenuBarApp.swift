@@ -414,6 +414,22 @@ private struct AgentDetailView: View {
                     Text(agent.sessionIsActive ? "Current iTerm session" : "Background iTerm session")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                    if let sessionTTY = agent.sessionTTY, !sessionTTY.isEmpty {
+                        Text("tty \(sessionTTY)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    if let sessionWorkingDirectory = agent.sessionWorkingDirectory, !sessionWorkingDirectory.isEmpty {
+                        Text(sessionWorkingDirectory)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                    if let sessionActivity = agent.sessionActivity, !sessionActivity.isEmpty {
+                        Text("activity \(sessionActivity)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 Text(agent.projectPath)
                     .font(.caption)

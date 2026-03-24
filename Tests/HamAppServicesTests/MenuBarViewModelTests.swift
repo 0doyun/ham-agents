@@ -118,7 +118,10 @@ final class MenuBarViewModelTests: XCTestCase {
             lastEventAt: Date(timeIntervalSince1970: 1),
             sessionRef: "iterm2://session/abc",
             sessionTitle: "Claude Review",
-            sessionIsActive: true
+            sessionIsActive: true,
+            sessionTTY: "ttys001",
+            sessionWorkingDirectory: "/tmp/app",
+            sessionActivity: "claude"
         )
         let viewModel = MenuBarViewModel(
             client: StubClient(
@@ -135,6 +138,9 @@ final class MenuBarViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.agent(withID: "agent-1")?.sessionTitle, "Claude Review")
         XCTAssertEqual(viewModel.agent(withID: "agent-1")?.sessionIsActive, true)
+        XCTAssertEqual(viewModel.agent(withID: "agent-1")?.sessionTTY, "ttys001")
+        XCTAssertEqual(viewModel.agent(withID: "agent-1")?.sessionWorkingDirectory, "/tmp/app")
+        XCTAssertEqual(viewModel.agent(withID: "agent-1")?.sessionActivity, "claude")
     }
 
     func testRefreshCapturesErrors() async {

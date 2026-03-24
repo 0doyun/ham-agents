@@ -51,3 +51,4 @@
 - 2026-03-25: richer attached metadata sync baseline currently limits itself to session title and current-session marker from iTerm polling; cwd/activity heuristics remain future work even though the task label mentions broader metadata.
 - 2026-03-25: stronger settings sections baseline adds `integrations.iterm_enabled` as the next daemon-backed settings section and uses it to gate current iTerm UI affordances before attempting broader provider/transcript settings.
 - 2026-03-25: event-driven UI refresh baseline keeps the existing poll loop as a safety net and layers a separate `followEvents` trigger lane on top, rather than replacing polling outright in one slice.
+- 2026-03-25: richer attached cwd/activity metadata baseline derives tty/foreground-command/cwd heuristics from the iTerm session tty via `ps` + `lsof`; this is good enough for menu bar context but not a guaranteed canonical shell state model.

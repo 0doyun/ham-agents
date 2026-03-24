@@ -41,6 +41,9 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
     public var sessionRef: String?
     public var sessionTitle: String?
     public var sessionIsActive: Bool
+    public var sessionTTY: String?
+    public var sessionWorkingDirectory: String?
+    public var sessionActivity: String?
     public var avatarVariant: String
 
     public init(
@@ -59,6 +62,9 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         sessionRef: String? = nil,
         sessionTitle: String? = nil,
         sessionIsActive: Bool = false,
+        sessionTTY: String? = nil,
+        sessionWorkingDirectory: String? = nil,
+        sessionActivity: String? = nil,
         avatarVariant: String = "default"
     ) {
         self.id = id
@@ -76,6 +82,9 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         self.sessionRef = sessionRef
         self.sessionTitle = sessionTitle
         self.sessionIsActive = sessionIsActive
+        self.sessionTTY = sessionTTY
+        self.sessionWorkingDirectory = sessionWorkingDirectory
+        self.sessionActivity = sessionActivity
         self.avatarVariant = avatarVariant
     }
 
@@ -95,6 +104,9 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         case sessionRef = "session_ref"
         case sessionTitle = "session_title"
         case sessionIsActive = "session_is_active"
+        case sessionTTY = "session_tty"
+        case sessionWorkingDirectory = "session_working_directory"
+        case sessionActivity = "session_activity"
         case avatarVariant = "avatar_variant"
     }
 }
