@@ -40,7 +40,7 @@ go/
   internal/adapters/      # iTerm2 adapter boundary
 Sources/
   HamCore/                # shared Swift models + daemon payload contracts
-  HamAppServices/         # Swift daemon client + menu bar summary prep
+  HamAppServices/         # Swift daemon client + menu bar summary/view-model prep
   ...                     # transitional Swift bootstrap code
 Tests/
   ...                     # transitional Swift bootstrap tests
@@ -83,3 +83,4 @@ Swift menu bar prep currently lives in `HamAppServices`, which provides:
 - daemon request/response payload models shared with Go
 - a Unix socket transport for `hamd`
 - a summary service that can turn snapshot + events into menu bar counts/feed data
+- a menu bar view model used by the baseline `ham-menubar` executable target

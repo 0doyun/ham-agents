@@ -101,3 +101,14 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: 실제 menu bar app target bootstrap, Swift-side live daemon polling integration, popover agent list baseline
+
+### 2026-03-24 (menu bar executable bootstrap)
+- `ham-menubar` SwiftPM executable target을 추가해 menu bar baseline이 실제 build graph에 들어오도록 했다.
+- `MenuBarViewModel` 을 추가해 daemon snapshot/events/agent list refresh를 하나의 Swift UI-facing state object로 정리했다.
+- `apps/macos/HamMenuBarApp/Sources/HamMenuBarApp.swift` 에 `MenuBarExtra` 기반 baseline UI를 추가해 status line, summary badges, tracked agent list, refresh button을 렌더링하도록 만들었다.
+- live daemon transport를 우선 사용하되 연결 구성이 없을 때는 preview client fallback 으로 shell UI를 계속 띄울 수 있게 했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: live polling timer / reconnect behavior, popup agent detail actions, notification triggers, actual macOS app packaging
