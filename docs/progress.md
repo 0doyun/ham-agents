@@ -181,3 +181,12 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: real existing-session focus semantics, iTerm message/send actions, live event stream/follow integration
+
+### 2026-03-24 (sessionRef-aware opener refinement)
+- `SessionTargetPlanner` 를 추가해 agent의 `sessionRef` 가 URL 형태일 때는 그 URL 을 우선 열고, 그렇지 않으면 workspace 기반 iTerm/finder fallback 을 사용하도록 정리했다.
+- Swift tests로 session target selection 규칙을 고정하고, existing `openSession` action wiring 은 그대로 재사용하도록 유지했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: richer session identification from daemon, iTerm message/send actions, live event stream/follow integration

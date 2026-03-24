@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **notification permission UX baseline** 다.
+현재 활성 범위는 **sessionRef-aware session opening refinement** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -55,12 +55,13 @@
 - [x] popover에서 최소 agent action 연결
 - [x] iTerm/workspace opening action baseline 추가
 - [x] notification permission 상태를 popover에서 인지/요청 가능하게 만들기
+- [x] sessionRef URL 이 있으면 이를 우선 사용하고 없으면 workspace fallback 하도록 세분화
 
 ### Current Slice Checklist
 
-- [x] notification permission status boundary 추가
-- [x] popover에 permission state + request action 추가
-- [x] Swift tests로 permission refresh/request behavior 보호
+- [x] session target planning helper 추가
+- [x] sessionRef URL 우선 / workspace fallback 연결
+- [x] Swift tests로 session target selection 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 
@@ -140,7 +141,7 @@
 
 #### Acceptance Criteria
 - [x] managed session 재오픈 또는 focus 가능
-- [ ] 연동 실패 시 graceful fallback 존재
+- [x] 연동 실패 시 graceful fallback 존재
 
 ### Epic 7: Attached and Observed Modes
 - [ ] attach flow 정의

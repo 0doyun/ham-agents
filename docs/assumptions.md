@@ -29,3 +29,4 @@
 - 2026-03-24: initial macOS notification delivery는 first-send authorization request + immediate local notification request 방식으로 시작한다. richer permission UX는 이후 menu/settings slice에서 다듬는다.
 - 2026-03-24: initial iTerm action baseline은 existing session focus 대신 workspace opening을 우선 지원한다. iTerm이 없으면 project-folder opener로 graceful fallback 한다.
 - 2026-03-24: permission UX baseline은 full settings screen 대신 popover에서 현재 status 표시 + explicit request button 제공으로 시작한다.
+- 2026-03-24: `sessionRef` 가 URL 로 주어지면 Swift opener는 그것을 직접 열어 session focus target 으로 취급한다. URL 이 아니면 workspace opening fallback 을 사용한다.
