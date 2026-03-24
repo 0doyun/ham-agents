@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **attached shell-state heuristic refinement baseline** 다.
+현재 활성 범위는 **lower-latency visual polish baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -93,7 +93,8 @@
 - [x] stronger feed semantics baseline 추가
 - [x] lower-latency visual polish baseline 추가
 - [x] stronger feed semantics baseline 추가
-- [ ] attached shell-state heuristic refinement baseline 추가
+- [x] attached shell-state heuristic refinement baseline 추가
+- [ ] lower-latency visual polish baseline 추가
 
 ### Current Slice Checklist
 
@@ -162,9 +163,9 @@
 - [x] follow event payload 로 partial UI update 범위 넓히기
 - [x] polling fallback 대비 event-driven refresh cost 줄이기
 - [x] Go/Swift tests로 higher-fidelity event-driven update baseline 보호
-- [ ] attached shell-state heuristic 정밀도 개선
-- [ ] daemon/UI 에 richer shell-state metadata 일부 노출
-- [ ] Go/Swift tests로 shell-state heuristic refinement baseline 보호
+- [x] attached shell-state heuristic 정밀도 개선
+- [x] daemon/UI 에 richer shell-state metadata 일부 노출
+- [x] Go/Swift tests로 shell-state heuristic refinement baseline 보호
 - [ ] Go/Swift tests로 shell-state fidelity baseline 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지

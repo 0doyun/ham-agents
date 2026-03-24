@@ -52,6 +52,53 @@ func TestIterm2AdapterListSessionsReturnsRunnerError(t *testing.T) {
 	}
 }
 
+func TestIterm2AdapterPrefersForegroundToolOverShellNoise(t *testing.T) {
+	t.Parallel()
+
+	adapter := NewIterm2Adapter(recordingOutputRunner{
+		outputs: map[string][]byte{
+			"osascript":                    []byte("abc\ttrue\tClaude Review\tttys001\n"),
+			"ps|-ax|-o|tty=,pid=,command=": []byte("ttys001 1200 -zsh\nttys001 1300 /usr/local/bin/claude chat\n"),
+			"lsof|-a|-d|cwd|-p|1300|-Fn":   []byte("p1300\nn/Users/User/projects/demo\n"),
+		},
+	})
+
+	sessions, err := adapter.ListSessions()
+	if err != nil {
+		t.Fatalf("list sessions: %v", err)
+	}
+
+	if sessions[0].ProcessID != 1300 {
+		t.Fatalf("expected foreground tool pid 1300, got %d", sessions[0].ProcessID)
+	}
+	if sessions[0].Activity != "claude" {
+		t.Fatalf("expected foreground activity claude, got %q", sessions[0].Activity)
+	}
+	if sessions[0].Command != "/usr/local/bin/claude chat" {
+		t.Fatalf("unexpected command %q", sessions[0].Command)
+	}
+}
+
+func TestSessionActivityFallsBackToShellLabelWhenOnlyShellPresent(t *testing.T) {
+	t.Parallel()
+
+	activity, pid, command := sessionActivityForTTY(recordingOutputRunner{
+		outputs: map[string][]byte{
+			"ps|-ax|-o|tty=,pid=,command=": []byte("ttys001 1200 /bin/zsh -l\n"),
+		},
+	}, "ttys001")
+
+	if pid != 1200 {
+		t.Fatalf("expected shell pid 1200, got %d", pid)
+	}
+	if activity != "shell" {
+		t.Fatalf("expected shell activity label, got %q", activity)
+	}
+	if command != "/bin/zsh -l" {
+		t.Fatalf("unexpected shell command %q", command)
+	}
+}
+
 func TestParseAttachableSessionsRejectsMalformedRows(t *testing.T) {
 	t.Parallel()
 

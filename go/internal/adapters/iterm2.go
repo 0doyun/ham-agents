@@ -175,6 +175,7 @@ func sessionActivityForTTY(runner ScriptOutputRunner, tty string) (activity stri
 	}
 
 	normalizedTTY := strings.TrimPrefix(strings.TrimSpace(tty), "/dev/")
+	var candidates []sessionProcessSample
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	for _, line := range lines {
 		fields := strings.Fields(strings.TrimSpace(line))
@@ -185,12 +186,19 @@ func sessionActivityForTTY(runner ScriptOutputRunner, tty string) (activity stri
 		if err != nil {
 			continue
 		}
-		pid = parsedPID
 		command = strings.Join(fields[2:], " ")
-		activity = filepath.Base(command)
+		candidates = append(candidates, sessionProcessSample{
+			pid:     parsedPID,
+			command: command,
+		})
 	}
 
-	return activity, pid, command
+	best := bestSessionProcess(candidates)
+	if best.pid == 0 {
+		return "", 0, ""
+	}
+
+	return activityLabel(best.command), best.pid, best.command
 }
 
 func workingDirectoryForPID(runner ScriptOutputRunner, pid string) string {
@@ -206,4 +214,63 @@ func workingDirectoryForPID(runner ScriptOutputRunner, pid string) string {
 	}
 
 	return ""
+}
+
+type sessionProcessSample struct {
+	pid     int
+	command string
+}
+
+func bestSessionProcess(samples []sessionProcessSample) sessionProcessSample {
+	var best sessionProcessSample
+	bestScore := -1
+
+	for _, sample := range samples {
+		score := sessionProcessScore(sample.command)
+		if score > bestScore || (score == bestScore && sample.pid > best.pid) {
+			best = sample
+			bestScore = score
+		}
+	}
+
+	return best
+}
+
+func sessionProcessScore(command string) int {
+	if isShellLikeCommand(command) {
+		return 0
+	}
+	return 1
+}
+
+func activityLabel(command string) string {
+	name := commandBase(command)
+	if name == "" {
+		return ""
+	}
+	if isShellLikeName(name) {
+		return "shell"
+	}
+	return name
+}
+
+func isShellLikeCommand(command string) bool {
+	return isShellLikeName(commandBase(command))
+}
+
+func isShellLikeName(name string) bool {
+	switch name {
+	case "bash", "zsh", "sh", "fish", "tmux", "screen", "login":
+		return true
+	default:
+		return false
+	}
+}
+
+func commandBase(command string) string {
+	fields := strings.Fields(strings.TrimSpace(command))
+	if len(fields) == 0 {
+		return ""
+	}
+	return filepath.Base(fields[0])
 }

@@ -550,3 +550,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: attached shell-state heuristic refinement, lower-latency visual polish, richer attached shell-state fidelity
+
+### 2026-03-25 (attached shell-state heuristic refinement baseline)
+- iTerm tty heuristic 이 shell process와 foreground tool이 함께 보일 때 non-shell foreground command 를 우선 선택하도록 정교화했다.
+- shell-only tty 인 경우에는 raw shell command 를 유지하되 activity label 은 generic `shell` 로 보정해 attached metadata noise 를 줄였다.
+- Go adapter tests 로 shell noise vs foreground tool prioritization과 shell fallback behavior 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: lower-latency visual polish, stronger feed semantics, richer attached shell-state fidelity

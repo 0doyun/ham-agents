@@ -61,3 +61,4 @@
 - 2026-03-25: lower-latency visual polish baseline still avoids animation/state-machine work; it focuses on clearer low-noise cues such as hiding raw event codes for known events and surfacing relative-time/context where possible.
 - 2026-03-25: stronger feed semantics baseline currently summarizes recent events into lightweight grouped chips by presented label/emphasis; this is a local UI aggregation, not persisted analytics.
 - 2026-03-25: stronger feed semantics now also surfaces a top-level recent-activity chip group in the popover, but the grouping is still a lightweight recent-window summary rather than a durable feed model.
+- 2026-03-25: attached shell-state heuristic refinement now prefers a non-shell foreground command on the tty when one exists, and only falls back to a generic `shell` label when the tty appears to contain shell-only noise.
