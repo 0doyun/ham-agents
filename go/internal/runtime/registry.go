@@ -273,55 +273,32 @@ func (r *Registry) Snapshot(ctx context.Context) (core.RuntimeSnapshot, error) {
 }
 
 func (r *Registry) UpdateNotificationPolicy(ctx context.Context, agentID string, policy core.NotificationPolicy) (core.Agent, error) {
-	agents, err := r.store.LoadAgents(ctx)
-	if err != nil {
-		return core.Agent{}, err
-	}
-
-	for index, agent := range agents {
-		if agent.ID != agentID {
-			continue
-		}
-
-		agents[index].NotificationPolicy = policy
-		agents[index].LastEventAt = r.clock().UTC()
-		if err := r.store.SaveAgents(ctx, agents); err != nil {
-			return core.Agent{}, err
-		}
-		r.appendEvent(ctx, agentID, core.EventTypeAgentNotificationPolicyUpdated, fmt.Sprintf("Notification policy set to %s.", policy))
-		return agents[index], nil
-	}
-
-	return core.Agent{}, fmt.Errorf("agent %q not found", agentID)
+	return r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		agent.NotificationPolicy = policy
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID: agent.ID,
+			Type:    core.EventTypeAgentNotificationPolicyUpdated,
+			Summary: fmt.Sprintf("Notification policy set to %s.", policy),
+		}, nil
+	})
 }
 
 func (r *Registry) UpdateRole(ctx context.Context, agentID string, role string) (core.Agent, error) {
-	agents, err := r.store.LoadAgents(ctx)
-	if err != nil {
-		return core.Agent{}, err
-	}
-
 	trimmedRole := strings.TrimSpace(role)
-
-	for index, agent := range agents {
-		if agent.ID != agentID {
-			continue
-		}
-
-		agents[index].Role = trimmedRole
-		agents[index].LastEventAt = r.clock().UTC()
-		if err := r.store.SaveAgents(ctx, agents); err != nil {
-			return core.Agent{}, err
-		}
+	return r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		agent.Role = trimmedRole
+		agent.LastEventAt = now
 		summary := "Role cleared."
 		if trimmedRole != "" {
 			summary = fmt.Sprintf("Role updated to %s.", trimmedRole)
 		}
-		r.appendEvent(ctx, agentID, core.EventTypeAgentRoleUpdated, summary)
-		return agents[index], nil
-	}
-
-	return core.Agent{}, fmt.Errorf("agent %q not found", agentID)
+		return &core.Event{
+			AgentID: agent.ID,
+			Type:    core.EventTypeAgentRoleUpdated,
+			Summary: summary,
+		}, nil
+	})
 }
 
 func (r *Registry) Remove(ctx context.Context, agentID string) error {
@@ -344,11 +321,11 @@ func (r *Registry) Remove(ctx context.Context, agentID string) error {
 		return fmt.Errorf("agent %q not found", agentID)
 	}
 
-	if err := r.store.SaveAgents(ctx, filtered); err != nil {
-		return err
-	}
-	r.appendEvent(ctx, agentID, core.EventTypeAgentRemoved, "Tracking stopped.")
-	return nil
+	return r.saveAgentsAndEvents(ctx, filtered, []core.Event{{
+		AgentID: agentID,
+		Type:    core.EventTypeAgentRemoved,
+		Summary: "Tracking stopped.",
+	}})
 }
 
 func (r *Registry) Events(ctx context.Context, limit int) ([]core.Event, error) {
@@ -436,13 +413,7 @@ func (r *Registry) RefreshAttached(ctx context.Context, sessions []core.Attachab
 		return nil
 	}
 
-	if err := r.store.SaveAgents(ctx, refreshed); err != nil {
-		return err
-	}
-	for _, event := range changedEvents {
-		r.appendEvent(ctx, event.AgentID, event.Type, event.Summary)
-	}
-	return nil
+	return r.saveAgentsAndEvents(ctx, refreshed, changedEvents)
 }
 
 func openTargetFromSessionRef(sessionRef string) (core.OpenTarget, bool) {
@@ -586,21 +557,6 @@ func eventsAfterID(events []core.Event, afterEventID string, limit int) []core.E
 	return followed
 }
 
-func (r *Registry) appendEvent(ctx context.Context, agentID string, eventType core.EventType, summary string) {
-	if r.eventStore == nil {
-		return
-	}
-
-	event := core.Event{
-		ID:         fmt.Sprintf("event-%d", r.clock().UTC().UnixNano()),
-		AgentID:    agentID,
-		Type:       eventType,
-		Summary:    summary,
-		OccurredAt: r.clock().UTC(),
-	}
-	_ = r.eventStore.Append(ctx, event)
-}
-
 func formatStatusTransitionSummary(status core.AgentStatus, reason string) string {
 	if strings.TrimSpace(reason) == "" {
 		return fmt.Sprintf("Status changed to %s.", status)
@@ -618,10 +574,7 @@ func (r *Registry) RefreshObserved(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	for _, event := range events {
-		r.appendEvent(ctx, event.AgentID, event.Type, event.Summary)
-	}
-	return nil
+	return r.saveAgentsAndEvents(ctx, agents, events)
 }
 
 func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agent) ([]core.Agent, []core.Event, error) {
@@ -660,4 +613,62 @@ func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agen
 	}
 
 	return refreshed, events, nil
+}
+
+func (r *Registry) mutateAgent(
+	ctx context.Context,
+	agentID string,
+	mutate func(agent *core.Agent, now time.Time) (*core.Event, error),
+) (core.Agent, error) {
+	agents, err := r.store.LoadAgents(ctx)
+	if err != nil {
+		return core.Agent{}, err
+	}
+
+	now := r.clock().UTC()
+	for index := range agents {
+		if agents[index].ID != agentID {
+			continue
+		}
+
+		event, err := mutate(&agents[index], now)
+		if err != nil {
+			return core.Agent{}, err
+		}
+		events := make([]core.Event, 0, 1)
+		if event != nil {
+			events = append(events, *event)
+		}
+		if err := r.saveAgentsAndEvents(ctx, agents, events); err != nil {
+			return core.Agent{}, err
+		}
+		return agents[index], nil
+	}
+
+	return core.Agent{}, fmt.Errorf("agent %q not found", agentID)
+}
+
+func (r *Registry) saveAgentsAndEvents(ctx context.Context, agents []core.Agent, events []core.Event) error {
+	if err := r.store.SaveAgents(ctx, agents); err != nil {
+		return err
+	}
+	for _, event := range events {
+		r.appendEvent(ctx, event.AgentID, event.Type, event.Summary)
+	}
+	return nil
+}
+
+func (r *Registry) appendEvent(ctx context.Context, agentID string, eventType core.EventType, summary string) {
+	if r.eventStore == nil {
+		return
+	}
+
+	event := core.Event{
+		ID:         fmt.Sprintf("event-%d", r.clock().UTC().UnixNano()),
+		AgentID:    agentID,
+		Type:       eventType,
+		Summary:    summary,
+		OccurredAt: r.clock().UTC(),
+	}
+	_ = r.eventStore.Append(ctx, event)
 }
