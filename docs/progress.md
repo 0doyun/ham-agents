@@ -219,3 +219,13 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: richer iTerm session identification, actual send acknowledgement/error surfacing, backend-persisted notification settings
+
+### 2026-03-25 (quick message feedback baseline)
+- `QuickMessageSending` 이 `QuickMessageResult` 를 반환하도록 바꿔 sender가 delivered / handoff / failed outcome 을 명시하게 했다.
+- `MenuBarViewModel` 이 quick message 결과를 published feedback text 로 저장하고, popover detail pane에서 사용자에게 즉시 보여주도록 연결했다.
+- sender가 구성되지 않았거나 agent가 선택되지 않은 경우에도 조용히 무시하지 않고 feedback 을 남기도록 baseline error surface 를 추가했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: richer iTerm session identification, actual send acknowledgement from backend/runtime, backend-persisted notification settings
