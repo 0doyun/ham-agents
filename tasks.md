@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **severity-aware feed ordering baseline** 다.
+현재 활성 범위는 **runtime lifecycle transition baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -99,7 +99,8 @@
 - [x] status reason baseline 추가
 - [x] confidence/reason refinement baseline 추가
 - [x] attention queue baseline 추가
-- [ ] severity-aware feed ordering baseline 추가
+- [x] severity-aware feed ordering baseline 추가
+- [ ] runtime lifecycle transition baseline 추가
 
 ### Current Slice Checklist
 
@@ -150,6 +151,9 @@
 - [x] activity feed semantics를 더 구조적으로 분류/집계
 - [x] feed summary/visual grouping 을 더 직접 활용
 - [x] Go/Swift tests로 stronger feed semantics baseline 보호
+- [ ] lifecycle transition event coverage 확장
+- [ ] runtime transition tests 강화
+- [ ] lifecycle summary wording 일관화
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호

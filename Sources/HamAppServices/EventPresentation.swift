@@ -86,6 +86,20 @@ public enum AgentEventPresenter {
         }
     }
 
+    public static func ordered(_ events: [AgentEventPayload]) -> [AgentEventPayload] {
+        events.sorted { lhs, rhs in
+            let lhsPriority = sortPriority(present(lhs).emphasis)
+            let rhsPriority = sortPriority(present(rhs).emphasis)
+            if lhsPriority == rhsPriority {
+                if lhs.occurredAt == rhs.occurredAt {
+                    return lhs.id > rhs.id
+                }
+                return lhs.occurredAt > rhs.occurredAt
+            }
+            return lhsPriority < rhsPriority
+        }
+    }
+
     private static func sortPriority(_ emphasis: AgentEventEmphasis) -> Int {
         switch emphasis {
         case .warning:
