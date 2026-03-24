@@ -132,6 +132,7 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	settings.Notifications.QuietHoursStartHour = 21
 	settings.Notifications.QuietHoursEndHour = 6
 	settings.Appearance.Theme = "night"
+	settings.Integrations.ItermEnabled = false
 	updatedSettings, err := client.UpdateSettings(context.Background(), settings)
 	if err != nil {
 		t.Fatalf("update settings via client: %v", err)
@@ -144,6 +145,9 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	}
 	if updatedSettings.Appearance.Theme != "night" {
 		t.Fatalf("expected theme night, got %q", updatedSettings.Appearance.Theme)
+	}
+	if updatedSettings.Integrations.ItermEnabled {
+		t.Fatal("expected iTerm integration to remain disabled")
 	}
 
 	agents, err := client.ListAgents(context.Background())

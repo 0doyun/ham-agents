@@ -25,6 +25,7 @@ func TestFileSettingsStoreRoundTrip(t *testing.T) {
 	settings.Notifications.QuietHoursStartHour = 21
 	settings.Notifications.QuietHoursEndHour = 7
 	settings.Appearance.Theme = "night"
+	settings.Integrations.ItermEnabled = false
 
 	if err := settingsStore.Save(ctx, settings); err != nil {
 		t.Fatalf("save settings: %v", err)
@@ -45,6 +46,9 @@ func TestFileSettingsStoreRoundTrip(t *testing.T) {
 	}
 	if reloaded.Appearance.Theme != "night" {
 		t.Fatalf("expected theme night, got %q", reloaded.Appearance.Theme)
+	}
+	if reloaded.Integrations.ItermEnabled {
+		t.Fatal("expected iTerm integration to persist as disabled")
 	}
 }
 
@@ -82,5 +86,8 @@ func TestFileSettingsStoreBackfillsQuietHoursDefaultsForLegacyFiles(t *testing.T
 	}
 	if settings.Appearance.Theme != core.DefaultTheme {
 		t.Fatalf("expected default theme %q, got %q", core.DefaultTheme, settings.Appearance.Theme)
+	}
+	if !settings.Integrations.ItermEnabled {
+		t.Fatal("expected iTerm integration default to be enabled")
 	}
 }

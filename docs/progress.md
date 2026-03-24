@@ -438,3 +438,14 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: stronger settings sections, higher-fidelity event-driven UI updates, richer attached cwd/activity metadata
+
+### 2026-03-25 (stronger settings sections baseline)
+- daemon settings schema 에 `integrations.iterm_enabled` section 을 추가해 appearance 다음 단계의 non-notification settings 영역을 확장했다.
+- CLI `ham settings integrations --iterm-enabled=...` 와 Swift menu bar `Integrations` section 을 연결해 iTerm integration toggle 을 daemon-backed settings 로 수정할 수 있게 했다.
+- current UI behavior 도 이 설정을 일부 존중하도록 연결해 iTerm integration 이 꺼져 있으면 attachable session preview 와 session-open action 을 막도록 만들었다.
+- Go/Swift tests 로 settings persistence, daemon round-trip, and Swift integration-gated UI behavior 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: event-driven UI refresh baseline, richer attached cwd/activity metadata, stronger settings sections

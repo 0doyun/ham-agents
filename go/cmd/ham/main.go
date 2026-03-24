@@ -89,6 +89,7 @@ Usage:
   ham settings [--json]
   ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--quiet-hours=true|false] [--quiet-start-hour=0-23] [--quiet-end-hour=0-23] [--preview-text=true|false]
   ham settings appearance [--theme=auto|day|night]
+  ham settings integrations [--iterm-enabled=true|false]
   ham list [--json]
   ham status [--json]
   ham events [--json] [--limit N] [--follow] [--after-id ID] [--wait-ms N]
@@ -286,6 +287,8 @@ func runSettings(ctx context.Context, client *ipc.Client, args []string) error {
 		return runSettingsNotifications(ctx, client, args[1:])
 	case "appearance":
 		return runSettingsAppearance(ctx, client, args[1:])
+	case "integrations":
+		return runSettingsIntegrations(ctx, client, args[1:])
 	default:
 		return fmt.Errorf("unsupported settings subcommand %q", args[0])
 	}
@@ -365,6 +368,32 @@ func runSettingsAppearance(ctx context.Context, client *ipc.Client, args []strin
 			settings.Appearance.Theme = strings.TrimSpace(strings.TrimPrefix(argument, "--theme="))
 		default:
 			return fmt.Errorf("unsupported appearance flag %q", argument)
+		}
+	}
+
+	updated, err := client.UpdateSettings(ctx, settings)
+	if err != nil {
+		return err
+	}
+	return writeJSON(updated)
+}
+
+func runSettingsIntegrations(ctx context.Context, client *ipc.Client, args []string) error {
+	settings, err := client.Settings(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, argument := range args {
+		switch {
+		case strings.HasPrefix(argument, "--iterm-enabled="):
+			value, err := parseBoolFlag(argument, "--iterm-enabled=")
+			if err != nil {
+				return err
+			}
+			settings.Integrations.ItermEnabled = value
+		default:
+			return fmt.Errorf("unsupported integrations flag %q", argument)
 		}
 	}
 

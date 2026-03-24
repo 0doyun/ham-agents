@@ -122,7 +122,14 @@ private struct MenuBarContentView: View {
                     }
                 )
 
-                if !viewModel.attachableSessions.isEmpty {
+                IntegrationSettingsSection(
+                    settings: viewModel.settings.integrations,
+                    updateItermEnabled: { value in
+                        Task { await viewModel.updateIntegrationSetting(itermEnabled: value) }
+                    }
+                )
+
+                if viewModel.settings.integrations.itermEnabled && !viewModel.attachableSessions.isEmpty {
                     AttachableSessionsSection(sessions: viewModel.attachableSessions)
                 }
 
@@ -170,6 +177,7 @@ private struct MenuBarContentView: View {
                 openSession: {
                     viewModel.openSession(forAgentID: selectedAgentID)
                 },
+                canOpenSession: viewModel.settings.integrations.itermEnabled,
                 toggleNotifications: {
                     viewModel.toggleNotificationPause(forAgentID: selectedAgentID)
                 },
@@ -324,6 +332,27 @@ private struct AttachableSessionsSection: View {
     }
 }
 
+private struct IntegrationSettingsSection: View {
+    let settings: DaemonIntegrationSettingsPayload
+    let updateItermEnabled: (Bool) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Integrations")
+                .font(.caption.weight(.semibold))
+
+            Toggle(
+                "iTerm2 Access",
+                isOn: Binding(
+                    get: { settings.itermEnabled },
+                    set: updateItermEnabled
+                )
+            )
+        }
+        .toggleStyle(.checkbox)
+    }
+}
+
 private struct AppearanceSettingsSection: View {
     let settings: DaemonAppearanceSettingsPayload
     let updateTheme: (String) -> Void
@@ -359,6 +388,7 @@ private struct AgentDetailView: View {
     @Binding var quickMessage: String
     let openProject: () -> Void
     let openSession: () -> Void
+    let canOpenSession: Bool
     let toggleNotifications: () -> Void
     let saveRole: () async -> Void
     let stopTracking: () async -> Void
@@ -418,6 +448,7 @@ private struct AgentDetailView: View {
                     openSession()
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(!canOpenSession)
 
                 Button("Stop Tracking") {
                     Task { await stopTracking() }
