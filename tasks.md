@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **CLI doctor baseline** 다.
+현재 활성 범위는 **severity-aware feed scanning baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -114,6 +114,7 @@
 - [x] CLI logs baseline 추가
 - [x] CLI list summary baseline 추가
 - [x] CLI doctor baseline 추가
+- [x] severity-aware feed scanning baseline 추가
 
 ### Current Slice Checklist
 
@@ -206,6 +207,9 @@
 - [x] `ham doctor` baseline 추가
 - [x] doctor output 의 human/JSON path 정리
 - [x] Go tests로 CLI doctor baseline 보호
+- [x] recent activity severity summary 추가
+- [x] feed summary 가 severity-first scan path 를 직접 제공
+- [x] Go/Swift tests로 severity-aware feed scanning baseline 보호
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호
@@ -242,8 +246,8 @@
 - [x] menu bar 에 attention queue/view 추가
 - [x] Go/Swift tests로 attention queue baseline 보호
 - [x] feed row ordering/priority refinement 추가
-- [ ] severity-aware feed scanning 개선
-- [ ] Go/Swift tests로 severity-aware feed ordering baseline 보호
+- [x] severity-aware feed scanning 개선
+- [x] Go/Swift tests로 severity-aware feed ordering baseline 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

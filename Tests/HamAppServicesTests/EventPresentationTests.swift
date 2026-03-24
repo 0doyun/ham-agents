@@ -101,6 +101,44 @@ final class EventPresentationTests: XCTestCase {
         XCTAssertEqual(summary.last?.count, 1)
     }
 
+    func testSummarizeBySeverityGroupsWarningsBeforePositiveThenInfo() {
+        let events = [
+            AgentEventPayload(
+                id: "event-1",
+                agentID: "agent-1",
+                type: "agent.registered",
+                summary: "Registered.",
+                occurredAt: Date(timeIntervalSince1970: 1)
+            ),
+            AgentEventPayload(
+                id: "event-2",
+                agentID: "agent-1",
+                type: "agent.disconnected",
+                summary: "Disconnected.",
+                occurredAt: Date(timeIntervalSince1970: 2)
+            ),
+            AgentEventPayload(
+                id: "event-3",
+                agentID: "agent-1",
+                type: "agent.disconnected",
+                summary: "Disconnected.",
+                occurredAt: Date(timeIntervalSince1970: 3)
+            ),
+            AgentEventPayload(
+                id: "event-4",
+                agentID: "agent-1",
+                type: "agent.reconnected",
+                summary: "Reconnected.",
+                occurredAt: Date(timeIntervalSince1970: 4)
+            ),
+        ]
+
+        let summary = AgentEventPresenter.summarizeBySeverity(events)
+
+        XCTAssertEqual(summary.map(\.label), ["Needs Attention", "Positive", "Info"])
+        XCTAssertEqual(summary.map(\.count), [2, 1, 1])
+    }
+
     func testOrderedPrioritizesWarningsBeforeInfoThenRecency() {
         let infoEvent = AgentEventPayload(
             id: "event-1",

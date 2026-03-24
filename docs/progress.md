@@ -694,6 +694,17 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer lifecycle coverage, daemon-backed attention model, severity-aware feed scanning
 
+### 2026-03-25 (severity-aware feed scanning baseline)
+- Recent Activity 영역에 severity summary chip row 를 추가해 warning / positive / info / neutral 분포를 label-group chips 보다 먼저 스캔할 수 있게 만들었다.
+- agent detail 의 Recent Events 영역도 같은 severity summary row 를 먼저 보여주도록 맞춰, 개별 agent feed 에서도 현재 분위기를 더 빨리 읽을 수 있게 만들었다.
+- 기존 label-group chips 와 recent-event ordering 은 유지하고, severity summary 는 presentation-level 집계로만 추가했다.
+- Swift tests 로 severity chip grouping/order 와 view model severity chip surface 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed attention model, printEvents empty-json writer consistency
+
 ### 2026-03-25 (severity-aware feed ordering baseline)
 - recent event feed ordering 을 severity-first, recency-second 로 정리해 warning/positive/info 계열 event 가 작은 recent-event window 에서 더 빠르게 보이도록 만들었다.
 - `MenuBarViewModel.recentEvents` 가 `AgentEventPresenter` ordering helper 를 사용하도록 연결하고, Swift tests 로 warning event 가 informational row 앞에 오는 ordering 을 보호했다.

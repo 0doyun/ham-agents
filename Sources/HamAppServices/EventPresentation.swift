@@ -86,6 +86,24 @@ public enum AgentEventPresenter {
         }
     }
 
+    public static func summarizeBySeverity(_ events: [AgentEventPayload]) -> [AgentEventSummaryChip] {
+        var counts: [AgentEventEmphasis: Int] = [:]
+
+        for event in events {
+            let emphasis = present(event).emphasis
+            counts[emphasis, default: 0] += 1
+        }
+
+        return counts.keys.sorted { sortPriority($0) < sortPriority($1) }.compactMap { emphasis in
+            guard let count = counts[emphasis], count > 0 else { return nil }
+            return AgentEventSummaryChip(
+                label: severityLabel(for: emphasis),
+                emphasis: emphasis,
+                count: count
+            )
+        }
+    }
+
     public static func ordered(_ events: [AgentEventPayload]) -> [AgentEventPayload] {
         events.sorted { lhs, rhs in
             let lhsPriority = sortPriority(present(lhs).emphasis)
@@ -110,6 +128,19 @@ public enum AgentEventPresenter {
             return 2
         case .neutral:
             return 3
+        }
+    }
+
+    private static func severityLabel(for emphasis: AgentEventEmphasis) -> String {
+        switch emphasis {
+        case .warning:
+            return "Needs Attention"
+        case .positive:
+            return "Positive"
+        case .info:
+            return "Info"
+        case .neutral:
+            return "Other"
         }
     }
 }

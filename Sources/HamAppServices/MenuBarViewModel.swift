@@ -110,6 +110,10 @@ public final class MenuBarViewModel: ObservableObject {
         AgentEventPresenter.summarize(recentEvents(forAgentID: id))
     }
 
+    public func recentEventSeverityChips(forAgentID id: Agent.ID?) -> [AgentEventSummaryChip] {
+        AgentEventPresenter.summarizeBySeverity(recentEvents(forAgentID: id))
+    }
+
     public var attentionAgents: [Agent] {
         agents
             .filter { attentionPriority(for: $0) != nil }

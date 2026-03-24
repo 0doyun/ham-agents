@@ -88,12 +88,18 @@ private struct MenuBarContentView: View {
                     LatestEventBanner(presentation: presentation, summary: summary)
                 }
 
+                let recentActivitySeverityChips = viewModel.recentEventSeverityChips(forAgentID: nil)
                 let recentActivityChips = viewModel.recentEventSummaryChips(forAgentID: nil)
-                if !recentActivityChips.isEmpty {
+                if !recentActivitySeverityChips.isEmpty || !recentActivityChips.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Recent Activity")
                             .font(.caption.weight(.semibold))
-                        EventSummaryChipsView(chips: recentActivityChips)
+                        if !recentActivitySeverityChips.isEmpty {
+                            EventSummaryChipsView(chips: recentActivitySeverityChips)
+                        }
+                        if !recentActivityChips.isEmpty {
+                            EventSummaryChipsView(chips: recentActivityChips)
+                        }
                     }
                 }
 
@@ -586,6 +592,10 @@ private struct AgentDetailView: View {
                     .font(.caption.weight(.semibold))
                     .padding(.top, 4)
 
+                let recentEventSeverityChips = AgentEventPresenter.summarizeBySeverity(recentEvents)
+                if !recentEventSeverityChips.isEmpty {
+                    EventSummaryChipsView(chips: recentEventSeverityChips)
+                }
                 if !recentEventSummaryChips.isEmpty {
                     EventSummaryChipsView(chips: recentEventSummaryChips)
                 }

@@ -84,3 +84,4 @@
 - 2026-03-25: `ham logs` baseline reuses the current global recent event log and filters by agent on the client side, so it is a best-effort recent-window view rather than a dedicated indexed per-agent history yet.
 - 2026-03-25: CLI list summary baseline keeps the top `summary ...` line human-only so operator scanability can improve without changing the JSON list array contract.
 - 2026-03-25: `ham doctor` baseline is currently a local path/socket inspection tool, not a full self-healing doctor; it reports resolved paths and socket reachability but does not attempt automatic repair yet.
+- 2026-03-25: severity-aware feed scanning baseline adds severity-level summary chips ahead of the existing label-group chips, but it does not replace the underlying recent-event ordering or introduce a persisted event priority model.
