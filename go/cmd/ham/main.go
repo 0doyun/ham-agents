@@ -417,19 +417,7 @@ func runList(ctx context.Context, client *ipc.Client, args []string) error {
 		return err
 	}
 
-	if *asJSON {
-		return writeJSON(agents)
-	}
-
-	if len(agents) == 0 {
-		fmt.Println("no tracked agents")
-		return nil
-	}
-
-	for _, agent := range agents {
-		fmt.Printf("%s\t%s\t%s\t%s\t%s\n", agent.ID, agent.DisplayName, agent.Provider, agent.Status, agent.Mode)
-	}
-	return nil
+	return renderAgents(os.Stdout, agents, *asJSON)
 }
 
 func runStatus(ctx context.Context, client *ipc.Client, args []string) error {
@@ -445,18 +433,7 @@ func runStatus(ctx context.Context, client *ipc.Client, args []string) error {
 		return err
 	}
 
-	if *asJSON {
-		return writeJSON(map[string]any{
-			"total":       snapshot.TotalCount(),
-			"running":     snapshot.RunningCount(),
-			"waiting":     snapshot.WaitingCount(),
-			"done":        snapshot.DoneCount(),
-			"generatedAt": snapshot.GeneratedAt,
-		})
-	}
-
-	fmt.Printf("total=%d running=%d waiting=%d done=%d\n", snapshot.TotalCount(), snapshot.RunningCount(), snapshot.WaitingCount(), snapshot.DoneCount())
-	return nil
+	return renderStatus(os.Stdout, snapshot, *asJSON)
 }
 
 func runEvents(ctx context.Context, client *ipc.Client, args []string) error {
@@ -804,11 +781,102 @@ func splitProvider(args []string) (string, []string) {
 }
 
 func writeJSON(value any) error {
+	return writeJSONTo(os.Stdout, value)
+}
+
+func writeJSONTo(out io.Writer, value any) error {
 	payload, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		return err
 	}
-	_, err = fmt.Fprintf(os.Stdout, "%s\n", payload)
+	_, err = fmt.Fprintf(out, "%s\n", payload)
+	return err
+}
+
+func renderAgents(out io.Writer, agents []core.Agent, asJSON bool) error {
+	if asJSON {
+		return writeJSONTo(out, agents)
+	}
+
+	if len(agents) == 0 {
+		_, err := fmt.Fprintln(out, "no tracked agents")
+		return err
+	}
+
+	for _, agent := range agents {
+		if _, err := fmt.Fprintln(out, formatAgentListLine(agent)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func formatAgentListLine(agent core.Agent) string {
+	parts := []string{
+		agent.ID,
+		agent.DisplayName,
+		agent.Provider,
+		string(agent.Mode),
+		formatAgentStatusLabel(agent),
+		formatConfidenceLabel(agent.StatusConfidence),
+	}
+	if reason := strings.TrimSpace(agent.StatusReason); reason != "" {
+		parts = append(parts, reason)
+	}
+	return strings.Join(parts, "\t")
+}
+
+func formatAgentStatusLabel(agent core.Agent) string {
+	if agent.StatusConfidence < 0.5 {
+		return "likely " + string(agent.Status)
+	}
+	return string(agent.Status)
+}
+
+func formatConfidenceLabel(confidence float64) string {
+	percent := int((confidence * 100) + 0.5)
+	level := "low"
+	switch {
+	case confidence >= 0.8:
+		level = "high"
+	case confidence >= 0.5:
+		level = "medium"
+	}
+	return fmt.Sprintf("%s %d%%", level, percent)
+}
+
+func countAttentionAgents(agents []core.Agent) int {
+	count := 0
+	for _, agent := range agents {
+		switch agent.Status {
+		case core.AgentStatusError, core.AgentStatusWaitingInput, core.AgentStatusDisconnected:
+			count++
+		}
+	}
+	return count
+}
+
+func renderStatus(out io.Writer, snapshot core.RuntimeSnapshot, asJSON bool) error {
+	if asJSON {
+		return writeJSONTo(out, map[string]any{
+			"total":       snapshot.TotalCount(),
+			"running":     snapshot.RunningCount(),
+			"waiting":     snapshot.WaitingCount(),
+			"done":        snapshot.DoneCount(),
+			"generatedAt": snapshot.GeneratedAt,
+		})
+	}
+
+	attentionCount := countAttentionAgents(snapshot.Agents)
+	_, err := fmt.Fprintf(
+		out,
+		"total=%d running=%d waiting=%d done=%d attention=%d\n",
+		snapshot.TotalCount(),
+		snapshot.RunningCount(),
+		snapshot.WaitingCount(),
+		snapshot.DoneCount(),
+		attentionCount,
+	)
 	return err
 }
 
