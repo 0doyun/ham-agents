@@ -7,8 +7,10 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -18,6 +20,7 @@ import (
 	"github.com/ham-agents/ham-agents/go/internal/core"
 	"github.com/ham-agents/ham-agents/go/internal/ipc"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
+	"github.com/ham-agents/ham-agents/go/internal/store"
 )
 
 func main() {
@@ -57,6 +60,8 @@ func run(args []string) error {
 		return runStop(ctx, client, args[1:])
 	case "logs":
 		return runLogs(ctx, client, args[1:])
+	case "doctor":
+		return runDoctor(socketPath, args[1:])
 	case "settings":
 		return runSettings(ctx, client, args[1:])
 	case "list":
@@ -93,6 +98,7 @@ Usage:
   ham ask <agent-id> <message>
   ham stop <agent-id> [--json]
   ham logs <agent-id> [--json] [--limit N]
+  ham doctor [--json]
   ham settings [--json]
   ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--quiet-hours=true|false] [--quiet-start-hour=0-23] [--quiet-end-hour=0-23] [--preview-text=true|false]
   ham settings appearance [--theme=auto|day|night]
@@ -299,6 +305,24 @@ func runLogs(ctx context.Context, client *ipc.Client, args []string) error {
 	}
 
 	return printEvents(os.Stdout, eventsForAgent(events, agentID, limit), asJSON)
+}
+
+func runDoctor(socketPath string, args []string) error {
+	flags := flag.NewFlagSet("doctor", flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	asJSON := flags.Bool("json", false, "emit JSON")
+	if err := flags.Parse(args); err != nil {
+		return err
+	}
+	if len(flags.Args()) > 0 {
+		return fmt.Errorf("unexpected argument %q", flags.Args()[0])
+	}
+
+	report, err := gatherDoctorReport(socketPath)
+	if err != nil {
+		return err
+	}
+	return renderDoctorReport(os.Stdout, report, *asJSON)
 }
 
 func runSettings(ctx context.Context, client *ipc.Client, args []string) error {
@@ -886,6 +910,138 @@ func renderStopResult(out io.Writer, agentID string, asJSON bool) error {
 
 	_, err := fmt.Fprintf(out, "stopped tracking %s\n", agentID)
 	return err
+}
+
+type doctorReport struct {
+	HamAgentsHome string          `json:"ham_agents_home,omitempty"`
+	ResolvedRoot  string          `json:"resolved_root"`
+	RootSource    string          `json:"root_source"`
+	Socket        doctorPathCheck `json:"socket"`
+	State         doctorPathCheck `json:"state"`
+	Events        doctorPathCheck `json:"events"`
+	Settings      doctorPathCheck `json:"settings"`
+}
+
+type doctorPathCheck struct {
+	Path      string `json:"path"`
+	Exists    bool   `json:"exists"`
+	Kind      string `json:"kind"`
+	Reachable bool   `json:"reachable,omitempty"`
+}
+
+func gatherDoctorReport(socketPath string) (doctorReport, error) {
+	statePath, err := store.DefaultStatePath()
+	if err != nil {
+		return doctorReport{}, err
+	}
+	eventPath, err := store.DefaultEventLogPath()
+	if err != nil {
+		return doctorReport{}, err
+	}
+	settingsPath, err := store.DefaultSettingsPath()
+	if err != nil {
+		return doctorReport{}, err
+	}
+
+	homeValue := strings.TrimSpace(os.Getenv("HAM_AGENTS_HOME"))
+	rootSource := "default"
+	resolvedRoot := filepath.Dir(statePath)
+	if homeValue != "" {
+		rootSource = "env"
+		resolvedRoot = homeValue
+	}
+
+	return doctorReport{
+		HamAgentsHome: homeValue,
+		ResolvedRoot:  resolvedRoot,
+		RootSource:    rootSource,
+		Socket:        inspectSocketPath(socketPath),
+		State:         inspectRegularPath(statePath),
+		Events:        inspectRegularPath(eventPath),
+		Settings:      inspectRegularPath(settingsPath),
+	}, nil
+}
+
+func renderDoctorReport(out io.Writer, report doctorReport, asJSON bool) error {
+	if asJSON {
+		return writeJSONTo(out, report)
+	}
+
+	hamAgentsHome := report.HamAgentsHome
+	if hamAgentsHome == "" {
+		hamAgentsHome = "(unset)"
+	}
+
+	lines := []string{
+		"ham-agents doctor",
+		fmt.Sprintf("root_source: %s", report.RootSource),
+		fmt.Sprintf("ham_agents_home: %s", hamAgentsHome),
+		fmt.Sprintf("resolved_root: %s", report.ResolvedRoot),
+		formatDoctorPathLine("socket", report.Socket),
+		formatDoctorPathLine("state", report.State),
+		formatDoctorPathLine("events", report.Events),
+		formatDoctorPathLine("settings", report.Settings),
+	}
+	for _, line := range lines {
+		if _, err := fmt.Fprintln(out, line); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func formatDoctorPathLine(label string, check doctorPathCheck) string {
+	status := check.Kind
+	if check.Kind == "unix_socket" {
+		if check.Reachable {
+			status = "reachable_socket"
+		} else {
+			status = "socket_not_listening"
+		}
+	}
+	return fmt.Sprintf("%s: %s\t%s", label, status, check.Path)
+}
+
+func inspectRegularPath(path string) doctorPathCheck {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return doctorPathCheck{Path: path, Exists: false, Kind: "missing"}
+		}
+		return doctorPathCheck{Path: path, Exists: false, Kind: "unreadable"}
+	}
+
+	kind := "file"
+	if info.IsDir() {
+		kind = "directory"
+	}
+	return doctorPathCheck{Path: path, Exists: true, Kind: kind}
+}
+
+func inspectSocketPath(path string) doctorPathCheck {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return doctorPathCheck{Path: path, Exists: false, Kind: "missing"}
+		}
+		return doctorPathCheck{Path: path, Exists: false, Kind: "unreadable"}
+	}
+
+	if info.Mode()&os.ModeSocket == 0 {
+		kind := "file"
+		if info.IsDir() {
+			kind = "directory"
+		}
+		return doctorPathCheck{Path: path, Exists: true, Kind: kind}
+	}
+
+	check := doctorPathCheck{Path: path, Exists: true, Kind: "unix_socket"}
+	conn, err := net.DialTimeout("unix", path, 200*time.Millisecond)
+	if err == nil {
+		check.Reachable = true
+		_ = conn.Close()
+	}
+	return check
 }
 
 func agentLogFetchLimit(limit int) int {

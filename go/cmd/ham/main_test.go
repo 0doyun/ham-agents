@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -96,6 +98,153 @@ func TestParseLogsInputRejectsNonPositiveLimit(t *testing.T) {
 
 	if _, _, _, err := parseLogsInput([]string{"--limit", "0", "agent-1"}); err == nil {
 		t.Fatalf("expected zero limit to fail")
+	}
+}
+
+func TestRunDoctorRejectsUnexpectedArgument(t *testing.T) {
+	t.Parallel()
+
+	if err := runDoctor("/tmp/hamd.sock", []string{"unexpected"}); err == nil {
+		t.Fatalf("expected unexpected doctor argument to fail")
+	}
+}
+
+func TestGatherDoctorReportUsesEnvRootAndInspectsPaths(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("HAM_AGENTS_HOME", root)
+
+	socketPath := filepath.Join(root, "hamd.sock")
+	statePath := filepath.Join(root, "managed-agents.json")
+	eventPath := filepath.Join(root, "events.jsonl")
+	if err := os.WriteFile(statePath, []byte("{}"), 0o644); err != nil {
+		t.Fatalf("write state: %v", err)
+	}
+	if err := os.WriteFile(eventPath, []byte(""), 0o644); err != nil {
+		t.Fatalf("write events: %v", err)
+	}
+
+	report, err := gatherDoctorReport(socketPath)
+	if err != nil {
+		t.Fatalf("gather doctor report: %v", err)
+	}
+
+	if report.RootSource != "env" {
+		t.Fatalf("expected env root source, got %q", report.RootSource)
+	}
+	if report.HamAgentsHome != root {
+		t.Fatalf("expected HAM_AGENTS_HOME %q, got %q", root, report.HamAgentsHome)
+	}
+	if report.Socket.Exists || report.Socket.Kind != "missing" {
+		t.Fatalf("expected missing socket, got %#v", report.Socket)
+	}
+	if !report.State.Exists || report.State.Kind != "file" {
+		t.Fatalf("expected state file, got %#v", report.State)
+	}
+	if !report.Events.Exists || report.Events.Kind != "file" {
+		t.Fatalf("expected event file, got %#v", report.Events)
+	}
+	if report.Settings.Exists || report.Settings.Kind != "missing" {
+		t.Fatalf("expected missing settings file, got %#v", report.Settings)
+	}
+}
+
+func TestRenderDoctorReportHumanReadable(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	err := renderDoctorReport(&output, doctorReport{
+		RootSource:    "env",
+		HamAgentsHome: "/tmp/ham",
+		ResolvedRoot:  "/tmp/ham",
+		Socket:        doctorPathCheck{Path: "/tmp/ham/hamd.sock", Exists: true, Kind: "unix_socket", Reachable: true},
+		State:         doctorPathCheck{Path: "/tmp/ham/managed-agents.json", Exists: true, Kind: "file"},
+		Events:        doctorPathCheck{Path: "/tmp/ham/events.jsonl", Exists: false, Kind: "missing"},
+		Settings:      doctorPathCheck{Path: "/tmp/ham/settings.json", Exists: true, Kind: "file"},
+	}, false)
+	if err != nil {
+		t.Fatalf("render doctor report: %v", err)
+	}
+
+	rendered := output.String()
+	if !strings.Contains(rendered, "ham-agents doctor") {
+		t.Fatalf("expected header in output %q", rendered)
+	}
+	if !strings.Contains(rendered, "root_source: env") || !strings.Contains(rendered, "ham_agents_home: /tmp/ham") || !strings.Contains(rendered, "resolved_root: /tmp/ham") {
+		t.Fatalf("expected root info in output %q", rendered)
+	}
+	if !strings.Contains(rendered, "socket: reachable_socket\t/tmp/ham/hamd.sock") {
+		t.Fatalf("expected socket line in output %q", rendered)
+	}
+	if !strings.Contains(rendered, "events: missing\t/tmp/ham/events.jsonl") {
+		t.Fatalf("expected missing events line in output %q", rendered)
+	}
+}
+
+func TestRenderDoctorReportJSON(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	err := renderDoctorReport(&output, doctorReport{
+		RootSource:   "default",
+		ResolvedRoot: "/tmp/ham-agents",
+		Socket:       doctorPathCheck{Path: "/tmp/hamd.sock", Exists: false, Kind: "missing"},
+		State:        doctorPathCheck{Path: "/tmp/state.json", Exists: false, Kind: "missing"},
+		Events:       doctorPathCheck{Path: "/tmp/events.jsonl", Exists: false, Kind: "missing"},
+		Settings:     doctorPathCheck{Path: "/tmp/settings.json", Exists: false, Kind: "missing"},
+	}, true)
+	if err != nil {
+		t.Fatalf("render doctor report json: %v", err)
+	}
+
+	payload := output.String()
+	if !strings.Contains(payload, `"root_source": "default"`) || !strings.Contains(payload, `"kind": "missing"`) {
+		t.Fatalf("expected doctor json fields in payload %q", payload)
+	}
+	if strings.Contains(payload, "ham-agents doctor") || strings.Contains(payload, "reachable_socket") {
+		t.Fatalf("expected json output to avoid human wording, got %q", payload)
+	}
+}
+
+func TestRenderDoctorReportHumanReadableDefaultRoot(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	err := renderDoctorReport(&output, doctorReport{
+		RootSource:   "default",
+		ResolvedRoot: "/Users/example/Library/Application Support/ham-agents",
+		Socket:       doctorPathCheck{Path: "/tmp/hamd.sock", Exists: false, Kind: "missing"},
+		State:        doctorPathCheck{Path: "/tmp/state.json", Exists: false, Kind: "missing"},
+		Events:       doctorPathCheck{Path: "/tmp/events.jsonl", Exists: false, Kind: "missing"},
+		Settings:     doctorPathCheck{Path: "/tmp/settings.json", Exists: false, Kind: "missing"},
+	}, false)
+	if err != nil {
+		t.Fatalf("render doctor report: %v", err)
+	}
+
+	rendered := output.String()
+	if !strings.Contains(rendered, "ham_agents_home: (unset)") || !strings.Contains(rendered, "resolved_root: /Users/example/Library/Application Support/ham-agents") {
+		t.Fatalf("expected default root output, got %q", rendered)
+	}
+}
+
+func TestRenderDoctorReportHumanReadableShowsSocketNotListening(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	err := renderDoctorReport(&output, doctorReport{
+		RootSource:   "default",
+		ResolvedRoot: "/tmp/ham",
+		Socket:       doctorPathCheck{Path: "/tmp/ham/hamd.sock", Exists: true, Kind: "unix_socket", Reachable: false},
+		State:        doctorPathCheck{Path: "/tmp/ham/managed-agents.json", Exists: false, Kind: "missing"},
+		Events:       doctorPathCheck{Path: "/tmp/ham/events.jsonl", Exists: false, Kind: "missing"},
+		Settings:     doctorPathCheck{Path: "/tmp/ham/settings.json", Exists: false, Kind: "missing"},
+	}, false)
+	if err != nil {
+		t.Fatalf("render doctor report: %v", err)
+	}
+
+	if !strings.Contains(output.String(), "socket: socket_not_listening\t/tmp/ham/hamd.sock") {
+		t.Fatalf("expected socket_not_listening output, got %q", output.String())
 	}
 }
 
