@@ -469,3 +469,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: higher-fidelity event-driven UI updates, stronger settings sections, richer attached shell-state fidelity
+
+### 2026-03-25 (higher-fidelity event-driven UI update baseline)
+- `MenuBarViewModel.followLatestEvents` 가 follow-event 도착 후 full refresh 대신 lighter snapshot/agent/event merge path 를 사용하도록 바꿨다.
+- follow lane 에서는 기존 summary events 와 새 followed events 를 merge 하고, settings / attachable sessions / permission state 는 polling lane 에 맡겨 event-driven refresh cost 를 줄였다.
+- Swift tests 로 follow lane 이 새 이벤트를 반영하면서도 settings/event fetch 호출을 불필요하게 반복하지 않는지 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer attached shell-state fidelity, stronger event semantics, lower-latency UI updates

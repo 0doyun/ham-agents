@@ -10,7 +10,7 @@ func TestIterm2AdapterListsSessions(t *testing.T) {
 
 	adapter := NewIterm2Adapter(recordingOutputRunner{
 		outputs: map[string][]byte{
-			"osascript|-e":                []byte("abc\ttrue\tClaude Review\tttys001\nxyz\tfalse\tShell\t\n"),
+			"osascript":                   []byte("abc\ttrue\tClaude Review\tttys001\nxyz\tfalse\tShell\t\n"),
 			"ps|-ax|-o|tty=,pid=,comm=":   []byte("ttys001 12345 /usr/local/bin/claude\n"),
 			"lsof|-a|-d|cwd|-p|12345|-Fn": []byte("p12345\nn/Users/User/projects/demo\n"),
 		},
@@ -62,6 +62,11 @@ type recordingOutputRunner struct {
 func (r recordingOutputRunner) Output(name string, args ...string) ([]byte, error) {
 	if r.err != nil {
 		return nil, r.err
+	}
+	if name == "osascript" {
+		if payload, ok := r.outputs["osascript"]; ok {
+			return payload, nil
+		}
 	}
 	key := name
 	for _, arg := range args {

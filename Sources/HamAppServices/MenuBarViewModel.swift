@@ -294,13 +294,12 @@ public final class MenuBarViewModel: ObservableObject {
             let loadedAgentsValue = try await loadedAgents
             let loadedSettingsValue = try await loadedSettings
             let loadedAttachableSessionsValue = (try? await client.fetchAttachableSessions()) ?? []
-            let candidates = filteredNotificationCandidates(
-                notificationEngine.candidates(previous: previousAgents, current: loadedAgentsValue),
+            applyRefreshedState(
+                summary: summaryValue,
+                agents: loadedAgentsValue,
+                previousAgents: previousAgents,
                 settings: loadedSettingsValue
             )
-
-            summary = summaryValue
-            agents = loadedAgentsValue
             attachableSessions = loadedAttachableSessionsValue
             settings = loadedSettingsValue
             notificationPermissionStatus = await permissionStatus
@@ -308,10 +307,6 @@ public final class MenuBarViewModel: ObservableObject {
                 roleDraft = firstAgent.role ?? ""
             }
             errorMessage = nil
-
-            for candidate in candidates {
-                notificationSink.send(candidate)
-            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -321,13 +316,29 @@ public final class MenuBarViewModel: ObservableObject {
         let afterEventID = summary?.recentEvents.last?.id ?? ""
 
         do {
-            let events = try await client.followEvents(
+            let followedEvents = try await client.followEvents(
                 afterEventID: afterEventID,
                 limit: eventLimit,
                 waitMilliseconds: waitMilliseconds
             )
-            guard !events.isEmpty else { return }
-            await refresh(eventLimit: eventLimit)
+            guard !followedEvents.isEmpty else { return }
+
+            let previousAgents = agents
+            async let loadedSnapshot = client.fetchSnapshot()
+            async let loadedAgents = client.fetchAgents()
+
+            let snapshot = try await loadedSnapshot
+            let loadedAgentsValue = try await loadedAgents
+            let mergedEvents = mergedRecentEvents(current: summary?.recentEvents ?? [], followed: followedEvents, limit: eventLimit)
+            let summaryValue = makeSummary(snapshot: snapshot, recentEvents: mergedEvents)
+
+            applyRefreshedState(
+                summary: summaryValue,
+                agents: loadedAgentsValue,
+                previousAgents: previousAgents,
+                settings: settings
+            )
+            errorMessage = nil
         } catch {
             return
         }
@@ -366,6 +377,51 @@ public final class MenuBarViewModel: ObservableObject {
 
             return candidate
         }
+    }
+
+    private func applyRefreshedState(
+        summary: HamMenuBarSummary,
+        agents: [Agent],
+        previousAgents: [Agent],
+        settings: DaemonSettingsPayload
+    ) {
+        let candidates = filteredNotificationCandidates(
+            notificationEngine.candidates(previous: previousAgents, current: agents),
+            settings: settings
+        )
+
+        self.summary = summary
+        self.agents = agents
+
+        for candidate in candidates {
+            notificationSink.send(candidate)
+        }
+    }
+
+    private func makeSummary(snapshot: DaemonRuntimeSnapshotPayload, recentEvents: [AgentEventPayload]) -> HamMenuBarSummary {
+        HamMenuBarSummary(
+            generatedAt: snapshot.generatedAt,
+            totalAgents: snapshot.totalCount,
+            runningAgents: snapshot.runningCount,
+            waitingAgents: snapshot.waitingCount,
+            doneAgents: snapshot.doneCount,
+            recentEvents: recentEvents
+        )
+    }
+
+    private func mergedRecentEvents(
+        current: [AgentEventPayload],
+        followed: [AgentEventPayload],
+        limit: Int
+    ) -> [AgentEventPayload] {
+        var merged = current
+        for event in followed where !merged.contains(where: { $0.id == event.id }) {
+            merged.append(event)
+        }
+        if limit > 0 && merged.count > limit {
+            return Array(merged.suffix(limit))
+        }
+        return merged
     }
 
     private func isQuietHoursActive(_ settings: DaemonNotificationSettingsPayload, at date: Date) -> Bool {
