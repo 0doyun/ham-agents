@@ -94,3 +94,4 @@ The current `ham-menubar` baseline:
 - shows a selected-agent detail pane with recent event context inside the popover
 - includes a baseline “Open Project Folder” action from the selected-agent detail pane
 - shows current notification permission state and lets the user request permission from the popover
+- uses `sessionRef` as a URL-based session target when available, otherwise falls back to opening the workspace in iTerm or Finder

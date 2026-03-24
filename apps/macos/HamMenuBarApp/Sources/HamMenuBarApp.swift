@@ -301,18 +301,23 @@ private struct WorkspaceProjectOpener: ProjectOpening {
 
 private struct ItermSessionOpener: SessionOpening {
     let projectOpener: ProjectOpening
+    private let planner = SessionTargetPlanner()
 
     func openSession(for agent: Agent) {
         let workspace = NSWorkspace.shared
-        let projectURL = URL(fileURLWithPath: agent.projectPath)
+        switch planner.target(for: agent) {
+        case .externalURL(let url):
+            workspace.open(url)
+        case .workspace(let path):
+            let projectURL = URL(fileURLWithPath: path)
 
-        if let appPath = workspace.fullPath(forApplication: "iTerm") {
-            let appURL = URL(fileURLWithPath: appPath)
-            let configuration = NSWorkspace.OpenConfiguration()
-            workspace.open([projectURL], withApplicationAt: appURL, configuration: configuration) { _, _ in }
-            return
+            if let appURL = workspace.urlForApplication(withBundleIdentifier: "com.googlecode.iterm2") {
+                let configuration = NSWorkspace.OpenConfiguration()
+                workspace.open([projectURL], withApplicationAt: appURL, configuration: configuration) { _, _ in }
+                return
+            }
+
+            projectOpener.openProject(at: path)
         }
-
-        projectOpener.openProject(at: agent.projectPath)
     }
 }
