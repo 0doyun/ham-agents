@@ -29,8 +29,11 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
 		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
 	)
+	settingsService := runtime.NewSettingsService(
+		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
+	)
 
-	server := ipc.NewServer(socketPath, registry)
+	server := ipc.NewServer(socketPath, registry, settingsService)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -104,6 +107,19 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	}
 	if target.Kind != "external_url" {
 		t.Fatalf("unexpected open target kind %q", target.Kind)
+	}
+
+	settings, err := client.Settings(context.Background())
+	if err != nil {
+		t.Fatalf("get settings via client: %v", err)
+	}
+	settings.Notifications.PreviewText = true
+	updatedSettings, err := client.UpdateSettings(context.Background(), settings)
+	if err != nil {
+		t.Fatalf("update settings via client: %v", err)
+	}
+	if !updatedSettings.Notifications.PreviewText {
+		t.Fatal("expected preview text to persist")
 	}
 
 	agents, err := client.ListAgents(context.Background())
@@ -185,8 +201,11 @@ func TestServerRejectsDirectoryAtSocketPath(t *testing.T) {
 		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
 		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
 	)
+	settingsService := runtime.NewSettingsService(
+		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
+	)
 
-	server := ipc.NewServer(socketPath, registry)
+	server := ipc.NewServer(socketPath, registry, settingsService)
 	err := server.Serve(context.Background())
 	if err == nil {
 		t.Fatal("expected server startup to fail when socket path is a directory")

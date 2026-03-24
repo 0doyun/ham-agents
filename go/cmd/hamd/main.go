@@ -34,10 +34,15 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	settingsPath, err := store.DefaultSettingsPath()
+	if err != nil {
+		return err
+	}
 	registry := runtime.NewRegistry(
 		store.NewFileAgentStore(statePath),
 		store.NewFileEventStore(eventPath),
 	)
+	settingsService := runtime.NewSettingsService(store.NewFileSettingsStore(settingsPath))
 
 	command := "serve"
 	if len(args) > 0 {
@@ -62,7 +67,7 @@ func run(args []string) error {
 			return nil
 		}
 
-		server := ipc.NewServer(ipcConfig.SocketPath, registry)
+		server := ipc.NewServer(ipcConfig.SocketPath, registry, settingsService)
 		go pollObserved(ctx, registry, 2*time.Second)
 		fmt.Printf("hamd serving on %s\n", ipcConfig.SocketPath)
 		return server.Serve(ctx)

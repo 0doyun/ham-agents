@@ -46,6 +46,8 @@ func run(args []string) error {
 		return runObserve(ctx, client, args[1:])
 	case "open":
 		return runOpen(ctx, client, args[1:])
+	case "settings":
+		return runSettings(ctx, client, args[1:])
 	case "list":
 		return runList(ctx, client, args[1:])
 	case "status":
@@ -75,6 +77,8 @@ Usage:
   ham attach <session-ref> [name] [--project path] [--role role] [--provider provider]
   ham observe <source-ref> [name] [--project path] [--role role] [--provider provider]
   ham open <agent-id> [--json] [--print]
+  ham settings [--json]
+  ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--preview-text=true|false]
   ham list [--json]
   ham status [--json]
   ham events [--json] [--limit N]
@@ -149,6 +153,73 @@ func runOpen(ctx context.Context, client *ipc.Client, args []string) error {
 	}
 
 	return openTarget(target)
+}
+
+func runSettings(ctx context.Context, client *ipc.Client, args []string) error {
+	if len(args) == 0 {
+		settings, err := client.Settings(ctx)
+		if err != nil {
+			return err
+		}
+		return writeJSON(settings)
+	}
+
+	switch args[0] {
+	case "--json":
+		settings, err := client.Settings(ctx)
+		if err != nil {
+			return err
+		}
+		return writeJSON(settings)
+	case "notifications":
+		return runSettingsNotifications(ctx, client, args[1:])
+	default:
+		return fmt.Errorf("unsupported settings subcommand %q", args[0])
+	}
+}
+
+func runSettingsNotifications(ctx context.Context, client *ipc.Client, args []string) error {
+	settings, err := client.Settings(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, argument := range args {
+		switch {
+		case strings.HasPrefix(argument, "--done="):
+			value, err := parseBoolFlag(argument, "--done=")
+			if err != nil {
+				return err
+			}
+			settings.Notifications.Done = value
+		case strings.HasPrefix(argument, "--error="):
+			value, err := parseBoolFlag(argument, "--error=")
+			if err != nil {
+				return err
+			}
+			settings.Notifications.Error = value
+		case strings.HasPrefix(argument, "--waiting-input="):
+			value, err := parseBoolFlag(argument, "--waiting-input=")
+			if err != nil {
+				return err
+			}
+			settings.Notifications.WaitingInput = value
+		case strings.HasPrefix(argument, "--preview-text="):
+			value, err := parseBoolFlag(argument, "--preview-text=")
+			if err != nil {
+				return err
+			}
+			settings.Notifications.PreviewText = value
+		default:
+			return fmt.Errorf("unsupported notifications flag %q", argument)
+		}
+	}
+
+	updated, err := client.UpdateSettings(ctx, settings)
+	if err != nil {
+		return err
+	}
+	return writeJSON(updated)
 }
 
 func runList(ctx context.Context, client *ipc.Client, args []string) error {
@@ -395,6 +466,18 @@ func parseOpenInput(args []string) (agentID string, asJSON bool, printOnly bool,
 		err = fmt.Errorf("agent id is required")
 	}
 	return
+}
+
+func parseBoolFlag(argument string, prefix string) (bool, error) {
+	value := strings.TrimPrefix(argument, prefix)
+	switch value {
+	case "true":
+		return true, nil
+	case "false":
+		return false, nil
+	default:
+		return false, fmt.Errorf("invalid boolean value %q", value)
+	}
 }
 
 func splitProvider(args []string) (string, []string) {
