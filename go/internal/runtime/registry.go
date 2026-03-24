@@ -106,14 +106,7 @@ func (r *Registry) RegisterManaged(ctx context.Context, input RegisterManagedInp
 		AvatarVariant:          "default",
 	}
 
-	agents = append(agents, agent)
-	if err := r.store.SaveAgents(ctx, agents); err != nil {
-		return core.Agent{}, err
-	}
-
-	r.appendEvent(ctx, agent.ID, core.EventTypeAgentRegistered, agent.LastUserVisibleSummary)
-
-	return agent, nil
+	return r.registerAgent(ctx, agents, agent)
 }
 
 func (r *Registry) RegisterAttached(ctx context.Context, input RegisterAttachedInput) (core.Agent, error) {
@@ -169,14 +162,7 @@ func (r *Registry) RegisterAttached(ctx context.Context, input RegisterAttachedI
 		AvatarVariant:          "default",
 	}
 
-	agents = append(agents, agent)
-	if err := r.store.SaveAgents(ctx, agents); err != nil {
-		return core.Agent{}, err
-	}
-
-	r.appendEvent(ctx, agent.ID, core.EventTypeAgentRegistered, agent.LastUserVisibleSummary)
-
-	return agent, nil
+	return r.registerAgent(ctx, agents, agent)
 }
 
 func (r *Registry) RegisterObserved(ctx context.Context, input RegisterObservedInput) (core.Agent, error) {
@@ -232,14 +218,7 @@ func (r *Registry) RegisterObserved(ctx context.Context, input RegisterObservedI
 		AvatarVariant:          "default",
 	}
 
-	agents = append(agents, agent)
-	if err := r.store.SaveAgents(ctx, agents); err != nil {
-		return core.Agent{}, err
-	}
-
-	r.appendEvent(ctx, agent.ID, core.EventTypeAgentRegistered, agent.LastUserVisibleSummary)
-
-	return agent, nil
+	return r.registerAgent(ctx, agents, agent)
 }
 
 func (r *Registry) List(ctx context.Context) ([]core.Agent, error) {
@@ -646,6 +625,18 @@ func (r *Registry) mutateAgent(
 	}
 
 	return core.Agent{}, fmt.Errorf("agent %q not found", agentID)
+}
+
+func (r *Registry) registerAgent(ctx context.Context, agents []core.Agent, agent core.Agent) (core.Agent, error) {
+	updatedAgents := append(append([]core.Agent(nil), agents...), agent)
+	if err := r.saveAgentsAndEvents(ctx, updatedAgents, []core.Event{{
+		AgentID: agent.ID,
+		Type:    core.EventTypeAgentRegistered,
+		Summary: agent.LastUserVisibleSummary,
+	}}); err != nil {
+		return core.Agent{}, err
+	}
+	return agent, nil
 }
 
 func (r *Registry) saveAgentsAndEvents(ctx context.Context, agents []core.Agent, events []core.Event) error {
