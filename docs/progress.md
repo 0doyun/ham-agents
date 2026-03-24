@@ -549,7 +549,17 @@
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
-- 다음 우선순위 후보: attached shell-state heuristic refinement, lower-latency visual polish, richer attached shell-state fidelity
+- 다음 우선순위 후보: observed lifecycle event baseline, lower-latency visual polish, richer attached shell-state fidelity
+
+### 2026-03-25 (observed lifecycle event baseline)
+- observed refresh path 가 status 변화가 실제로 일어났을 때 `agent.status_updated` event 를 남기도록 확장했다.
+- `AgentEventPresenter` 도 새 event type 을 semantic `Status` label 로 매핑해 feed/UI semantics 와 맞추었다.
+- Go tests 로 observed refresh 뒤 status-update event emission 을 보호하고, Swift tests 로 새 event presentation mapping 을 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: stronger feed semantics, lower-latency visual polish, richer attached shell-state fidelity
 
 ### 2026-03-25 (attached shell-state heuristic refinement baseline)
 - iTerm tty heuristic 이 shell process와 foreground tool이 함께 보일 때 non-shell foreground command 를 우선 선택하도록 정교화했다.

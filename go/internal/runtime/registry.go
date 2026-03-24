@@ -245,7 +245,7 @@ func (r *Registry) List(ctx context.Context) ([]core.Agent, error) {
 		return nil, err
 	}
 
-	agents, err = r.refreshObservedAgents(ctx, agents)
+	agents, _, err = r.refreshObservedAgents(ctx, agents)
 	if err != nil {
 		return nil, err
 	}
@@ -602,18 +602,25 @@ func (r *Registry) RefreshObserved(ctx context.Context) error {
 		return err
 	}
 
-	_, err = r.refreshObservedAgents(ctx, agents)
-	return err
+	_, events, err := r.refreshObservedAgents(ctx, agents)
+	if err != nil {
+		return err
+	}
+	for _, event := range events {
+		r.appendEvent(ctx, event.AgentID, event.Type, event.Summary)
+	}
+	return nil
 }
 
-func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agent) ([]core.Agent, error) {
+func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agent) ([]core.Agent, []core.Event, error) {
 	if len(agents) == 0 {
-		return agents, nil
+		return agents, nil, nil
 	}
 
 	now := r.clock().UTC()
 	refreshed := append([]core.Agent(nil), agents...)
 	changed := false
+	events := make([]core.Event, 0)
 
 	for index, agent := range refreshed {
 		if agent.Mode != core.AgentModeObserved {
@@ -622,6 +629,13 @@ func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agen
 
 		updated := inference.RefreshObservedAgent(agent, now)
 		if updated != agent {
+			if updated.Status != agent.Status {
+				events = append(events, core.Event{
+					AgentID: agent.ID,
+					Type:    core.EventTypeAgentStatusUpdated,
+					Summary: updated.LastUserVisibleSummary,
+				})
+			}
 			refreshed[index] = updated
 			changed = true
 		}
@@ -629,9 +643,9 @@ func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agen
 
 	if changed {
 		if err := r.store.SaveAgents(ctx, refreshed); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
-	return refreshed, nil
+	return refreshed, events, nil
 }
