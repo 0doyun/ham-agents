@@ -69,15 +69,16 @@
 - [x] observed source contents를 읽어 status/confidence를 갱신하는 baseline 추가
 - [x] daemon serve 중 observed source polling 추가
 - [x] `ham open <agent>` baseline 추가
+- [ ] backend settings state baseline 추가
 
 ### Current Slice Checklist
 
-- [x] daemon/runtime open-target resolution 추가
-- [x] IPC `open_target` contract 추가
-- [x] CLI `ham open` + print/json path 추가
-- [x] Go tests/CLI smoke 로 open target 보호
+- [ ] settings store schema 추가
+- [ ] daemon/runtime get/update settings path 추가
+- [ ] CLI `ham settings --json` baseline 추가
+- [ ] Go tests로 settings persistence 보호
 - [x] Swift bootstrap build/test green 유지
-- [x] Go tests green 유지
+- [ ] Go tests green 유지
 
 ## Out of Scope For Current Slice
 

@@ -16,14 +16,16 @@ import (
 type Server struct {
 	socketPath string
 	registry   *hamruntime.Registry
+	settings   *hamruntime.SettingsService
 
 	listener net.Listener
 }
 
-func NewServer(socketPath string, registry *hamruntime.Registry) *Server {
+func NewServer(socketPath string, registry *hamruntime.Registry, settings *hamruntime.SettingsService) *Server {
 	return &Server{
 		socketPath: socketPath,
 		registry:   registry,
+		settings:   settings,
 	}
 }
 
@@ -177,6 +179,21 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{}, nil
+	case CommandGetSettings:
+		settings, err := s.settings.Get(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Settings: &settings}, nil
+	case CommandUpdateSettings:
+		if request.Settings == nil {
+			return Response{}, fmt.Errorf("settings payload is required")
+		}
+		settings, err := s.settings.Update(ctx, *request.Settings)
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Settings: &settings}, nil
 	default:
 		return Response{}, fmt.Errorf("unsupported command %q", request.Command)
 	}

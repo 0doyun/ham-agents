@@ -30,6 +30,8 @@ const (
 	CommandSetNotificationPolicy Command = "agents.set_notification_policy"
 	CommandSetRole               Command = "agents.set_role"
 	CommandRemoveAgent           Command = "agents.remove"
+	CommandGetSettings          Command = "settings.get"
+	CommandUpdateSettings       Command = "settings.update"
 )
 
 type Request struct {
@@ -42,6 +44,7 @@ type Request struct {
 	SessionRef  string  `json:"session_ref,omitempty"`
 	Limit       int     `json:"limit,omitempty"`
 	Policy      string  `json:"policy,omitempty"`
+	Settings    *core.Settings `json:"settings,omitempty"`
 }
 
 type Response struct {
@@ -49,6 +52,7 @@ type Response struct {
 	Agents   []core.Agent          `json:"agents,omitempty"`
 	Events   []core.Event          `json:"events,omitempty"`
 	OpenTarget *core.OpenTarget    `json:"open_target,omitempty"`
+	Settings *core.Settings        `json:"settings,omitempty"`
 	Snapshot *core.RuntimeSnapshot `json:"snapshot,omitempty"`
 	Error    string                `json:"error,omitempty"`
 }
@@ -153,6 +157,28 @@ func (c *Client) OpenTarget(ctx context.Context, agentID string) (core.OpenTarge
 		return core.OpenTarget{}, fmt.Errorf("daemon response missing open target payload")
 	}
 	return *response.OpenTarget, nil
+}
+
+func (c *Client) Settings(ctx context.Context) (core.Settings, error) {
+	response, err := c.request(ctx, Request{Command: CommandGetSettings})
+	if err != nil {
+		return core.Settings{}, err
+	}
+	if response.Settings == nil {
+		return core.Settings{}, fmt.Errorf("daemon response missing settings payload")
+	}
+	return *response.Settings, nil
+}
+
+func (c *Client) UpdateSettings(ctx context.Context, settings core.Settings) (core.Settings, error) {
+	response, err := c.request(ctx, Request{Command: CommandUpdateSettings, Settings: &settings})
+	if err != nil {
+		return core.Settings{}, err
+	}
+	if response.Settings == nil {
+		return core.Settings{}, fmt.Errorf("daemon response missing settings payload")
+	}
+	return *response.Settings, nil
 }
 
 func (c *Client) ListAgents(ctx context.Context) ([]core.Agent, error) {
