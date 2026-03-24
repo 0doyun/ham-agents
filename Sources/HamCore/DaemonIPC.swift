@@ -90,6 +90,16 @@ public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
     public init(notifications: DaemonNotificationSettingsPayload) {
         self.notifications = notifications
     }
+
+    public static let `default` = DaemonSettingsPayload(
+        notifications: DaemonNotificationSettingsPayload(
+            done: true,
+            error: true,
+            waitingInput: true,
+            quietHoursEnabled: false,
+            previewText: false
+        )
+    )
 }
 
 public struct DaemonRuntimeSnapshotPayload: Codable, Equatable, Sendable {

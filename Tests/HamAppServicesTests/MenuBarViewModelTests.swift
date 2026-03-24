@@ -531,17 +531,105 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertTrue(sink.candidates.isEmpty)
         XCTAssertTrue(viewModel.isNotificationsMuted(forAgentID: "agent-1"))
     }
+
+    func testNotificationSettingsCanSuppressDoneNotifications() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .done,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2),
+            lastUserVisibleSummary: "Build completed."
+        )
+        let settings = DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: false,
+                error: true,
+                waitingInput: true,
+                quietHoursEnabled: false,
+                previewText: true
+            )
+        )
+        let client = TransitioningClient(initialAgents: [previous], nextAgents: [current], settings: settings)
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(client: client, notificationSink: sink)
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertTrue(sink.candidates.isEmpty)
+    }
+
+    func testNotificationSettingsCanMaskPreviewText() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .error,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2),
+            lastUserVisibleSummary: "Secret failure detail"
+        )
+        let settings = DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: true,
+                error: true,
+                waitingInput: true,
+                quietHoursEnabled: false,
+                previewText: false
+            )
+        )
+        let client = TransitioningClient(initialAgents: [previous], nextAgents: [current], settings: settings)
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(client: client, notificationSink: sink)
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertEqual(sink.candidates.first?.body, "Open ham-menubar for details.")
+    }
 }
 
 private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
     let snapshot: DaemonRuntimeSnapshotPayload
     let events: [AgentEventPayload]
     let agents: [Agent]
+    let settings: DaemonSettingsPayload
 
-    init(snapshot: DaemonRuntimeSnapshotPayload, events: [AgentEventPayload], agents: [Agent]) {
+    init(snapshot: DaemonRuntimeSnapshotPayload, events: [AgentEventPayload], agents: [Agent], settings: DaemonSettingsPayload = .default) {
         self.snapshot = snapshot
         self.events = events
         self.agents = agents
+        self.settings = settings
     }
 
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload { snapshot }
@@ -555,15 +643,7 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
     }
 
     func fetchSettings() async throws -> DaemonSettingsPayload {
-        DaemonSettingsPayload(
-            notifications: DaemonNotificationSettingsPayload(
-                done: true,
-                error: true,
-                waitingInput: true,
-                quietHoursEnabled: false,
-                previewText: false
-            )
-        )
+        settings
     }
 
     func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {
@@ -624,9 +704,11 @@ private struct FailingClient: HamDaemonClientProtocol, Sendable {
 private actor CyclingClient: HamDaemonClientProtocol {
     private let agent: Agent
     private var snapshotCalls = 0
+    private let settings: DaemonSettingsPayload
 
-    init(agent: Agent) {
+    init(agent: Agent, settings: DaemonSettingsPayload = .default) {
         self.agent = agent
+        self.settings = settings
     }
 
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload {
@@ -649,15 +731,7 @@ private actor CyclingClient: HamDaemonClientProtocol {
     }
 
     func fetchSettings() async throws -> DaemonSettingsPayload {
-        DaemonSettingsPayload(
-            notifications: DaemonNotificationSettingsPayload(
-                done: true,
-                error: true,
-                waitingInput: true,
-                quietHoursEnabled: false,
-                previewText: false
-            )
-        )
+        settings
     }
 
     func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {
@@ -708,10 +782,12 @@ private actor TransitioningClient: HamDaemonClientProtocol {
     private let nextAgents: [Agent]
     private var fetchAgentsCalls = 0
     private var policyOverride: NotificationPolicy?
+    private let settings: DaemonSettingsPayload
 
-    init(initialAgents: [Agent], nextAgents: [Agent]) {
+    init(initialAgents: [Agent], nextAgents: [Agent], settings: DaemonSettingsPayload = .default) {
         self.initialAgents = initialAgents
         self.nextAgents = nextAgents
+        self.settings = settings
     }
 
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload {
@@ -731,15 +807,7 @@ private actor TransitioningClient: HamDaemonClientProtocol {
     }
 
     func fetchSettings() async throws -> DaemonSettingsPayload {
-        DaemonSettingsPayload(
-            notifications: DaemonNotificationSettingsPayload(
-                done: true,
-                error: true,
-                waitingInput: true,
-                quietHoursEnabled: false,
-                previewText: false
-            )
-        )
+        settings
     }
 
     func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {

@@ -237,7 +237,10 @@ public final class MenuBarViewModel: ObservableObject {
             let summaryValue = try await loadedSummary
             let loadedAgentsValue = try await loadedAgents
             let loadedSettingsValue = try await loadedSettings
-            let candidates = notificationEngine.candidates(previous: previousAgents, current: loadedAgentsValue)
+            let candidates = filteredNotificationCandidates(
+                notificationEngine.candidates(previous: previousAgents, current: loadedAgentsValue),
+                settings: loadedSettingsValue
+            )
 
             summary = summaryValue
             agents = loadedAgentsValue
@@ -258,5 +261,31 @@ public final class MenuBarViewModel: ObservableObject {
 
     deinit {
         refreshTask?.cancel()
+    }
+
+    private func filteredNotificationCandidates(
+        _ candidates: [NotificationCandidate],
+        settings: DaemonSettingsPayload
+    ) -> [NotificationCandidate] {
+        candidates.compactMap { candidate in
+            switch candidate.event {
+            case .done:
+                guard settings.notifications.done else { return nil }
+            case .error:
+                guard settings.notifications.error else { return nil }
+            case .waitingInput:
+                guard settings.notifications.waitingInput else { return nil }
+            }
+
+            guard settings.notifications.previewText else {
+                return NotificationCandidate(
+                    event: candidate.event,
+                    title: candidate.title,
+                    body: "Open ham-menubar for details."
+                )
+            }
+
+            return candidate
+        }
     }
 }
