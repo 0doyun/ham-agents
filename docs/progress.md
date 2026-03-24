@@ -161,3 +161,13 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: iTerm/session-focused actions, richer notification permission UX, live event stream/follow integration
+
+### 2026-03-24 (iTerm/workspace action baseline)
+- `SessionOpening` boundary 를 추가해 selected agent action 이 AppKit/iTerm specific implementation 과 분리되도록 만들었다.
+- popover detail pane에 `Open in iTerm` 버튼을 추가하고, app target에서는 iTerm 설치 시 workspace 경로를 iTerm으로 열고, 없으면 project-folder opener 로 fallback 하도록 연결했다.
+- Swift tests로 selected agent 가 injected session opener 로 전달되는지 고정했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: real existing-session focus semantics, iTerm message/send actions, richer notification permission UX

@@ -234,6 +234,39 @@ final class MenuBarViewModelTests: XCTestCase {
 
         XCTAssertEqual(opener.openedPaths, ["/tmp/app"])
     }
+
+    func testOpenSessionUsesInjectedOpener() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            role: "reviewer",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1),
+            sessionRef: "session-1"
+        )
+        let opener = RecordingSessionOpener()
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            ),
+            sessionOpener: opener
+        )
+
+        await viewModel.refresh()
+        viewModel.openSession(forAgentID: "agent-1")
+
+        XCTAssertEqual(opener.openedAgentIDs, ["agent-1"])
+    }
 }
 
 private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
@@ -355,5 +388,13 @@ private final class RecordingProjectOpener: ProjectOpening, @unchecked Sendable 
 
     func openProject(at path: String) {
         openedPaths.append(path)
+    }
+}
+
+private final class RecordingSessionOpener: SessionOpening, @unchecked Sendable {
+    private(set) var openedAgentIDs: [String] = []
+
+    func openSession(for agent: Agent) {
+        openedAgentIDs.append(agent.id)
     }
 }

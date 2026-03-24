@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **popover agent detail actions baseline** 다.
+현재 활성 범위는 **iTerm/workspace action baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -53,12 +53,14 @@
 - [x] actual macOS notification delivery sink 연결
 - [x] popover에서 선택 agent detail + recent event context 표시
 - [x] popover에서 최소 agent action 연결
+- [x] iTerm/workspace opening action baseline 추가
 
 ### Current Slice Checklist
 
-- [x] open project folder action boundary 추가
-- [x] popover detail panel에 baseline action button 추가
-- [x] Swift tests로 action wiring 보호
+- [x] session/iTerm opener boundary 추가
+- [x] popover detail panel에 iTerm action button 추가
+- [x] graceful fallback(open project folder) 정의
+- [x] Swift tests로 session action wiring 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 
@@ -132,12 +134,12 @@
 
 ### Epic 6: iTerm2 Integration
 - [ ] 세션 식별 방식 결정
-- [ ] focus/open 연동
+- [x] focus/open 연동
 - [ ] 선택적 message send
 - [ ] 종료 감지 초안
 
 #### Acceptance Criteria
-- [ ] managed session 재오픈 또는 focus 가능
+- [x] managed session 재오픈 또는 focus 가능
 - [ ] 연동 실패 시 graceful fallback 존재
 
 ### Epic 7: Attached and Observed Modes

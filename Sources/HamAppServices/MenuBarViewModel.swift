@@ -15,6 +15,7 @@ public final class MenuBarViewModel: ObservableObject {
     private let notificationEngine: StatusChangeNotificationEngine
     private let notificationSink: NotificationSink
     private let projectOpener: ProjectOpening
+    private let sessionOpener: SessionOpening
     private let pollIntervalNanoseconds: UInt64
     private let sleep: @Sendable (UInt64) async throws -> Void
     private var hasStarted = false
@@ -25,6 +26,7 @@ public final class MenuBarViewModel: ObservableObject {
         notificationEngine: StatusChangeNotificationEngine = StatusChangeNotificationEngine(),
         notificationSink: NotificationSink = NoopNotificationSink(),
         projectOpener: ProjectOpening = NoopProjectOpener(),
+        sessionOpener: SessionOpening = NoopSessionOpener(),
         pollIntervalNanoseconds: UInt64 = 15_000_000_000,
         sleep: @escaping @Sendable (UInt64) async throws -> Void = { nanoseconds in
             try await Task.sleep(nanoseconds: nanoseconds)
@@ -35,6 +37,7 @@ public final class MenuBarViewModel: ObservableObject {
         self.notificationEngine = notificationEngine
         self.notificationSink = notificationSink
         self.projectOpener = projectOpener
+        self.sessionOpener = sessionOpener
         self.pollIntervalNanoseconds = pollIntervalNanoseconds
         self.sleep = sleep
     }
@@ -60,6 +63,11 @@ public final class MenuBarViewModel: ObservableObject {
     public func openProject(forAgentID id: Agent.ID?) {
         guard let agent = agent(withID: id) else { return }
         projectOpener.openProject(at: agent.projectPath)
+    }
+
+    public func openSession(forAgentID id: Agent.ID?) {
+        guard let agent = agent(withID: id) else { return }
+        sessionOpener.openSession(for: agent)
     }
 
     public func start() {
