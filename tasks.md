@@ -104,7 +104,8 @@
 - [x] runtime coordinator baseline 추가
 - [x] runtime transition consistency baseline 추가
 - [x] richer attached shell-state fidelity follow-up 추가
-- [ ] runtime coordinator follow-up 추가
+- [x] runtime coordinator follow-up 추가
+- [ ] runtime lifecycle coverage follow-up 추가
 
 ### Current Slice Checklist
 

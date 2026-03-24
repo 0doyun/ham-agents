@@ -652,11 +652,12 @@
 ### 2026-03-25 (runtime transition consistency baseline)
 - observed refresh가 poll path뿐 아니라 list/snapshot read path에서도 같은 apply-and-persist helper 를 타도록 정리해 lifecycle evidence 가 호출 경로에 따라 달라지지 않게 했다.
 - snapshot-driven observed refresh regression test 를 추가했고, explicit poll/list/snapshot 경로가 모두 `agent.status_updated` event 를 남기는지 보호했다.
+- unchanged observed/attached refresh 가 extra lifecycle event 나 redundant save 를 만들지 않는지까지 regression coverage 를 넓혔다.
 - 검증:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
-- 다음 우선순위 후보: richer attached shell-state fidelity follow-up, stronger feed semantics, lower-latency visual polish
+- 다음 우선순위 후보: runtime lifecycle coverage follow-up, stronger feed semantics, lower-latency visual polish
 
 ### 2026-03-25 (richer attached shell-state fidelity follow-up)
 - attached shell-state follow-up 으로 stale disconnect metadata 를 정리해, attached session 이 끊기면 tty/cwd/activity/pid/command 정보가 그대로 남아 misleading 하지 않게 만들었다.

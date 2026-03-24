@@ -68,6 +68,7 @@
 - 2026-03-25: runtime coordinator follow-up extends that rule to refresh/read paths as well; explicit refreshes and read-triggered refreshes should use the same helper boundaries whenever they can mutate persisted state.
 - 2026-03-25: `applyRefreshedAgents` is now the preferred no-op guard for refresh-style paths so attached/observed refreshes skip persistence when neither state nor emitted events changed.
 - 2026-03-25: runtime transition consistency baseline now expects observed transitions triggered by poll, list, and snapshot paths to produce the same persisted state and lifecycle evidence.
+- 2026-03-25: lifecycle coverage follow-up also treats “no status change” as a first-class contract — refresh paths should avoid emitting duplicate lifecycle events when the inferred state is unchanged.
 - 2026-03-25: attached shell-state heuristic refinement now prefers a non-shell foreground command on the tty when one exists, and only falls back to a generic `shell` label when the tty appears to contain shell-only noise.
 - 2026-03-25: richer attached shell-state follow-up clears stale tty/cwd/activity/pid/command metadata on disconnect and hides shell-command noise when the best available signal is only a shell.
 - 2026-03-25: status reason strings are currently concise backend-authored heuristics and the Swift UI uses confidence-aware wording (`likely ...`, `low/medium/high confidence`) to avoid overstating low-confidence inferred states.
