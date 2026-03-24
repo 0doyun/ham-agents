@@ -40,6 +40,42 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.confidenceText(for: viewModel.agent(withID: "agent-1")), "100%")
     }
 
+    func testRefreshLoadsAttachableSessions() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let client = StubClient(
+            snapshot: DaemonRuntimeSnapshotPayload(
+                agents: [agent],
+                generatedAt: Date(timeIntervalSince1970: 10)
+            ),
+            events: [],
+            agents: [agent],
+            attachableSessions: [
+                DaemonAttachableSessionPayload(
+                    id: "abc",
+                    title: "Claude Review",
+                    sessionRef: "iterm2://session/abc",
+                    isActive: true
+                )
+            ]
+        )
+        let viewModel = MenuBarViewModel(client: client)
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.attachableSessions.count, 1)
+        XCTAssertEqual(viewModel.attachableSessions.first?.id, "abc")
+    }
+
     func testRefreshCapturesErrors() async {
         let client = FailingClient()
         let viewModel = MenuBarViewModel(client: client)
@@ -767,17 +803,26 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
     let snapshot: DaemonRuntimeSnapshotPayload
     let events: [AgentEventPayload]
     let agents: [Agent]
+    let attachableSessions: [DaemonAttachableSessionPayload]
     let settings: DaemonSettingsPayload
 
-    init(snapshot: DaemonRuntimeSnapshotPayload, events: [AgentEventPayload], agents: [Agent], settings: DaemonSettingsPayload = .default) {
+    init(
+        snapshot: DaemonRuntimeSnapshotPayload,
+        events: [AgentEventPayload],
+        agents: [Agent],
+        attachableSessions: [DaemonAttachableSessionPayload] = [],
+        settings: DaemonSettingsPayload = .default
+    ) {
         self.snapshot = snapshot
         self.events = events
         self.agents = agents
+        self.attachableSessions = attachableSessions
         self.settings = settings
     }
 
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload { snapshot }
     func fetchAgents() async throws -> [Agent] { agents }
+    func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] { attachableSessions }
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] { events }
 
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
@@ -811,6 +856,10 @@ private struct FailingClient: HamDaemonClientProtocol, Sendable {
     }
 
     func fetchAgents() async throws -> [Agent] {
+        throw HamDaemonClientError.transportFailed("unavailable")
+    }
+
+    func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] {
         throw HamDaemonClientError.transportFailed("unavailable")
     }
 
@@ -868,6 +917,10 @@ private actor CyclingClient: HamDaemonClientProtocol {
 
     func fetchAgents() async throws -> [Agent] {
         [agent]
+    }
+
+    func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] {
+        []
     }
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
@@ -947,6 +1000,10 @@ private actor TransitioningClient: HamDaemonClientProtocol {
     }
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
+        []
+    }
+
+    func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] {
         []
     }
 

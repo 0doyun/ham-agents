@@ -32,6 +32,7 @@ public protocol DaemonTransport: Sendable {
 public protocol HamDaemonClientProtocol: Sendable {
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload
     func fetchAgents() async throws -> [Agent]
+    func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload]
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload]
     func fetchSettings() async throws -> DaemonSettingsPayload
     func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload
@@ -89,6 +90,14 @@ public final class HamDaemonClient: HamDaemonClientProtocol, @unchecked Sendable
             throw HamDaemonClientError.server(error)
         }
         return response.agents ?? []
+    }
+
+    public func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] {
+        let response = try await transport.send(.init(command: .listItermSessions))
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
+        return response.attachableSessions ?? []
     }
 
     public func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {

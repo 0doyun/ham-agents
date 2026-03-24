@@ -20,41 +20,43 @@ type Config struct {
 type Command string
 
 const (
-	CommandRunManaged Command = "run.managed"
-	CommandAttachSession Command = "attach.session"
-	CommandObserveSource Command = "observe.source"
-	CommandOpenTarget    Command = "agents.open_target"
-	CommandListAgents Command = "agents.list"
-	CommandStatus     Command = "agents.status"
-	CommandEvents     Command = "events.list"
+	CommandRunManaged            Command = "run.managed"
+	CommandAttachSession         Command = "attach.session"
+	CommandObserveSource         Command = "observe.source"
+	CommandOpenTarget            Command = "agents.open_target"
+	CommandListItermSessions     Command = "iterm.sessions"
+	CommandListAgents            Command = "agents.list"
+	CommandStatus                Command = "agents.status"
+	CommandEvents                Command = "events.list"
 	CommandSetNotificationPolicy Command = "agents.set_notification_policy"
 	CommandSetRole               Command = "agents.set_role"
 	CommandRemoveAgent           Command = "agents.remove"
-	CommandGetSettings          Command = "settings.get"
-	CommandUpdateSettings       Command = "settings.update"
+	CommandGetSettings           Command = "settings.get"
+	CommandUpdateSettings        Command = "settings.update"
 )
 
 type Request struct {
-	Command     Command `json:"command"`
-	AgentID     string  `json:"agent_id,omitempty"`
-	Provider    string  `json:"provider,omitempty"`
-	DisplayName string  `json:"display_name,omitempty"`
-	ProjectPath string  `json:"project_path,omitempty"`
-	Role        string  `json:"role,omitempty"`
-	SessionRef  string  `json:"session_ref,omitempty"`
-	Limit       int     `json:"limit,omitempty"`
-	Policy      string  `json:"policy,omitempty"`
+	Command     Command        `json:"command"`
+	AgentID     string         `json:"agent_id,omitempty"`
+	Provider    string         `json:"provider,omitempty"`
+	DisplayName string         `json:"display_name,omitempty"`
+	ProjectPath string         `json:"project_path,omitempty"`
+	Role        string         `json:"role,omitempty"`
+	SessionRef  string         `json:"session_ref,omitempty"`
+	Limit       int            `json:"limit,omitempty"`
+	Policy      string         `json:"policy,omitempty"`
 	Settings    *core.Settings `json:"settings,omitempty"`
 }
 
 type Response struct {
-	Agent    *core.Agent           `json:"agent,omitempty"`
-	Agents   []core.Agent          `json:"agents,omitempty"`
-	Events   []core.Event          `json:"events,omitempty"`
-	OpenTarget *core.OpenTarget    `json:"open_target,omitempty"`
-	Settings *core.Settings        `json:"settings,omitempty"`
-	Snapshot *core.RuntimeSnapshot `json:"snapshot,omitempty"`
-	Error    string                `json:"error,omitempty"`
+	Agent              *core.Agent              `json:"agent,omitempty"`
+	Agents             []core.Agent             `json:"agents,omitempty"`
+	Events             []core.Event             `json:"events,omitempty"`
+	AttachableSessions []core.AttachableSession `json:"attachable_sessions,omitempty"`
+	OpenTarget         *core.OpenTarget         `json:"open_target,omitempty"`
+	Settings           *core.Settings           `json:"settings,omitempty"`
+	Snapshot           *core.RuntimeSnapshot    `json:"snapshot,omitempty"`
+	Error              string                   `json:"error,omitempty"`
 }
 
 func DefaultSocketPath() (string, error) {
@@ -157,6 +159,14 @@ func (c *Client) OpenTarget(ctx context.Context, agentID string) (core.OpenTarge
 		return core.OpenTarget{}, fmt.Errorf("daemon response missing open target payload")
 	}
 	return *response.OpenTarget, nil
+}
+
+func (c *Client) ListItermSessions(ctx context.Context) ([]core.AttachableSession, error) {
+	response, err := c.request(ctx, Request{Command: CommandListItermSessions})
+	if err != nil {
+		return nil, err
+	}
+	return response.AttachableSessions, nil
 }
 
 func (c *Client) Settings(ctx context.Context) (core.Settings, error) {

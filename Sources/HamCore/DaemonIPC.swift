@@ -4,6 +4,7 @@ public enum DaemonCommand: String, Codable, Sendable {
     case runManaged = "run.managed"
     case attachSession = "attach.session"
     case observeSource = "observe.source"
+    case listItermSessions = "iterm.sessions"
     case listAgents = "agents.list"
     case status = "agents.status"
     case events = "events.list"
@@ -12,6 +13,27 @@ public enum DaemonCommand: String, Codable, Sendable {
     case removeAgent = "agents.remove"
     case getSettings = "settings.get"
     case updateSettings = "settings.update"
+}
+
+public struct DaemonAttachableSessionPayload: Codable, Equatable, Sendable, Identifiable {
+    public var id: String
+    public var title: String
+    public var sessionRef: String
+    public var isActive: Bool
+
+    public init(id: String, title: String, sessionRef: String, isActive: Bool) {
+        self.id = id
+        self.title = title
+        self.sessionRef = sessionRef
+        self.isActive = isActive
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case sessionRef = "session_ref"
+        case isActive = "is_active"
+    }
 }
 
 public struct DaemonRequest: Codable, Equatable, Sendable {
@@ -147,6 +169,7 @@ public struct DaemonRuntimeSnapshotPayload: Codable, Equatable, Sendable {
 public struct DaemonResponse: Codable, Equatable, Sendable {
     public var agent: Agent?
     public var agents: [Agent]?
+    public var attachableSessions: [DaemonAttachableSessionPayload]?
     public var events: [AgentEventPayload]?
     public var snapshot: DaemonRuntimeSnapshotPayload?
     public var settings: DaemonSettingsPayload?
@@ -155,6 +178,7 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
     public init(
         agent: Agent? = nil,
         agents: [Agent]? = nil,
+        attachableSessions: [DaemonAttachableSessionPayload]? = nil,
         events: [AgentEventPayload]? = nil,
         snapshot: DaemonRuntimeSnapshotPayload? = nil,
         settings: DaemonSettingsPayload? = nil,
@@ -162,9 +186,20 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
     ) {
         self.agent = agent
         self.agents = agents
+        self.attachableSessions = attachableSessions
         self.events = events
         self.snapshot = snapshot
         self.settings = settings
         self.error = error
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case agent
+        case agents
+        case attachableSessions = "attachable_sessions"
+        case events
+        case snapshot
+        case settings
+        case error
     }
 }

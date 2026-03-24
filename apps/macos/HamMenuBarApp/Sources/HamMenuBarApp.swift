@@ -115,6 +115,10 @@ private struct MenuBarContentView: View {
                     }
                 )
 
+                if !viewModel.attachableSessions.isEmpty {
+                    AttachableSessionsSection(sessions: viewModel.attachableSessions)
+                }
+
                 Text("Agents")
                     .font(.subheadline.weight(.semibold))
 
@@ -289,6 +293,30 @@ private struct NotificationPermissionRow: View {
     }
 }
 
+private struct AttachableSessionsSection: View {
+    let sessions: [DaemonAttachableSessionPayload]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Attachable iTerm Sessions")
+                .font(.caption.weight(.semibold))
+
+            ForEach(sessions.prefix(3)) { session in
+                HStack(spacing: 6) {
+                    Text(session.title)
+                        .lineLimit(1)
+                    if session.isActive {
+                        Text("Current")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .font(.caption)
+            }
+        }
+    }
+}
+
 private struct AgentDetailView: View {
     let agent: Agent?
     let recentEvents: [AgentEventPayload]
@@ -449,6 +477,23 @@ private struct PreviewDaemonClient: HamDaemonClientProtocol {
 
     func fetchAgents() async throws -> [Agent] {
         (try await fetchSnapshot()).agents
+    }
+
+    func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] {
+        [
+            DaemonAttachableSessionPayload(
+                id: "preview-iterm-1",
+                title: "Claude Review",
+                sessionRef: "iterm2://session/preview-iterm-1",
+                isActive: true
+            ),
+            DaemonAttachableSessionPayload(
+                id: "preview-iterm-2",
+                title: "Shell",
+                sessionRef: "iterm2://session/preview-iterm-2",
+                isActive: false
+            ),
+        ]
     }
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {

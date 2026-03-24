@@ -33,7 +33,11 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, settingsService)
+	server := ipc.NewServer(socketPath, registry, settingsService, stubSessionLister{
+		sessions: []core.AttachableSession{
+			{ID: "abc", Title: "Claude", SessionRef: "iterm2://session/abc", IsActive: true},
+		},
+	})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -110,6 +114,14 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	}
 	if target.SessionID != "abc" {
 		t.Fatalf("unexpected session id %q", target.SessionID)
+	}
+
+	sessions, err := client.ListItermSessions(context.Background())
+	if err != nil {
+		t.Fatalf("list iTerm sessions via client: %v", err)
+	}
+	if len(sessions) != 1 || sessions[0].ID != "abc" {
+		t.Fatalf("unexpected attachable sessions %#v", sessions)
 	}
 
 	settings, err := client.Settings(context.Background())
@@ -196,6 +208,14 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	}
 }
 
+type stubSessionLister struct {
+	sessions []core.AttachableSession
+}
+
+func (s stubSessionLister) ListSessions() ([]core.AttachableSession, error) {
+	return append([]core.AttachableSession(nil), s.sessions...), nil
+}
+
 func TestServerRejectsDirectoryAtSocketPath(t *testing.T) {
 	t.Parallel()
 
@@ -213,7 +233,7 @@ func TestServerRejectsDirectoryAtSocketPath(t *testing.T) {
 		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, settingsService)
+	server := ipc.NewServer(socketPath, registry, settingsService, nil)
 	err := server.Serve(context.Background())
 	if err == nil {
 		t.Fatal("expected server startup to fail when socket path is a directory")
