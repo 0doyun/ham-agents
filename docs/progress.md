@@ -142,3 +142,12 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: richer notification permission UX, popover agent detail actions, live event stream/follow integration
+
+### 2026-03-24 (popover detail panel + recent event context)
+- `MenuBarViewModel` 에 selected-agent helper 와 recent-event filtering helper 를 추가해 popover detail pane 이 현재 daemon snapshot/event data를 그대로 재사용하게 했다.
+- menu bar popover를 2-column baseline으로 확장해 좌측 agent list, 우측 detail panel, recent events block 을 함께 보여주도록 만들었다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: popover agent detail actions, richer notification permission UX, live event stream/follow integration

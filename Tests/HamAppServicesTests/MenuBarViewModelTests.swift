@@ -34,6 +34,7 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.agents.count, 1)
         XCTAssertEqual(viewModel.statusLine, "ham 1▶ 0? 0✓")
         XCTAssertNil(viewModel.errorMessage)
+        XCTAssertEqual(viewModel.agent(withID: "agent-1")?.displayName, "builder")
     }
 
     func testRefreshCapturesErrors() async {
@@ -66,7 +67,14 @@ final class MenuBarViewModelTests: XCTestCase {
             events: [],
             agents: [agent]
         )
-        let viewModel = MenuBarViewModel(client: client)
+        let sleepController = CancellingSleepController()
+        let viewModel = MenuBarViewModel(
+            client: client,
+            pollIntervalNanoseconds: 1,
+            sleep: { nanoseconds in
+                try await sleepController.sleep(nanoseconds: nanoseconds)
+            }
+        )
 
         viewModel.start()
         try? await Task.sleep(nanoseconds: 100_000_000)
@@ -140,6 +148,61 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(sent.count, 1)
         XCTAssertEqual(sent.first?.title, "builder finished")
     }
+
+    func testRecentEventsFiltersBySelectedAgent() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let otherAgent = Agent(
+            id: "agent-2",
+            displayName: "reviewer",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .done,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2)
+        )
+        let client = StubClient(
+            snapshot: DaemonRuntimeSnapshotPayload(
+                agents: [agent, otherAgent],
+                generatedAt: Date(timeIntervalSince1970: 10)
+            ),
+            events: [
+                AgentEventPayload(
+                    id: "event-1",
+                    agentID: "agent-1",
+                    type: "agent.registered",
+                    summary: "Managed session registered.",
+                    occurredAt: Date(timeIntervalSince1970: 3)
+                ),
+                AgentEventPayload(
+                    id: "event-2",
+                    agentID: "agent-2",
+                    type: "agent.registered",
+                    summary: "Other agent registered.",
+                    occurredAt: Date(timeIntervalSince1970: 4)
+                ),
+            ],
+            agents: [agent, otherAgent]
+        )
+        let viewModel = MenuBarViewModel(client: client)
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.agent(withID: "agent-2")?.displayName, "reviewer")
+        XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-2").count, 1)
+        XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-2").first?.summary, "Other agent registered.")
+    }
 }
 
 private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
@@ -210,6 +273,13 @@ private actor SleepController {
             return
         }
         try await Task.sleep(nanoseconds: 50_000_000)
+    }
+}
+
+private actor CancellingSleepController {
+    func sleep(nanoseconds: UInt64) async throws {
+        _ = nanoseconds
+        throw CancellationError()
     }
 }
 

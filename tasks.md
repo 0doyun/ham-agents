@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **macOS notification delivery sink + baseline permission request** 다.
+현재 활성 범위는 **menu bar detail panel + recent event context** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -51,13 +51,14 @@
 - [x] menu bar 상태 surface가 launch 이후에도 daemon 상태를 주기적으로 따라가게 만들기
 - [x] status transition 기반 notification trigger foundation 추가
 - [x] actual macOS notification delivery sink 연결
+- [x] popover에서 선택 agent detail + recent event context 표시
 
 ### Current Slice Checklist
 
-- [x] UserNotifications-backed sink 추가
-- [x] 최초 권한 요청 baseline 추가
-- [x] menu bar app에 실제 sink 연결
-- [x] Swift tests로 notification request behavior 보호
+- [x] selected agent detail helper 추가
+- [x] recent event filtering helper 추가
+- [x] popover detail panel UI 추가
+- [x] Swift tests로 detail/event selection behavior 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 
@@ -110,15 +111,15 @@
 - [ ] 테스트로 주요 전이 보호
 
 ### Epic 4: Menu Bar Baseline
-- [ ] macOS menu bar app target 생성
-- [ ] 기본 status indicator 구현
-- [ ] runtime snapshot 연결
-- [ ] 최소 팝오버 agent list 구현
+- [x] macOS menu bar app target 생성
+- [x] 기본 status indicator 구현
+- [x] runtime snapshot 연결
+- [x] 최소 팝오버 agent list 구현
 
 #### Acceptance Criteria
-- [ ] 메뉴바에서 앱이 상주함
-- [ ] 현재 agent 상태 요약을 볼 수 있음
-- [ ] CLI/runtime과 상태 소스가 분리되지 않음
+- [x] 메뉴바에서 앱이 상주함
+- [x] 현재 agent 상태 요약을 볼 수 있음
+- [x] CLI/runtime과 상태 소스가 분리되지 않음
 
 ### Epic 5: Notifications
 - [ ] done / waiting_input / error 알림 정의

@@ -91,3 +91,4 @@ The current `ham-menubar` baseline:
 - supports manual refresh from the popover
 - detects done / waiting_input / error status transitions and routes notification candidates through a sink boundary
 - requests notification permission on first delivery attempt and can submit macOS notification requests through `UserNotifications`
+- shows a selected-agent detail pane with recent event context inside the popover

@@ -133,3 +133,4 @@
 - `MenuBarViewModel` now owns initial refresh + polling/retry behavior so menu bar state can track daemon changes without waiting for popover interaction.
 - `HamNotifications` now owns transition-based notification candidate generation and a sink boundary so later macOS notification delivery can attach without changing polling logic.
 - `HamNotifications` now also includes a `UserNotifications`-backed sink so the current polling/menu bar flow can emit real macOS notification requests.
+- The current popover baseline includes agent selection, detail metadata, and per-agent recent-event context without requiring a second backend query path.
