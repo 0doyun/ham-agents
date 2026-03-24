@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
+	"github.com/ham-agents/ham-agents/go/internal/inference"
 	"github.com/ham-agents/ham-agents/go/internal/store"
 )
 
@@ -270,6 +271,11 @@ func (r *Registry) List(ctx context.Context) ([]core.Agent, error) {
 		return nil, err
 	}
 
+	agents, err = r.refreshObservedAgents(ctx, agents)
+	if err != nil {
+		return nil, err
+	}
+
 	sort.SliceStable(agents, func(i, j int) bool {
 		if agents[i].DisplayName == agents[j].DisplayName {
 			return agents[i].ID < agents[j].ID
@@ -371,4 +377,34 @@ func (r *Registry) Events(ctx context.Context, limit int) ([]core.Event, error) 
 		return events, nil
 	}
 	return events[len(events)-limit:], nil
+}
+
+func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agent) ([]core.Agent, error) {
+	if len(agents) == 0 {
+		return agents, nil
+	}
+
+	now := r.clock().UTC()
+	refreshed := append([]core.Agent(nil), agents...)
+	changed := false
+
+	for index, agent := range refreshed {
+		if agent.Mode != core.AgentModeObserved {
+			continue
+		}
+
+		updated := inference.RefreshObservedAgent(agent, now)
+		if updated != agent {
+			refreshed[index] = updated
+			changed = true
+		}
+	}
+
+	if changed {
+		if err := r.store.SaveAgents(ctx, refreshed); err != nil {
+			return nil, err
+		}
+	}
+
+	return refreshed, nil
 }

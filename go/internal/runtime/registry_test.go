@@ -135,6 +135,43 @@ func TestRegisterObservedPersistsModeAndConfidence(t *testing.T) {
 	}
 }
 
+func TestListRefreshesObservedAgentFromSource(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	source := filepath.Join(root, "observed.log")
+	if err := os.WriteFile(source, []byte("build completed"), 0o644); err != nil {
+		t.Fatalf("write observed source: %v", err)
+	}
+
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterObserved(ctx, runtime.RegisterObservedInput{
+		Provider:    "log",
+		DisplayName: "observer",
+		ProjectPath: "/tmp/project",
+		SessionRef:  source,
+	})
+	if err != nil {
+		t.Fatalf("register observed: %v", err)
+	}
+	if agent.Status != core.AgentStatusIdle {
+		t.Fatalf("expected initial idle status, got %q", agent.Status)
+	}
+
+	listed, err := registry.List(ctx)
+	if err != nil {
+		t.Fatalf("list agents: %v", err)
+	}
+	if listed[0].Status != core.AgentStatusDone {
+		t.Fatalf("expected observed refresh to infer done, got %q", listed[0].Status)
+	}
+}
+
 func TestRegisterManagedSucceedsWhenEventLogAppendFails(t *testing.T) {
 	t.Parallel()
 

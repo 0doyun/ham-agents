@@ -283,6 +283,19 @@
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: actual session/process termination semantics, broader backend-persisted settings state, live event stream/follow integration
 
+### 2026-03-25 (observed source refresh + heuristic baseline)
+- Go runtime 에 observed source refresh helper 를 추가해 list/snapshot 시점에 transcript/log 파일 내용을 읽고 error / done / waiting_input / sleeping 류의 lightweight heuristic 을 적용하도록 만들었다.
+- `ham observe` path 를 CLI/daemon 에 추가해 explicit source ref 기반 observed agent 를 등록할 수 있게 했다.
+- unsandboxed smoke 로 `hamd serve --once=false` 뒤 `ham attach ...`, `ham observe ...`, `ham list`, `ham status --json` 을 확인했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - unsandboxed smoke:
+    - `go run ./go/cmd/ham observe /tmp/demo.log watcher --project /tmp/demo --role watcher` ✅
+    - `go run ./go/cmd/ham list` / `status --json` ✅
+- 다음 우선순위 후보: always-on observed watching, richer attached/iTerm session identification, broader backend-persisted settings state
+
 ### 2026-03-25 (agent role rename baseline)
 - Go runtime/IPC/client 에 role update path 를 추가해 selected agent role 을 daemon-backed source of truth 쪽에서 갱신할 수 있게 했다.
 - popover detail pane에 role draft field 와 `Save` action 을 추가하고, Swift view model 이 daemon mutation 결과로 local agent list 를 갱신하도록 연결했다.

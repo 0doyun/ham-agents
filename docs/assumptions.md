@@ -37,3 +37,4 @@
 - 2026-03-25: stop-tracking baseline은 session/process termination 대신 registry removal만 수행한다. later slice에서 실제 kill/detach semantics를 붙인다.
 - 2026-03-25: attached mode minimal baseline은 explicit `sessionRef` 를 받아 mode=`attached`, status=`idle`, confidence=`0.6` 으로 시작한다. richer inference/metadata sync 는 이후 attached slice에서 확장한다.
 - 2026-03-25: mode/confidence baseline은 new heuristics without introducing new inference logic; it only exposes already-available daemon fields in the popover.
+- 2026-03-25: observed mode heuristic baseline은 snapshot/list 시점에 source 파일 내용을 읽어 error/done/question/staleness를 판정한다. always-on watching은 later slice에서 추가한다.
