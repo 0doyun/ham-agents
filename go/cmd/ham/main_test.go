@@ -42,6 +42,29 @@ func TestParseHourFlagRejectsInvalidQuietHours(t *testing.T) {
 	}
 }
 
+func TestParseStopInputAcceptsAgentIDAndJSONFlag(t *testing.T) {
+	t.Parallel()
+
+	agentID, asJSON, err := parseStopInput([]string{"agent-1", "--json"})
+	if err != nil {
+		t.Fatalf("parse stop input: %v", err)
+	}
+	if agentID != "agent-1" {
+		t.Fatalf("expected agent-1, got %q", agentID)
+	}
+	if !asJSON {
+		t.Fatalf("expected json flag to be true")
+	}
+}
+
+func TestParseStopInputRejectsMissingAgentID(t *testing.T) {
+	t.Parallel()
+
+	if _, _, err := parseStopInput([]string{"--json"}); err == nil {
+		t.Fatalf("expected missing agent id to fail")
+	}
+}
+
 func TestChooseAttachableSessionReturnsOnlySessionWithoutPrompt(t *testing.T) {
 	t.Parallel()
 
@@ -434,5 +457,35 @@ func TestRenderStatusJSONKeepsMachineReadableShape(t *testing.T) {
 	}
 	if strings.Contains(payload, "attention=") || strings.Contains(payload, "attention_breakdown") || strings.Contains(payload, "\n!") {
 		t.Fatalf("expected json payload to avoid human summary wording, got %q", payload)
+	}
+}
+
+func TestRenderStopResultHumanReadable(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	if err := renderStopResult(&output, "agent-1", false); err != nil {
+		t.Fatalf("render stop result: %v", err)
+	}
+
+	if got := output.String(); got != "stopped tracking agent-1\n" {
+		t.Fatalf("unexpected human stop output %q", got)
+	}
+}
+
+func TestRenderStopResultJSON(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	if err := renderStopResult(&output, "agent-1", true); err != nil {
+		t.Fatalf("render stop result json: %v", err)
+	}
+
+	payload := output.String()
+	if !strings.Contains(payload, `"removed": "agent-1"`) {
+		t.Fatalf("expected removed field in payload %q", payload)
+	}
+	if strings.Contains(payload, "stopped tracking") {
+		t.Fatalf("expected json stop output to avoid human wording, got %q", payload)
 	}
 }
