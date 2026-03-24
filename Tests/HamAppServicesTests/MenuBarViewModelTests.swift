@@ -319,6 +319,49 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.recentEventSummaryChips(forAgentID: nil).first?.count, 2)
     }
 
+    func testRecentEventsPrioritizeWarningsOverInformationalRows() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .error,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [
+                    AgentEventPayload(
+                        id: "event-1",
+                        agentID: "agent-1",
+                        type: "agent.registered",
+                        summary: "Registered.",
+                        occurredAt: Date(timeIntervalSince1970: 3)
+                    ),
+                    AgentEventPayload(
+                        id: "event-2",
+                        agentID: "agent-1",
+                        type: "agent.disconnected",
+                        summary: "Disconnected.",
+                        occurredAt: Date(timeIntervalSince1970: 1)
+                    )
+                ],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-1").map(\.id), ["event-2", "event-1"])
+    }
+
     func testConfidenceTextRoundsPercentage() {
         let agent = Agent(
             id: "agent-1",

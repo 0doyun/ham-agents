@@ -101,7 +101,7 @@ public final class MenuBarViewModel: ObservableObject {
     }
 
     public func recentEvents(forAgentID id: Agent.ID?) -> [AgentEventPayload] {
-        let events = summary?.recentEvents ?? []
+        let events = AgentEventPresenter.ordered(summary?.recentEvents ?? [])
         guard let id else { return events }
         return events.filter { $0.agentID == id }
     }

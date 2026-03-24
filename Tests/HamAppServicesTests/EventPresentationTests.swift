@@ -100,4 +100,32 @@ final class EventPresentationTests: XCTestCase {
         XCTAssertEqual(summary.last?.label, "Reconnected")
         XCTAssertEqual(summary.last?.count, 1)
     }
+
+    func testOrderedPrioritizesWarningsBeforeInfoThenRecency() {
+        let infoEvent = AgentEventPayload(
+            id: "event-1",
+            agentID: "agent-1",
+            type: "agent.registered",
+            summary: "Registered.",
+            occurredAt: Date(timeIntervalSince1970: 3)
+        )
+        let warningEvent = AgentEventPayload(
+            id: "event-2",
+            agentID: "agent-1",
+            type: "agent.disconnected",
+            summary: "Disconnected.",
+            occurredAt: Date(timeIntervalSince1970: 1)
+        )
+        let positiveEvent = AgentEventPayload(
+            id: "event-3",
+            agentID: "agent-1",
+            type: "agent.reconnected",
+            summary: "Reconnected.",
+            occurredAt: Date(timeIntervalSince1970: 2)
+        )
+
+        let ordered = AgentEventPresenter.ordered([infoEvent, positiveEvent, warningEvent])
+
+        XCTAssertEqual(ordered.map(\.id), ["event-2", "event-3", "event-1"])
+    }
 }
