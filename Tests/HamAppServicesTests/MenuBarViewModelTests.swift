@@ -607,6 +607,10 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.followLatestEvents(eventLimit: 5, waitMilliseconds: 1)
 
         XCTAssertEqual(viewModel.summary?.recentEvents.last?.id, "event-2")
+        let counts = await client.callCounts()
+        XCTAssertEqual(counts.fetchSettings, 1)
+        XCTAssertEqual(counts.fetchEvents, 1)
+        XCTAssertEqual(counts.followEvents, 1)
     }
 
     func testSaveRoleUpdatesSelectedAgent() async {
@@ -1287,6 +1291,9 @@ private actor EventFollowingClient: HamDaemonClientProtocol {
     private let initialEvents: [AgentEventPayload]
     private let followedEvents: [AgentEventPayload]
     private var didFollow = false
+    private var fetchEventsCalls = 0
+    private var fetchSettingsCalls = 0
+    private var followEventsCalls = 0
 
     init(agent: Agent, initialEvents: [AgentEventPayload], followedEvents: [AgentEventPayload]) {
         self.agent = agent
@@ -1308,6 +1315,7 @@ private actor EventFollowingClient: HamDaemonClientProtocol {
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
         _ = limit
+        fetchEventsCalls += 1
         return didFollow ? followedEvents : initialEvents
     }
 
@@ -1315,12 +1323,14 @@ private actor EventFollowingClient: HamDaemonClientProtocol {
         _ = afterEventID
         _ = limit
         _ = waitMilliseconds
+        followEventsCalls += 1
         didFollow = true
         return followedEvents
     }
 
     func fetchSettings() async throws -> DaemonSettingsPayload {
-        .default
+        fetchSettingsCalls += 1
+        return .default
     }
 
     func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {
@@ -1343,6 +1353,10 @@ private actor EventFollowingClient: HamDaemonClientProtocol {
 
     func removeAgent(agentID: String) async throws {
         _ = agentID
+    }
+
+    func callCounts() -> (fetchEvents: Int, fetchSettings: Int, followEvents: Int) {
+        (fetchEventsCalls, fetchSettingsCalls, followEventsCalls)
     }
 }
 
