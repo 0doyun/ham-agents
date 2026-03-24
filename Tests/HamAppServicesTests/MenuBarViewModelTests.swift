@@ -312,6 +312,7 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.agent(withID: "agent-2")?.displayName, "reviewer")
         XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-2").count, 1)
         XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-2").first?.summary, "Other agent registered.")
+        XCTAssertEqual(viewModel.recentEventSummaryChips(forAgentID: "agent-2").first?.label, "Registered")
     }
 
     func testConfidenceTextRoundsPercentage() {

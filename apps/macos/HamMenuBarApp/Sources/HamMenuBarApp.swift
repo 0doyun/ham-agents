@@ -168,6 +168,7 @@ private struct MenuBarContentView: View {
             AgentDetailView(
                 agent: viewModel.agent(withID: selectedAgentID),
                 recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID),
+                recentEventSummaryChips: viewModel.recentEventSummaryChips(forAgentID: selectedAgentID),
                 notificationsMuted: viewModel.isNotificationsMuted(forAgentID: selectedAgentID),
                 quickMessageFeedback: viewModel.quickMessageFeedback,
                 confidenceText: viewModel.confidenceText(for: viewModel.agent(withID: selectedAgentID)),
@@ -406,6 +407,7 @@ private struct AppearanceSettingsSection: View {
 private struct AgentDetailView: View {
     let agent: Agent?
     let recentEvents: [AgentEventPayload]
+    let recentEventSummaryChips: [AgentEventSummaryChip]
     let notificationsMuted: Bool
     let quickMessageFeedback: String?
     let confidenceText: String
@@ -534,6 +536,10 @@ private struct AgentDetailView: View {
                     .font(.caption.weight(.semibold))
                     .padding(.top, 4)
 
+                if !recentEventSummaryChips.isEmpty {
+                    EventSummaryChipsView(chips: recentEventSummaryChips)
+                }
+
                 if recentEvents.isEmpty {
                     Text("No recent events for this agent.")
                         .font(.caption)
@@ -567,6 +573,38 @@ private struct AgentDetailView: View {
             }
 
             Spacer()
+        }
+    }
+}
+
+private struct EventSummaryChipsView: View {
+    let chips: [AgentEventSummaryChip]
+
+    var body: some View {
+        FlexibleChipRow(items: chips) { chip in
+            HStack(spacing: 4) {
+                Text(chip.label)
+                Text("\(chip.count)")
+                    .foregroundStyle(.secondary)
+            }
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(eventBadgeBackground(for: chip.emphasis))
+            .clipShape(Capsule())
+        }
+    }
+}
+
+private struct FlexibleChipRow<Item, Content: View>: View {
+    let items: [Item]
+    let content: (Item) -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                content(item)
+            }
         }
     }
 }

@@ -106,6 +106,10 @@ public final class MenuBarViewModel: ObservableObject {
         return events.filter { $0.agentID == id }
     }
 
+    public func recentEventSummaryChips(forAgentID id: Agent.ID?) -> [AgentEventSummaryChip] {
+        AgentEventPresenter.summarize(recentEvents(forAgentID: id))
+    }
+
     public func confidenceText(for agent: Agent?) -> String {
         guard let agent else { return "—" }
         return "\(Int((agent.statusConfidence * 100).rounded()))%"
