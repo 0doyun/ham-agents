@@ -150,12 +150,26 @@ private struct MenuBarContentView: View {
                 Text("Agents")
                     .font(.subheadline.weight(.semibold))
 
+                if !viewModel.attentionAgents.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Needs Attention")
+                            .font(.caption.weight(.semibold))
+                        ForEach(viewModel.attentionAgents) { agent in
+                            AttentionAgentRow(
+                                name: agent.displayName,
+                                status: viewModel.statusDisplayText(for: agent),
+                                confidence: viewModel.confidenceLevelText(for: agent)
+                            )
+                        }
+                    }
+                }
+
                 if viewModel.agents.isEmpty {
                     Text("No tracked agents")
                         .foregroundStyle(.secondary)
                 } else {
                     List(selection: $selectedAgentID) {
-                        ForEach(viewModel.agents) { agent in
+                        ForEach(viewModel.nonAttentionAgents) { agent in
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(agent.displayName)
                                     .font(.body.weight(.medium))
@@ -223,6 +237,28 @@ private struct MenuBarContentView: View {
             }
             viewModel.setRoleDraft(from: selectedAgentID)
         }
+    }
+}
+
+private struct AttentionAgentRow: View {
+    let name: String
+    let status: String
+    let confidence: String
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .font(.caption.weight(.semibold))
+                Text("\(status) · \(confidence)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .padding(6)
+        .background(Color.orange.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
 

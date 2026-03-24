@@ -600,3 +600,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: stronger feed semantics, lower-latency visual polish, richer attached shell-state fidelity
+
+### 2026-03-25 (attention queue baseline)
+- `MenuBarViewModel` 에 attention priority helper 를 추가해 `error`, `waiting_input`, `disconnected` 상태의 agent 를 별도 attention queue 로 분리하고 우선순위/최근성 기준으로 정렬하도록 만들었다.
+- menu bar popover 상단에 `Needs Attention` 섹션을 추가해 attention-required agent 를 일반 agent list 보다 먼저 보이게 만들었다.
+- Swift tests 로 attention agent ordering/filtering behavior 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: severity-aware feed ordering, lower-latency visual polish, richer feed semantics
