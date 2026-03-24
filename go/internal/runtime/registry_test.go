@@ -282,6 +282,14 @@ func TestRefreshAttachedMarksMissingSessionsDisconnected(t *testing.T) {
 	if listed[0].Status != core.AgentStatusDisconnected {
 		t.Fatalf("expected disconnected status, got %q", listed[0].Status)
 	}
+
+	events, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events: %v", err)
+	}
+	if events[len(events)-1].Type != core.EventTypeAgentDisconnected {
+		t.Fatalf("expected disconnected event, got %q", events[len(events)-1].Type)
+	}
 }
 
 func TestRefreshAttachedRestoresDisconnectedSessionsWhenReachable(t *testing.T) {
@@ -343,6 +351,14 @@ func TestRefreshAttachedRestoresDisconnectedSessionsWhenReachable(t *testing.T) 
 	}
 	if listed[0].SessionCommand != "/usr/local/bin/claude" {
 		t.Fatalf("expected synced command, got %q", listed[0].SessionCommand)
+	}
+
+	events, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events: %v", err)
+	}
+	if events[len(events)-1].Type != core.EventTypeAgentReconnected {
+		t.Fatalf("expected reconnected event, got %q", events[len(events)-1].Type)
 	}
 }
 
@@ -553,6 +569,14 @@ func TestUpdateNotificationPolicyPersistsChange(t *testing.T) {
 	if listed[0].NotificationPolicy != core.NotificationPolicyMuted {
 		t.Fatalf("expected persisted muted policy, got %q", listed[0].NotificationPolicy)
 	}
+
+	events, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events: %v", err)
+	}
+	if events[len(events)-1].Type != core.EventTypeAgentNotificationPolicyUpdated {
+		t.Fatalf("expected notification policy event, got %q", events[len(events)-1].Type)
+	}
 }
 
 func TestUpdateRolePersistsChange(t *testing.T) {
@@ -589,6 +613,14 @@ func TestUpdateRolePersistsChange(t *testing.T) {
 	if listed[0].Role != "reviewer" {
 		t.Fatalf("expected persisted reviewer role, got %q", listed[0].Role)
 	}
+
+	events, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events: %v", err)
+	}
+	if events[len(events)-1].Type != core.EventTypeAgentRoleUpdated {
+		t.Fatalf("expected role updated event, got %q", events[len(events)-1].Type)
+	}
 }
 
 func TestRemoveDeletesAgentFromRegistry(t *testing.T) {
@@ -620,5 +652,13 @@ func TestRemoveDeletesAgentFromRegistry(t *testing.T) {
 	}
 	if len(listed) != 0 {
 		t.Fatalf("expected empty registry, got %d agents", len(listed))
+	}
+
+	events, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events: %v", err)
+	}
+	if events[len(events)-1].Type != core.EventTypeAgentRemoved {
+		t.Fatalf("expected agent removed event, got %q", events[len(events)-1].Type)
 	}
 }

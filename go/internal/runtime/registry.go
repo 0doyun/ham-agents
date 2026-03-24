@@ -110,16 +110,7 @@ func (r *Registry) RegisterManaged(ctx context.Context, input RegisterManagedInp
 		return core.Agent{}, err
 	}
 
-	if r.eventStore != nil {
-		event := core.Event{
-			ID:         fmt.Sprintf("event-%d", now.UnixNano()),
-			AgentID:    agent.ID,
-			Type:       core.EventTypeAgentRegistered,
-			Summary:    agent.LastUserVisibleSummary,
-			OccurredAt: now,
-		}
-		_ = r.eventStore.Append(ctx, event)
-	}
+	r.appendEvent(ctx, agent.ID, core.EventTypeAgentRegistered, agent.LastUserVisibleSummary)
 
 	return agent, nil
 }
@@ -181,16 +172,7 @@ func (r *Registry) RegisterAttached(ctx context.Context, input RegisterAttachedI
 		return core.Agent{}, err
 	}
 
-	if r.eventStore != nil {
-		event := core.Event{
-			ID:         fmt.Sprintf("event-%d", now.UnixNano()),
-			AgentID:    agent.ID,
-			Type:       core.EventTypeAgentRegistered,
-			Summary:    agent.LastUserVisibleSummary,
-			OccurredAt: now,
-		}
-		_ = r.eventStore.Append(ctx, event)
-	}
+	r.appendEvent(ctx, agent.ID, core.EventTypeAgentRegistered, agent.LastUserVisibleSummary)
 
 	return agent, nil
 }
@@ -252,16 +234,7 @@ func (r *Registry) RegisterObserved(ctx context.Context, input RegisterObservedI
 		return core.Agent{}, err
 	}
 
-	if r.eventStore != nil {
-		event := core.Event{
-			ID:         fmt.Sprintf("event-%d", now.UnixNano()),
-			AgentID:    agent.ID,
-			Type:       core.EventTypeAgentRegistered,
-			Summary:    agent.LastUserVisibleSummary,
-			OccurredAt: now,
-		}
-		_ = r.eventStore.Append(ctx, event)
-	}
+	r.appendEvent(ctx, agent.ID, core.EventTypeAgentRegistered, agent.LastUserVisibleSummary)
 
 	return agent, nil
 }
@@ -312,6 +285,7 @@ func (r *Registry) UpdateNotificationPolicy(ctx context.Context, agentID string,
 		if err := r.store.SaveAgents(ctx, agents); err != nil {
 			return core.Agent{}, err
 		}
+		r.appendEvent(ctx, agentID, core.EventTypeAgentNotificationPolicyUpdated, fmt.Sprintf("Notification policy set to %s.", policy))
 		return agents[index], nil
 	}
 
@@ -336,6 +310,11 @@ func (r *Registry) UpdateRole(ctx context.Context, agentID string, role string) 
 		if err := r.store.SaveAgents(ctx, agents); err != nil {
 			return core.Agent{}, err
 		}
+		summary := "Role cleared."
+		if trimmedRole != "" {
+			summary = fmt.Sprintf("Role updated to %s.", trimmedRole)
+		}
+		r.appendEvent(ctx, agentID, core.EventTypeAgentRoleUpdated, summary)
 		return agents[index], nil
 	}
 
@@ -362,7 +341,11 @@ func (r *Registry) Remove(ctx context.Context, agentID string) error {
 		return fmt.Errorf("agent %q not found", agentID)
 	}
 
-	return r.store.SaveAgents(ctx, filtered)
+	if err := r.store.SaveAgents(ctx, filtered); err != nil {
+		return err
+	}
+	r.appendEvent(ctx, agentID, core.EventTypeAgentRemoved, "Tracking stopped.")
+	return nil
 }
 
 func (r *Registry) Events(ctx context.Context, limit int) ([]core.Event, error) {
@@ -445,12 +428,18 @@ func (r *Registry) RefreshAttached(ctx context.Context, sessions []core.Attachab
 	}
 
 	now := r.clock().UTC()
-	refreshed, changed := refreshAttachedAgents(agents, sessions, now)
+	refreshed, changed, changedEvents := refreshAttachedAgents(agents, sessions, now)
 	if !changed {
 		return nil
 	}
 
-	return r.store.SaveAgents(ctx, refreshed)
+	if err := r.store.SaveAgents(ctx, refreshed); err != nil {
+		return err
+	}
+	for _, event := range changedEvents {
+		r.appendEvent(ctx, event.AgentID, event.Type, event.Summary)
+	}
+	return nil
 }
 
 func openTargetFromSessionRef(sessionRef string) (core.OpenTarget, bool) {
@@ -477,9 +466,9 @@ func openTargetFromSessionRef(sessionRef string) (core.OpenTarget, bool) {
 	}, true
 }
 
-func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSession, now time.Time) ([]core.Agent, bool) {
+func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSession, now time.Time) ([]core.Agent, bool, []core.Event) {
 	if len(agents) == 0 {
-		return agents, false
+		return agents, false, nil
 	}
 
 	sessionsByRef := make(map[string]core.AttachableSession, len(sessions))
@@ -489,6 +478,7 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 
 	refreshed := append([]core.Agent(nil), agents...)
 	changed := false
+	events := make([]core.Event, 0)
 
 	for index, agent := range refreshed {
 		if agent.Mode != core.AgentModeAttached {
@@ -539,17 +529,27 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 			refreshed[index].SessionIsActive = false
 			refreshed[index].LastEventAt = now
 			refreshed[index].LastUserVisibleSummary = "Attached session disappeared from iTerm."
+			events = append(events, core.Event{
+				AgentID: agent.ID,
+				Type:    core.EventTypeAgentDisconnected,
+				Summary: refreshed[index].LastUserVisibleSummary,
+			})
 			changed = true
 		case attached && agent.Status == core.AgentStatusDisconnected:
 			refreshed[index].Status = core.AgentStatusIdle
 			refreshed[index].StatusConfidence = 0.6
 			refreshed[index].LastEventAt = now
 			refreshed[index].LastUserVisibleSummary = "Attached session became reachable again."
+			events = append(events, core.Event{
+				AgentID: agent.ID,
+				Type:    core.EventTypeAgentReconnected,
+				Summary: refreshed[index].LastUserVisibleSummary,
+			})
 			changed = true
 		}
 	}
 
-	return refreshed, changed
+	return refreshed, changed, events
 }
 
 func eventsAfterID(events []core.Event, afterEventID string, limit int) []core.Event {
@@ -579,6 +579,21 @@ func eventsAfterID(events []core.Event, afterEventID string, limit int) []core.E
 		return followed[len(followed)-limit:]
 	}
 	return followed
+}
+
+func (r *Registry) appendEvent(ctx context.Context, agentID string, eventType core.EventType, summary string) {
+	if r.eventStore == nil {
+		return
+	}
+
+	event := core.Event{
+		ID:         fmt.Sprintf("event-%d", r.clock().UTC().UnixNano()),
+		AgentID:    agentID,
+		Type:       eventType,
+		Summary:    summary,
+		OccurredAt: r.clock().UTC(),
+	}
+	_ = r.eventStore.Append(ctx, event)
 }
 
 func (r *Registry) RefreshObserved(ctx context.Context) error {
