@@ -18,6 +18,7 @@ public final class MenuBarViewModel: ObservableObject {
     private let notificationPermissionController: NotificationPermissionControlling
     private let projectOpener: ProjectOpening
     private let sessionOpener: SessionOpening
+    private let quickMessageSender: QuickMessageSending
     private let pollIntervalNanoseconds: UInt64
     private let sleep: @Sendable (UInt64) async throws -> Void
     private var notificationOverrides: [Agent.ID: NotificationPolicy] = [:]
@@ -31,6 +32,7 @@ public final class MenuBarViewModel: ObservableObject {
         notificationPermissionController: NotificationPermissionControlling = NoopNotificationPermissionController(),
         projectOpener: ProjectOpening = NoopProjectOpener(),
         sessionOpener: SessionOpening = NoopSessionOpener(),
+        quickMessageSender: QuickMessageSending = NoopQuickMessageSender(),
         pollIntervalNanoseconds: UInt64 = 15_000_000_000,
         sleep: @escaping @Sendable (UInt64) async throws -> Void = { nanoseconds in
             try await Task.sleep(nanoseconds: nanoseconds)
@@ -43,6 +45,7 @@ public final class MenuBarViewModel: ObservableObject {
         self.notificationPermissionController = notificationPermissionController
         self.projectOpener = projectOpener
         self.sessionOpener = sessionOpener
+        self.quickMessageSender = quickMessageSender
         self.pollIntervalNanoseconds = pollIntervalNanoseconds
         self.sleep = sleep
     }
@@ -73,6 +76,13 @@ public final class MenuBarViewModel: ObservableObject {
     public func openSession(forAgentID id: Agent.ID?) {
         guard let agent = agent(withID: id) else { return }
         sessionOpener.openSession(for: agent)
+    }
+
+    public func sendQuickMessage(_ message: String, forAgentID id: Agent.ID?) {
+        guard let agent = agent(withID: id) else { return }
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        quickMessageSender.send(message: trimmed, to: agent)
     }
 
     public func isNotificationsMuted(forAgentID id: Agent.ID?) -> Bool {

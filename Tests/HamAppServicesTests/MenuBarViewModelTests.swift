@@ -280,6 +280,70 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.notificationPermissionStatus, .authorized)
     }
 
+    func testSendQuickMessageUsesInjectedSender() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let sender = RecordingQuickMessageSender()
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            ),
+            quickMessageSender: sender
+        )
+
+        await viewModel.refresh()
+        viewModel.sendQuickMessage("  please check logs  ", forAgentID: "agent-1")
+
+        XCTAssertEqual(sender.sentMessages.count, 1)
+        XCTAssertEqual(sender.sentMessages.first?.0, "agent-1")
+        XCTAssertEqual(sender.sentMessages.first?.1, "please check logs")
+    }
+
+    func testSendQuickMessageIgnoresBlankDraft() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let sender = RecordingQuickMessageSender()
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            ),
+            quickMessageSender: sender
+        )
+
+        await viewModel.refresh()
+        viewModel.sendQuickMessage("   ", forAgentID: "agent-1")
+
+        XCTAssertTrue(sender.sentMessages.isEmpty)
+    }
+
     func testToggleNotificationPauseUpdatesSelectedAgentPolicy() async {
         let agent = Agent(
             id: "agent-1",
@@ -473,6 +537,14 @@ private final class RecordingSessionOpener: SessionOpening, @unchecked Sendable 
 
     func openSession(for agent: Agent) {
         openedAgentIDs.append(agent.id)
+    }
+}
+
+private final class RecordingQuickMessageSender: QuickMessageSending, @unchecked Sendable {
+    private(set) var sentMessages: [(String, String)] = []
+
+    func send(message: String, to agent: Agent) {
+        sentMessages.append((agent.id, message))
     }
 }
 

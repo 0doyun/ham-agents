@@ -199,3 +199,13 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: richer session identification from daemon, iTerm message/send actions, backend-persisted notification settings
+
+### 2026-03-25 (quick message baseline)
+- `QuickMessageSending` boundary 를 추가하고, `MenuBarViewModel` 에서 selected agent 기준으로 quick message handoff action 을 route 하도록 만들었다.
+- popover detail pane에 multi-line draft field 와 `Copy & Open Session` 버튼을 추가했다.
+- app target baseline sender 는 message 를 clipboard 에 복사한 뒤 session opening path 를 재사용하도록 연결해, actual terminal write automation 전에도 정직한 handoff UX 를 제공한다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: real terminal write automation for iTerm, backend-persisted notification settings, live event stream/follow integration
