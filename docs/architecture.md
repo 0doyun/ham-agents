@@ -34,6 +34,7 @@
 - local notifications
 - app lifecycle and permissions UX
 - runtime stream consumer and command sender
+- daemon payload decoding, socket client, and menu-bar-facing summary composition
 
 #### Go responsibilities
 
@@ -50,6 +51,8 @@
 
 1. `apps/macos/HamMenuBarApp`
    - SwiftUI/AppKit 메뉴바 앱
+1a. `Sources/HamAppServices`
+   - daemon client, payload bridge, menu bar summary logic
 2. `go/cmd/ham`
    - 사용자 CLI 진입점
 3. `go/cmd/hamd`
@@ -125,3 +128,4 @@
 - `go/internal/ipc` now owns the JSON request/response contract, Unix socket server, and daemon client used by the CLI.
 - `go/cmd/ham` now talks to `hamd` over the local Unix socket for `run`, `list`, and `status`.
 - `go/cmd/hamd` serves the runtime over the socket in normal mode and still supports `serve --once` / `snapshot` bootstrap inspection commands.
+- `Sources/HamAppServices` now gives Swift a matching daemon request/response contract, Unix socket transport, and summary service for future menu bar surfaces.
