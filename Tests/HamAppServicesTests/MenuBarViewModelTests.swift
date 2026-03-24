@@ -26,7 +26,8 @@ final class MenuBarViewModelTests: XCTestCase {
             events: [],
             agents: [agent]
         )
-        let viewModel = MenuBarViewModel(client: client)
+        let permissions = RecordingNotificationPermissionController(initial: .authorized)
+        let viewModel = MenuBarViewModel(client: client, notificationPermissionController: permissions)
 
         await viewModel.refresh()
 
@@ -35,6 +36,7 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.statusLine, "ham 1▶ 0? 0✓")
         XCTAssertNil(viewModel.errorMessage)
         XCTAssertEqual(viewModel.agent(withID: "agent-1")?.displayName, "builder")
+        XCTAssertEqual(viewModel.notificationPermissionStatus, .authorized)
     }
 
     func testRefreshCapturesErrors() async {
@@ -267,6 +269,16 @@ final class MenuBarViewModelTests: XCTestCase {
 
         XCTAssertEqual(opener.openedAgentIDs, ["agent-1"])
     }
+
+    func testRequestNotificationPermissionUpdatesPublishedStatus() async {
+        let client = FailingClient()
+        let permissions = RecordingNotificationPermissionController(initial: .notDetermined, requestResult: .authorized)
+        let viewModel = MenuBarViewModel(client: client, notificationPermissionController: permissions)
+
+        await viewModel.requestNotificationPermission()
+
+        XCTAssertEqual(viewModel.notificationPermissionStatus, .authorized)
+    }
 }
 
 private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
@@ -396,5 +408,24 @@ private final class RecordingSessionOpener: SessionOpening, @unchecked Sendable 
 
     func openSession(for agent: Agent) {
         openedAgentIDs.append(agent.id)
+    }
+}
+
+private actor RecordingNotificationPermissionController: NotificationPermissionControlling {
+    private var current: NotificationPermissionStatus
+    private let requestResult: NotificationPermissionStatus
+
+    init(initial: NotificationPermissionStatus, requestResult: NotificationPermissionStatus? = nil) {
+        self.current = initial
+        self.requestResult = requestResult ?? initial
+    }
+
+    func currentPermissionStatus() async -> NotificationPermissionStatus {
+        current
+    }
+
+    func requestPermission() async -> NotificationPermissionStatus {
+        current = requestResult
+        return current
     }
 }

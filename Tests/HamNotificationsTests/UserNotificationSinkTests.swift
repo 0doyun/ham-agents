@@ -21,10 +21,12 @@ final class UserNotificationSinkTests: XCTestCase {
 
         let requests = await center.requests
         let authorizationCount = await center.authorizationRequestCount
+        let status = await center.status
         XCTAssertEqual(authorizationCount, 1)
         XCTAssertEqual(requests.count, 1)
         XCTAssertEqual(requests.first?.identifier, "agent-1.done")
         XCTAssertEqual(requests.first?.content.title, "builder finished")
+        XCTAssertEqual(status, .authorized)
     }
 
     func testSendSkipsAddWhenAuthorizationDenied() async throws {
@@ -43,8 +45,19 @@ final class UserNotificationSinkTests: XCTestCase {
 
         let authorizationCount = await center.authorizationRequestCount
         let requests = await center.requests
+        let status = await center.status
         XCTAssertEqual(authorizationCount, 1)
         XCTAssertTrue(requests.isEmpty)
+        XCTAssertEqual(status, .denied)
+    }
+
+    func testCurrentPermissionStatusMirrorsCenterState() async {
+        let center = RecordingUserNotificationCenter(granted: true, initialStatus: .denied)
+        let sink = UserNotificationSink(center: center)
+
+        let status = await sink.currentPermissionStatus()
+
+        XCTAssertEqual(status, .denied)
     }
 
     private func makeAgent() -> Agent {
@@ -64,20 +77,27 @@ final class UserNotificationSinkTests: XCTestCase {
 
 private actor RecordingUserNotificationCenter: UserNotificationCentering {
     let granted: Bool
+    private(set) var status: NotificationPermissionStatus
     private(set) var authorizationRequestCount = 0
     private(set) var requests: [UNNotificationRequest] = []
 
-    init(granted: Bool) {
+    init(granted: Bool, initialStatus: NotificationPermissionStatus = .notDetermined) {
         self.granted = granted
+        self.status = initialStatus
     }
 
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
         _ = options
         authorizationRequestCount += 1
+        status = granted ? .authorized : .denied
         return granted
     }
 
     func add(_ request: UNNotificationRequest) async throws {
         requests.append(request)
+    }
+
+    func authorizationStatus() async -> NotificationPermissionStatus {
+        status
     }
 }

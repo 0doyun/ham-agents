@@ -93,3 +93,4 @@ The current `ham-menubar` baseline:
 - requests notification permission on first delivery attempt and can submit macOS notification requests through `UserNotifications`
 - shows a selected-agent detail pane with recent event context inside the popover
 - includes a baseline “Open Project Folder” action from the selected-agent detail pane
+- shows current notification permission state and lets the user request permission from the popover

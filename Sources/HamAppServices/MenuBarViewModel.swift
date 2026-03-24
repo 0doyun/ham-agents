@@ -9,11 +9,13 @@ public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var agents: [Agent] = []
     @Published public private(set) var isRefreshing = false
     @Published public private(set) var errorMessage: String?
+    @Published public private(set) var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
 
     private let client: HamDaemonClientProtocol
     private let summaryService: MenuBarSummaryService
     private let notificationEngine: StatusChangeNotificationEngine
     private let notificationSink: NotificationSink
+    private let notificationPermissionController: NotificationPermissionControlling
     private let projectOpener: ProjectOpening
     private let sessionOpener: SessionOpening
     private let pollIntervalNanoseconds: UInt64
@@ -25,6 +27,7 @@ public final class MenuBarViewModel: ObservableObject {
         client: HamDaemonClientProtocol,
         notificationEngine: StatusChangeNotificationEngine = StatusChangeNotificationEngine(),
         notificationSink: NotificationSink = NoopNotificationSink(),
+        notificationPermissionController: NotificationPermissionControlling = NoopNotificationPermissionController(),
         projectOpener: ProjectOpening = NoopProjectOpener(),
         sessionOpener: SessionOpening = NoopSessionOpener(),
         pollIntervalNanoseconds: UInt64 = 15_000_000_000,
@@ -36,6 +39,7 @@ public final class MenuBarViewModel: ObservableObject {
         self.summaryService = MenuBarSummaryService(client: client)
         self.notificationEngine = notificationEngine
         self.notificationSink = notificationSink
+        self.notificationPermissionController = notificationPermissionController
         self.projectOpener = projectOpener
         self.sessionOpener = sessionOpener
         self.pollIntervalNanoseconds = pollIntervalNanoseconds
@@ -68,6 +72,10 @@ public final class MenuBarViewModel: ObservableObject {
     public func openSession(forAgentID id: Agent.ID?) {
         guard let agent = agent(withID: id) else { return }
         sessionOpener.openSession(for: agent)
+    }
+
+    public func requestNotificationPermission() async {
+        notificationPermissionStatus = await notificationPermissionController.requestPermission()
     }
 
     public func start() {
@@ -108,6 +116,7 @@ public final class MenuBarViewModel: ObservableObject {
         do {
             async let loadedSummary = summaryService.refresh(eventLimit: eventLimit)
             async let loadedAgents = client.fetchAgents()
+            async let permissionStatus = notificationPermissionController.currentPermissionStatus()
 
             let summaryValue = try await loadedSummary
             let loadedAgentsValue = try await loadedAgents
@@ -115,6 +124,7 @@ public final class MenuBarViewModel: ObservableObject {
 
             summary = summaryValue
             agents = loadedAgentsValue
+            notificationPermissionStatus = await permissionStatus
             errorMessage = nil
 
             for candidate in candidates {
