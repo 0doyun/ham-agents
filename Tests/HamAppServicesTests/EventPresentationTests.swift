@@ -17,6 +17,7 @@ final class EventPresentationTests: XCTestCase {
 
         XCTAssertEqual(presentation.label, "Disconnected")
         XCTAssertEqual(presentation.emphasis, .warning)
+        XCTAssertFalse(presentation.showsTechnicalType)
     }
 
     func testReconnectedEventGetsPositivePresentation() {
@@ -32,6 +33,22 @@ final class EventPresentationTests: XCTestCase {
 
         XCTAssertEqual(presentation.label, "Reconnected")
         XCTAssertEqual(presentation.emphasis, .positive)
+        XCTAssertFalse(presentation.showsTechnicalType)
+    }
+
+    func testUnknownEventKeepsTechnicalTypeVisible() {
+        let event = AgentEventPayload(
+            id: "event-4",
+            agentID: "agent-1",
+            type: "agent.custom_event",
+            summary: "Custom event.",
+            occurredAt: Date(timeIntervalSince1970: 4)
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "agent.custom_event")
+        XCTAssertTrue(presentation.showsTechnicalType)
     }
 
     func testSummarizeGroupsEventsByPresentation() {

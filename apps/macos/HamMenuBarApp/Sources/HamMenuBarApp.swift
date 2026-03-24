@@ -555,9 +555,15 @@ private struct AgentDetailView: View {
                                     .padding(.vertical, 2)
                                     .background(eventBadgeBackground(for: presentation.emphasis))
                                     .clipShape(Capsule())
-                                Text(event.type)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                if presentation.showsTechnicalType {
+                                    Text(event.type)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text(event.occurredAt.formatted(.relative(presentation: .named)))
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                             Text(event.summary)
                                 .font(.caption2)
