@@ -34,6 +34,7 @@ public protocol HamDaemonClientProtocol: Sendable {
     func fetchAgents() async throws -> [Agent]
     func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload]
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload]
+    func followEvents(afterEventID: String, limit: Int, waitMilliseconds: Int) async throws -> [AgentEventPayload]
     func fetchSettings() async throws -> DaemonSettingsPayload
     func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent
@@ -102,6 +103,16 @@ public final class HamDaemonClient: HamDaemonClientProtocol, @unchecked Sendable
 
     public func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
         let response = try await transport.send(.init(command: .events, limit: limit))
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
+        return response.events ?? []
+    }
+
+    public func followEvents(afterEventID: String, limit: Int, waitMilliseconds: Int) async throws -> [AgentEventPayload] {
+        let response = try await transport.send(
+            .init(command: .followEvents, limit: limit, afterEventID: afterEventID, waitMillis: waitMilliseconds)
+        )
         if let error = response.error {
             throw HamDaemonClientError.server(error)
         }

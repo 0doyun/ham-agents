@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
 	hamruntime "github.com/ham-agents/ham-agents/go/internal/runtime"
@@ -173,6 +174,12 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{Snapshot: &snapshot}, nil
 	case CommandEvents:
 		events, err := s.registry.Events(ctx, request.Limit)
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Events: events}, nil
+	case CommandFollowEvents:
+		events, err := s.registry.FollowEvents(ctx, request.AfterEventID, request.Limit, time.Duration(request.WaitMillis)*time.Millisecond)
 		if err != nil {
 			return Response{}, err
 		}

@@ -91,7 +91,7 @@ Usage:
   ham settings appearance [--theme=auto|day|night]
   ham list [--json]
   ham status [--json]
-  ham events [--json] [--limit N]
+  ham events [--json] [--limit N] [--follow] [--after-id ID] [--wait-ms N]
 
 Daemon socket:
   %s
@@ -435,6 +435,9 @@ func runEvents(ctx context.Context, client *ipc.Client, args []string) error {
 	flags.SetOutput(os.Stderr)
 	asJSON := flags.Bool("json", false, "emit JSON")
 	limit := flags.Int("limit", 20, "maximum events to show")
+	follow := flags.Bool("follow", false, "follow new events")
+	afterID := flags.String("after-id", "", "only show events after this id")
+	waitMillis := flags.Int("wait-ms", 15000, "long-poll wait in milliseconds when following")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -443,17 +446,36 @@ func runEvents(ctx context.Context, client *ipc.Client, args []string) error {
 	if err != nil {
 		return err
 	}
-	if *asJSON {
-		return writeJSON(events)
+	currentAfterID := *afterID
+	if currentAfterID != "" {
+		events = eventsAfterIDForDisplay(events, currentAfterID, *limit)
 	}
-	if len(events) == 0 {
-		fmt.Println("no events")
+
+	if err := printEvents(os.Stdout, events, *asJSON); err != nil {
+		return err
+	}
+	if !*follow {
 		return nil
 	}
-	for _, event := range events {
-		fmt.Printf("%s\t%s\t%s\t%s\n", event.OccurredAt.Format(time.RFC3339), event.Type, event.AgentID, event.Summary)
+
+	if currentAfterID == "" && len(events) > 0 {
+		currentAfterID = events[len(events)-1].ID
 	}
-	return nil
+
+	for {
+		followed, err := client.FollowEvents(ctx, currentAfterID, *limit, time.Duration(*waitMillis)*time.Millisecond)
+		if err != nil {
+			return err
+		}
+		if len(followed) == 0 {
+			continue
+		}
+
+		if err := printEvents(os.Stdout, followed, *asJSON); err != nil {
+			return err
+		}
+		currentAfterID = followed[len(followed)-1].ID
+	}
 }
 
 func parseRunInput(args []string) (runtime.RegisterManagedInput, error) {
@@ -759,6 +781,60 @@ func writeJSON(value any) error {
 	}
 	_, err = fmt.Fprintf(os.Stdout, "%s\n", payload)
 	return err
+}
+
+func printEvents(out io.Writer, events []core.Event, asJSON bool) error {
+	if asJSON {
+		if len(events) == 0 {
+			return writeJSON([]core.Event{})
+		}
+		for _, event := range events {
+			payload, err := json.Marshal(event)
+			if err != nil {
+				return err
+			}
+			if _, err := fmt.Fprintf(out, "%s\n", payload); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	if len(events) == 0 {
+		_, err := fmt.Fprintln(out, "no events")
+		return err
+	}
+	for _, event := range events {
+		if _, err := fmt.Fprintf(out, "%s\t%s\t%s\t%s\n", event.OccurredAt.Format(time.RFC3339), event.Type, event.AgentID, event.Summary); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func eventsAfterIDForDisplay(events []core.Event, afterEventID string, limit int) []core.Event {
+	if afterEventID == "" {
+		return events
+	}
+
+	start := -1
+	for index, event := range events {
+		if event.ID == afterEventID {
+			start = index + 1
+			break
+		}
+	}
+	if start == -1 {
+		start = 0
+	}
+	if start >= len(events) {
+		return []core.Event{}
+	}
+	filtered := events[start:]
+	if limit > 0 && len(filtered) > limit {
+		return filtered[len(filtered)-limit:]
+	}
+	return filtered
 }
 
 var openTarget = func(target core.OpenTarget) error {

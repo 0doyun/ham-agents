@@ -882,6 +882,12 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
     func fetchAgents() async throws -> [Agent] { agents }
     func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] { attachableSessions }
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] { events }
+    func followEvents(afterEventID: String, limit: Int, waitMilliseconds: Int) async throws -> [AgentEventPayload] {
+        _ = afterEventID
+        _ = limit
+        _ = waitMilliseconds
+        return []
+    }
 
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
         var agent = agents.first { $0.id == agentID } ?? snapshot.agents.first!
@@ -922,6 +928,13 @@ private struct FailingClient: HamDaemonClientProtocol, Sendable {
     }
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
+        throw HamDaemonClientError.transportFailed("unavailable")
+    }
+
+    func followEvents(afterEventID: String, limit: Int, waitMilliseconds: Int) async throws -> [AgentEventPayload] {
+        _ = afterEventID
+        _ = limit
+        _ = waitMilliseconds
         throw HamDaemonClientError.transportFailed("unavailable")
     }
 
@@ -983,6 +996,13 @@ private actor CyclingClient: HamDaemonClientProtocol {
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
         []
+    }
+
+    func followEvents(afterEventID: String, limit: Int, waitMilliseconds: Int) async throws -> [AgentEventPayload] {
+        _ = afterEventID
+        _ = limit
+        _ = waitMilliseconds
+        return []
     }
 
     func fetchSettings() async throws -> DaemonSettingsPayload {
@@ -1059,6 +1079,13 @@ private actor TransitioningClient: HamDaemonClientProtocol {
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
         []
+    }
+
+    func followEvents(afterEventID: String, limit: Int, waitMilliseconds: Int) async throws -> [AgentEventPayload] {
+        _ = afterEventID
+        _ = limit
+        _ = waitMilliseconds
+        return []
     }
 
     func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] {

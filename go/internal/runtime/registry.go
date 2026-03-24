@@ -380,6 +380,40 @@ func (r *Registry) Events(ctx context.Context, limit int) ([]core.Event, error) 
 	return events[len(events)-limit:], nil
 }
 
+func (r *Registry) FollowEvents(ctx context.Context, afterEventID string, limit int, wait time.Duration) ([]core.Event, error) {
+	pollInterval := 200 * time.Millisecond
+	deadline := r.clock().Add(wait)
+
+	for {
+		events, err := r.Events(ctx, 0)
+		if err != nil {
+			return nil, err
+		}
+
+		followed := eventsAfterID(events, afterEventID, limit)
+		if len(followed) > 0 || wait <= 0 {
+			return followed, nil
+		}
+
+		if !deadline.After(r.clock()) {
+			return []core.Event{}, nil
+		}
+
+		sleepDuration := pollInterval
+		if remaining := time.Until(deadline); remaining < sleepDuration {
+			sleepDuration = remaining
+		}
+
+		timer := time.NewTimer(sleepDuration)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
+
 func (r *Registry) OpenTarget(ctx context.Context, agentID string) (core.OpenTarget, error) {
 	agents, err := r.store.LoadAgents(ctx)
 	if err != nil {
@@ -484,6 +518,35 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 	}
 
 	return refreshed, changed
+}
+
+func eventsAfterID(events []core.Event, afterEventID string, limit int) []core.Event {
+	if afterEventID == "" {
+		if limit <= 0 || len(events) <= limit {
+			return events
+		}
+		return events[len(events)-limit:]
+	}
+
+	start := -1
+	for index, event := range events {
+		if event.ID == afterEventID {
+			start = index + 1
+			break
+		}
+	}
+	if start == -1 {
+		start = 0
+	}
+	if start >= len(events) {
+		return []core.Event{}
+	}
+
+	followed := events[start:]
+	if limit > 0 && len(followed) > limit {
+		return followed[len(followed)-limit:]
+	}
+	return followed
 }
 
 func (r *Registry) RefreshObserved(ctx context.Context) error {

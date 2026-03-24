@@ -173,6 +173,14 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		t.Fatalf("unexpected event agent id %q", events[0].AgentID)
 	}
 
+	followedEvents, err := client.FollowEvents(context.Background(), events[0].ID, 10, 0)
+	if err != nil {
+		t.Fatalf("follow events via client: %v", err)
+	}
+	if len(followedEvents) != 2 {
+		t.Fatalf("expected 2 newer events, got %d", len(followedEvents))
+	}
+
 	updated, err := client.UpdateNotificationPolicy(context.Background(), agent.ID, core.NotificationPolicyMuted)
 	if err != nil {
 		t.Fatalf("update notification policy via client: %v", err)
