@@ -146,6 +146,7 @@
 - Per-agent notification pause/resume now goes through daemon IPC and file-backed agent persistence so mute state survives refreshes and remains the backend source of truth.
 - Quick-message UI now routes through a dedicated sender boundary, with the current app-edge implementation preferring iTerm write automation and falling back to clipboard + session opening.
 - Quick-message result feedback currently stays in the Swift view-model layer so the popover can surface delivery vs fallback outcomes without requiring backend acknowledgements yet.
+- Notification candidate dispatch now also reads the backend settings document so stored toggles and preview-text policy affect real delivery behavior.
 - Selected-agent role editing now uses the same daemon mutation pattern as notification policy changes so role state remains backend-backed rather than Swift-local.
 - Stop-tracking now also uses a daemon mutation path, keeping agent removal authoritative in the backend rather than deleting rows only in Swift UI state.
 - Notification candidate dispatch now also reads the backend settings document so stored toggles and preview-text policy affect real delivery behavior.
