@@ -29,14 +29,15 @@ Implement `ham-agents` toward the full product spec in `spec.md` while preservin
 ## Current Execution Phases
 
 1. Repository bootstrap and architectural grounding
-2. Managed session foundation
-3. Runtime and persistence
-4. Menu bar baseline
-5. Notifications
-6. iTerm2 integration
-7. Attached / observed modes
-8. Inference refinement
-9. Pixel office completion
+2. Hybrid architecture realignment (`Swift UI + Go runtime`)
+3. Managed session foundation
+4. Runtime and persistence
+5. Menu bar baseline
+6. Notifications
+7. iTerm2 integration
+8. Attached / observed modes
+9. Inference refinement
+10. Pixel office completion
 
 ## User Stories
 
@@ -49,7 +50,16 @@ Acceptance criteria:
 - Tests run
 - Ralph planning docs exist
 
-### US-002 Managed Mode Foundation
+### US-002 Hybrid Architecture Baseline
+As the developer, I want the macOS UI and terminal runtime to be separated by responsibility so the implementation matches the product shape.
+
+Acceptance criteria:
+- Swift owns the menu bar app
+- Go owns the CLI and daemon
+- IPC direction is documented
+- tasks and architecture docs match this split
+
+### US-003 Managed Mode Foundation
 As a user, I want the product to track managed agents first so the system can offer high-confidence status.
 
 Acceptance criteria:
@@ -57,7 +67,7 @@ Acceptance criteria:
 - `ham list` shows tracked agents
 - `ham status` summarizes runtime state
 
-### US-003 Local Runtime
+### US-004 Local Runtime
 As a user, I want agent state to survive beyond a single interaction so the app can behave like an orchestrator.
 
 Acceptance criteria:
@@ -65,7 +75,7 @@ Acceptance criteria:
 - Runtime owns lifecycle transitions
 - Event/snapshot model is testable
 
-### US-004 Menu Bar Presence
+### US-005 Menu Bar Presence
 As a user, I want a menu bar status surface so I can see the team at a glance.
 
 Acceptance criteria:
@@ -73,28 +83,28 @@ Acceptance criteria:
 - Current agent counts render
 - Clicking opens a popover baseline
 
-### US-005 Notifications
+### US-006 Notifications
 As a user, I want immediate alerts for done, error, and waiting-input states.
 
 Acceptance criteria:
 - Core notification triggers exist
 - Noise control defaults are reasonable
 
-### US-006 Terminal Integration
+### US-007 Terminal Integration
 As a user, I want to reopen or focus tracked sessions from the product.
 
 Acceptance criteria:
 - iTerm2 adapter boundary exists
 - Focus/open flow works for managed sessions
 
-### US-007 Extended Tracking Modes
+### US-008 Extended Tracking Modes
 As a user, I want existing sessions and transcript-based sessions to appear in the same team model.
 
 Acceptance criteria:
 - attached and observed modes are supported
 - mode and confidence are visible
 
-### US-008 Pixel Office Experience
+### US-009 Pixel Office Experience
 As a user, I want the team to feel alive without losing informational clarity.
 
 Acceptance criteria:

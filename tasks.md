@@ -31,14 +31,15 @@
 
 ## Active Scope
 
-현재 활성 범위는 **전체 스펙 구현을 위한 실행 기반 고정**이다.
+현재 활성 범위는 **전체 스펙 구현을 위한 실행 기반 정리와 기술 방향 정합화**다.
 
-- [x] Swift + SwiftPM 기반 저장소 구조 확정
+- [x] 상세 스펙 복원 및 제품 truth 강화
+- [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
 - [x] 장기 backlog를 에픽 단위로 정리
 - [x] Ralph용 PRD / test spec 아티팩트 생성
 - [x] 핵심 모듈 골격 생성
-- [ ] Git 원격과 연결된 실제 작업 트리로 전환
-- [ ] 첫 구현 slice 시작: managed session registry + `ham status/list`
+- [x] Git 원격과 연결된 실제 작업 트리로 전환
+- [ ] 첫 hybrid implementation slice 시작: managed session registry + `ham status/list`
 
 ## Out of Scope For Current Slice
 
@@ -57,12 +58,13 @@
 - [x] Swift package 생성
 - [x] 모듈 경계 정의
 - [x] 기본 테스트 타깃 생성
-- [ ] GitHub origin 연결 확인
+- [x] GitHub origin 연결 확인
+- [ ] hybrid repository layout로 재정렬 시작
 
 #### Acceptance Criteria
 - [x] 저장소 구조가 스펙 아키텍처와 대응된다
 - [x] `swift build` / `swift test` 가능해야 한다
-- [ ] 원격 push 가능한 Git 워크트리여야 한다
+- [x] 원격 push 가능한 Git 워크트리여야 한다
 
 ### Epic 2: Managed Session Foundation
 - [ ] agent domain model 확정
@@ -149,5 +151,6 @@
 ## Notes
 - `spec.md`가 최종 목표 문서다.
 - `roadmap.md`는 참고용이며 현재 범위를 제한하지 않는다.
+- UI는 Swift, CLI/runtime은 Go로 분리하는 방향을 현재 기준 아키텍처로 본다.
 - Ralph/autonomous 실행은 항상 가장 높은 우선순위의 미완료 green slice부터 이어간다.
 - 각 slice 완료 시 `docs/progress.md`, `docs/assumptions.md`, 테스트 결과를 함께 갱신한다.

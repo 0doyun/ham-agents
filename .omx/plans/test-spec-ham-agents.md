@@ -14,12 +14,23 @@ swift build
 swift test
 ```
 
+Hybrid transition adds:
+
+```bash
+go test ./...
+```
+
 ## Planned Verification Matrix
 
 ### Repository Bootstrap
 - `swift build`
 - `swift test`
 - Source layout matches architecture docs
+
+### Hybrid Architecture Baseline
+- Documentation matches `Swift UI + Go CLI/runtime`
+- Go workspace bootstrap exists
+- Swift UI bootstrap remains buildable until migration completes
 
 ### Managed Session Foundation
 - Unit tests for agent model defaults and status enums

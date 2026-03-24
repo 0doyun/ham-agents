@@ -12,7 +12,8 @@
 
 ## Initial Entries
 - 2026-03-24: 최종 목표는 `spec.md` 전체 구현으로 본다. `roadmap.md`는 현재 범위를 제한하는 문서로 사용하지 않는다.
-- 2026-03-24: 첫 구현 언어/도구는 Swift + SwiftPM으로 고정한다. 이유는 macOS 메뉴바 앱과 CLI를 한 언어로 유지하기 위해서다.
-- 2026-03-24: 메뉴바 앱은 추후 별도 app target으로 추가하고, 지금은 core/runtime/CLI 경계를 먼저 안정화한다.
+- 2026-03-24: 제품 구현 기준 아키텍처는 `Swift UI + Go CLI/runtime` 이원 구조로 본다.
+- 2026-03-24: 메뉴바 앱과 macOS 통합 UX는 Swift가 담당하고, `ham` CLI / `hamd` daemon / 상태 수집은 Go가 담당한다.
+- 2026-03-24: 현재 Swift 기반 bootstrap 코드는 과도기 산출물로 보고, 최종 구조에 맞게 점진적으로 재편한다.
 - 2026-03-24: attached / observed mode는 최종 목표에 포함되지만, 첫 실구현 slice는 managed mode foundation으로 제한한다.
-- 2026-03-24: 현재 작업 폴더는 아직 Git 워크트리가 아니므로 자동 commit/push는 로컬 Git 연결 이후에만 가능하다고 본다.
+- 2026-03-24: 현재 작업 폴더는 Git 워크트리이며 origin/main push가 가능한 상태다.
