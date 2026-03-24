@@ -15,6 +15,7 @@ final class DaemonPayloadDecodingTests: XCTestCase {
           "role": "reviewer",
           "status": "booting",
           "status_confidence": 1,
+          "status_reason": "Managed launch requested.",
           "last_event_at": "2026-03-24T14:02:18.002914Z",
           "last_user_visible_summary": "Managed session registered.",
           "notification_policy": "default",
@@ -35,6 +36,7 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         XCTAssertEqual(agent.displayName, "reviewer")
         XCTAssertEqual(agent.projectPath, "/tmp/demo")
         XCTAssertEqual(agent.status, .booting)
+        XCTAssertEqual(agent.statusReason, "Managed launch requested.")
         XCTAssertEqual(agent.notificationPolicy, .default)
         XCTAssertEqual(agent.sessionTitle, "Claude Review")
         XCTAssertTrue(agent.sessionIsActive)

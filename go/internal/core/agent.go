@@ -43,6 +43,7 @@ type Agent struct {
 	Role                    string             `json:"role,omitempty"`
 	Status                  AgentStatus        `json:"status"`
 	StatusConfidence        float64            `json:"status_confidence"`
+	StatusReason            string             `json:"status_reason,omitempty"`
 	LastEventAt             time.Time          `json:"last_event_at"`
 	LastUserVisibleSummary  string             `json:"last_user_visible_summary,omitempty"`
 	NotificationPolicy      NotificationPolicy `json:"notification_policy"`

@@ -115,6 +115,7 @@ final class MenuBarViewModelTests: XCTestCase {
             projectPath: "/tmp/app",
             status: .idle,
             statusConfidence: 0.6,
+            statusReason: "Attached to an existing iTerm session.",
             lastEventAt: Date(timeIntervalSince1970: 1),
             sessionRef: "iterm2://session/abc",
             sessionTitle: "Claude Review",
@@ -145,6 +146,7 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.agent(withID: "agent-1")?.sessionActivity, "claude")
         XCTAssertEqual(viewModel.agent(withID: "agent-1")?.sessionProcessID, 12345)
         XCTAssertEqual(viewModel.agent(withID: "agent-1")?.sessionCommand, "/usr/local/bin/claude")
+        XCTAssertEqual(viewModel.agent(withID: "agent-1")?.statusReason, "Attached to an existing iTerm session.")
     }
 
     func testRefreshCapturesErrors() async {
