@@ -277,6 +277,51 @@ func TestSnapshotRefreshesObservedAgentAndPersistsLifecycleEvent(t *testing.T) {
 	}
 }
 
+func TestRefreshObservedDoesNotEmitLifecycleEventWhenStatusStaysSame(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	source := filepath.Join(root, "observed.log")
+	if err := os.WriteFile(source, []byte("question?"), 0o644); err != nil {
+		t.Fatalf("write observed source: %v", err)
+	}
+
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	if _, err := registry.RegisterObserved(ctx, runtime.RegisterObservedInput{
+		Provider:    "log",
+		DisplayName: "observer",
+		ProjectPath: "/tmp/project",
+		SessionRef:  source,
+	}); err != nil {
+		t.Fatalf("register observed: %v", err)
+	}
+
+	if err := registry.RefreshObserved(ctx); err != nil {
+		t.Fatalf("first refresh observed: %v", err)
+	}
+	eventsAfterFirstRefresh, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events after first refresh: %v", err)
+	}
+
+	if err := registry.RefreshObserved(ctx); err != nil {
+		t.Fatalf("second refresh observed: %v", err)
+	}
+	eventsAfterSecondRefresh, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events after second refresh: %v", err)
+	}
+
+	if len(eventsAfterSecondRefresh) != len(eventsAfterFirstRefresh) {
+		t.Fatalf("expected no extra lifecycle event on unchanged observed status, got %d -> %d", len(eventsAfterFirstRefresh), len(eventsAfterSecondRefresh))
+	}
+}
+
 func TestListObservedRefreshSavesExactlyOncePerObservedTransition(t *testing.T) {
 	t.Parallel()
 
@@ -566,15 +611,28 @@ func TestRefreshAttachedDoesNotPersistWhenNothingChanged(t *testing.T) {
 		t.Fatalf("register attached: %v", err)
 	}
 
+	if err := registry.RefreshAttached(ctx, []core.AttachableSession{
+		{ID: "abc", Title: "ops", SessionRef: "iterm2://session/abc"},
+	}); err != nil {
+		t.Fatalf("initial refresh attached: %v", err)
+	}
+
 	before := countingStore.saveCalls
 	if err := registry.RefreshAttached(ctx, []core.AttachableSession{
 		{ID: "abc", Title: "ops", SessionRef: "iterm2://session/abc"},
 	}); err != nil {
-		t.Fatalf("refresh attached: %v", err)
+		t.Fatalf("second refresh attached: %v", err)
 	}
-
 	if countingStore.saveCalls != before {
 		t.Fatalf("expected no extra save when nothing changed, got %d -> %d", before, countingStore.saveCalls)
+	}
+
+	events, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events: %v", err)
+	}
+	if len(events) != 1 {
+		t.Fatalf("expected no additional lifecycle events, got %d", len(events))
 	}
 }
 
