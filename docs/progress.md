@@ -305,6 +305,15 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: OS-level observed watching, richer attached/iTerm session identification, broader backend-persisted settings state
 
+### 2026-03-25 (CLI open target baseline)
+- Go runtime/IPC/client 에 open-target resolution path 를 추가해 agent의 current open target 을 daemon source of truth 쪽에서 계산하도록 만들었다.
+- `ham open <agent>` CLI baseline 을 추가해 print/json path 를 지원하고, attached sessionRef URL 이 있으면 URL target 을 우선 사용하도록 했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: broader backend-persisted settings state, richer iTerm session identification/send acknowledgement, OS-level observed watching
+
 ### 2026-03-25 (agent role rename baseline)
 - Go runtime/IPC/client 에 role update path 를 추가해 selected agent role 을 daemon-backed source of truth 쪽에서 갱신할 수 있게 했다.
 - popover detail pane에 role draft field 와 `Save` action 을 추가하고, Swift view model 이 daemon mutation 결과로 local agent list 를 갱신하도록 연결했다.

@@ -136,6 +136,12 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{Agent: &agent}, nil
+	case CommandOpenTarget:
+		target, err := s.registry.OpenTarget(ctx, request.AgentID)
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{OpenTarget: &target}, nil
 	case CommandListAgents:
 		agents, err := s.registry.List(ctx)
 		if err != nil {

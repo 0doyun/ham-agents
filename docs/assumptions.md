@@ -39,3 +39,4 @@
 - 2026-03-25: mode/confidence baseline은 new heuristics without introducing new inference logic; it only exposes already-available daemon fields in the popover.
 - 2026-03-25: observed mode heuristic baseline은 snapshot/list 시점에 source 파일 내용을 읽어 error/done/question/staleness를 판정한다. always-on watching은 later slice에서 추가한다.
 - 2026-03-25: observed polling baseline은 background ticker 로 source를 다시 읽는 수준에서 시작한다. OS-level watch 서비스는 later slice에서 붙인다.
+- 2026-03-25: `ham open` baseline은 daemon이 계산한 open target 을 CLI가 그대로 소비하는 방식으로 시작한다. richer platform-specific focus/open behavior는 later integration slices에서 확장한다.

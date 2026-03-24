@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **observed source polling baseline** 다.
+현재 활성 범위는 **broader backend-persisted settings state** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -68,18 +68,16 @@
 - [x] `ham observe` minimal flow 추가
 - [x] observed source contents를 읽어 status/confidence를 갱신하는 baseline 추가
 - [x] daemon serve 중 observed source polling 추가
+- [x] `ham open <agent>` baseline 추가
 
 ### Current Slice Checklist
 
-- [x] observed source refresh helper 추가
-- [x] transcript/log heuristic 상태 추정 추가
-- [x] snapshot/list 에 observed refresh 반영
-- [x] Go tests로 observed heuristic 보호
-- [x] runtime observed refresh 공개 entrypoint 추가
-- [x] hamd serve 에 polling loop 추가
-- [x] Go tests로 polling refresh 보호
+- [x] daemon/runtime open-target resolution 추가
+- [x] IPC `open_target` contract 추가
+- [x] CLI `ham open` + print/json path 추가
+- [x] Go tests/CLI smoke 로 open target 보호
 - [x] Swift bootstrap build/test green 유지
-- [ ] Go tests green 유지
+- [x] Go tests green 유지
 
 ## Out of Scope For Current Slice
 

@@ -213,6 +213,38 @@ func TestRefreshObservedUpdatesPersistedStatus(t *testing.T) {
 	}
 }
 
+func TestOpenTargetPrefersSessionRefURL(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterAttached(ctx, runtime.RegisterAttachedInput{
+		Provider:    "iterm2",
+		DisplayName: "ops",
+		ProjectPath: "/tmp/project",
+		SessionRef:  "iterm2://session/abc",
+	})
+	if err != nil {
+		t.Fatalf("register attached: %v", err)
+	}
+
+	target, err := registry.OpenTarget(ctx, agent.ID)
+	if err != nil {
+		t.Fatalf("open target: %v", err)
+	}
+	if target.Kind != core.OpenTargetKindExternalURL {
+		t.Fatalf("expected external_url, got %q", target.Kind)
+	}
+	if target.Value != "iterm2://session/abc" {
+		t.Fatalf("unexpected target value %q", target.Value)
+	}
+}
+
 func TestRegisterManagedSucceedsWhenEventLogAppendFails(t *testing.T) {
 	t.Parallel()
 

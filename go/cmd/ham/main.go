@@ -6,9 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
+	"github.com/ham-agents/ham-agents/go/internal/core"
 	"github.com/ham-agents/ham-agents/go/internal/ipc"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
 )
@@ -42,6 +44,8 @@ func run(args []string) error {
 		return runAttach(ctx, client, args[1:])
 	case "observe":
 		return runObserve(ctx, client, args[1:])
+	case "open":
+		return runOpen(ctx, client, args[1:])
 	case "list":
 		return runList(ctx, client, args[1:])
 	case "status":
@@ -70,6 +74,7 @@ Usage:
   ham run <provider> [name] [--project path] [--role role]
   ham attach <session-ref> [name] [--project path] [--role role] [--provider provider]
   ham observe <source-ref> [name] [--project path] [--role role] [--provider provider]
+  ham open <agent-id> [--json] [--print]
   ham list [--json]
   ham status [--json]
   ham events [--json] [--limit N]
@@ -122,6 +127,28 @@ func runObserve(ctx context.Context, client *ipc.Client, args []string) error {
 
 	fmt.Printf("observing %s [%s] via %s\n", agent.DisplayName, agent.ID, agent.Provider)
 	return nil
+}
+
+func runOpen(ctx context.Context, client *ipc.Client, args []string) error {
+	agentID, asJSON, printOnly, err := parseOpenInput(args)
+	if err != nil {
+		return err
+	}
+
+	target, err := client.OpenTarget(ctx, agentID)
+	if err != nil {
+		return err
+	}
+
+	if asJSON {
+		return writeJSON(target)
+	}
+	if printOnly {
+		fmt.Printf("%s\t%s\n", target.Kind, target.Value)
+		return nil
+	}
+
+	return openTarget(target)
 }
 
 func runList(ctx context.Context, client *ipc.Client, args []string) error {
@@ -343,6 +370,33 @@ func parseObserveInput(args []string) (runtime.RegisterObservedInput, error) {
 	return input, nil
 }
 
+func parseOpenInput(args []string) (agentID string, asJSON bool, printOnly bool, err error) {
+	for _, argument := range args {
+		switch argument {
+		case "--json":
+			asJSON = true
+		case "--print":
+			printOnly = true
+		default:
+			if strings.HasPrefix(argument, "-") {
+				err = fmt.Errorf("unsupported flag %q", argument)
+				return
+			}
+			if agentID == "" {
+				agentID = argument
+				continue
+			}
+			err = fmt.Errorf("unexpected argument %q", argument)
+			return
+		}
+	}
+
+	if agentID == "" {
+		err = fmt.Errorf("agent id is required")
+	}
+	return
+}
+
 func splitProvider(args []string) (string, []string) {
 	if len(args) == 0 {
 		return "unknown", args
@@ -360,4 +414,14 @@ func writeJSON(value any) error {
 	}
 	_, err = fmt.Fprintf(os.Stdout, "%s\n", payload)
 	return err
+}
+
+var openTarget = func(target core.OpenTarget) error {
+	switch target.Kind {
+	case core.OpenTargetKindExternalURL, core.OpenTargetKindWorkspace:
+		command := exec.Command("open", target.Value)
+		return command.Run()
+	default:
+		return fmt.Errorf("unsupported open target kind %q", target.Kind)
+	}
 }

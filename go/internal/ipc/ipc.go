@@ -23,6 +23,7 @@ const (
 	CommandRunManaged Command = "run.managed"
 	CommandAttachSession Command = "attach.session"
 	CommandObserveSource Command = "observe.source"
+	CommandOpenTarget    Command = "agents.open_target"
 	CommandListAgents Command = "agents.list"
 	CommandStatus     Command = "agents.status"
 	CommandEvents     Command = "events.list"
@@ -47,6 +48,7 @@ type Response struct {
 	Agent    *core.Agent           `json:"agent,omitempty"`
 	Agents   []core.Agent          `json:"agents,omitempty"`
 	Events   []core.Event          `json:"events,omitempty"`
+	OpenTarget *core.OpenTarget    `json:"open_target,omitempty"`
 	Snapshot *core.RuntimeSnapshot `json:"snapshot,omitempty"`
 	Error    string                `json:"error,omitempty"`
 }
@@ -137,6 +139,20 @@ func (c *Client) ObserveSource(ctx context.Context, input hamruntime.RegisterObs
 		return core.Agent{}, fmt.Errorf("daemon response missing agent payload")
 	}
 	return *response.Agent, nil
+}
+
+func (c *Client) OpenTarget(ctx context.Context, agentID string) (core.OpenTarget, error) {
+	response, err := c.request(ctx, Request{
+		Command: CommandOpenTarget,
+		AgentID: agentID,
+	})
+	if err != nil {
+		return core.OpenTarget{}, err
+	}
+	if response.OpenTarget == nil {
+		return core.OpenTarget{}, fmt.Errorf("daemon response missing open target payload")
+	}
+	return *response.OpenTarget, nil
 }
 
 func (c *Client) ListAgents(ctx context.Context) ([]core.Agent, error) {
