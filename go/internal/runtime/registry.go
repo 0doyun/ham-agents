@@ -583,9 +583,8 @@ func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agen
 	}
 
 	if changed {
-		if err := r.store.SaveAgents(ctx, refreshed); err != nil {
-			return nil, nil, err
-		}
+		// Persistence is handled by applyObservedRefresh so read-triggered and explicit
+		// observed refreshes follow the same save-and-append boundary.
 	}
 
 	return refreshed, events, nil
