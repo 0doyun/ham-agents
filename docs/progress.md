@@ -449,3 +449,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: event-driven UI refresh baseline, richer attached cwd/activity metadata, stronger settings sections
+
+### 2026-03-25 (event-driven UI refresh baseline)
+- `MenuBarViewModel` 에 daemon `followEvents` 를 사용하는 background lane 을 추가해 polling 외에도 새 이벤트가 도착하면 즉시 refresh 를 트리거할 수 있게 했다.
+- 기존 polling loop 는 safety net 으로 유지하고, follow lane 은 latest event id 이후의 새 이벤트가 생겼을 때 summary/events reload 를 촉발하는 방식으로 추가했다.
+- Swift tests 로 follow lane 이 새 이벤트 도착 시 summary refresh 를 다시 수행하는지 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer attached cwd/activity metadata baseline, stronger settings sections, higher-fidelity event-driven UI updates

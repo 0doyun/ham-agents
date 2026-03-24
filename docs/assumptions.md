@@ -50,3 +50,4 @@
 - 2026-03-25: live event follow baseline uses daemon long-polling over the existing request/response socket (`events.follow`) rather than introducing a persistent streaming transport yet.
 - 2026-03-25: richer attached metadata sync baseline currently limits itself to session title and current-session marker from iTerm polling; cwd/activity heuristics remain future work even though the task label mentions broader metadata.
 - 2026-03-25: stronger settings sections baseline adds `integrations.iterm_enabled` as the next daemon-backed settings section and uses it to gate current iTerm UI affordances before attempting broader provider/transcript settings.
+- 2026-03-25: event-driven UI refresh baseline keeps the existing poll loop as a safety net and layers a separate `followEvents` trigger lane on top, rather than replacing polling outright in one slice.
