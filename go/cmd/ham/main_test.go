@@ -65,6 +65,40 @@ func TestParseStopInputRejectsMissingAgentID(t *testing.T) {
 	}
 }
 
+func TestParseLogsInputAcceptsAgentIDLimitAndJSON(t *testing.T) {
+	t.Parallel()
+
+	agentID, limit, asJSON, err := parseLogsInput([]string{"--json", "--limit", "7", "agent-1"})
+	if err != nil {
+		t.Fatalf("parse logs input: %v", err)
+	}
+	if agentID != "agent-1" {
+		t.Fatalf("expected agent-1, got %q", agentID)
+	}
+	if limit != 7 {
+		t.Fatalf("expected limit 7, got %d", limit)
+	}
+	if !asJSON {
+		t.Fatalf("expected json flag to be true")
+	}
+}
+
+func TestParseLogsInputRejectsMissingAgentID(t *testing.T) {
+	t.Parallel()
+
+	if _, _, _, err := parseLogsInput([]string{"--limit", "5"}); err == nil {
+		t.Fatalf("expected missing agent id to fail")
+	}
+}
+
+func TestParseLogsInputRejectsNonPositiveLimit(t *testing.T) {
+	t.Parallel()
+
+	if _, _, _, err := parseLogsInput([]string{"--limit", "0", "agent-1"}); err == nil {
+		t.Fatalf("expected zero limit to fail")
+	}
+}
+
 func TestChooseAttachableSessionReturnsOnlySessionWithoutPrompt(t *testing.T) {
 	t.Parallel()
 
@@ -113,6 +147,35 @@ func TestEventsAfterIDForDisplayFiltersOlderEvents(t *testing.T) {
 	}
 	if filtered[0].ID != "event-2" || filtered[1].ID != "event-3" {
 		t.Fatalf("unexpected filtered events %#v", filtered)
+	}
+}
+
+func TestEventsForAgentFiltersAndLimitsToMostRecentMatches(t *testing.T) {
+	t.Parallel()
+
+	filtered := eventsForAgent([]core.Event{
+		{ID: "event-1", AgentID: "agent-1"},
+		{ID: "event-2", AgentID: "agent-2"},
+		{ID: "event-3", AgentID: "agent-1"},
+		{ID: "event-4", AgentID: "agent-1"},
+	}, "agent-1", 2)
+
+	if len(filtered) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(filtered))
+	}
+	if filtered[0].ID != "event-3" || filtered[1].ID != "event-4" {
+		t.Fatalf("unexpected filtered events %#v", filtered)
+	}
+}
+
+func TestAgentLogFetchLimitHasFloor(t *testing.T) {
+	t.Parallel()
+
+	if limit := agentLogFetchLimit(2); limit != 100 {
+		t.Fatalf("expected floor 100, got %d", limit)
+	}
+	if limit := agentLogFetchLimit(15); limit != 150 {
+		t.Fatalf("expected scaled limit 150, got %d", limit)
 	}
 }
 

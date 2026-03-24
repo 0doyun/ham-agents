@@ -55,6 +55,8 @@ func run(args []string) error {
 		return runAsk(ctx, client, args[1:])
 	case "stop":
 		return runStop(ctx, client, args[1:])
+	case "logs":
+		return runLogs(ctx, client, args[1:])
 	case "settings":
 		return runSettings(ctx, client, args[1:])
 	case "list":
@@ -90,6 +92,7 @@ Usage:
   ham open <agent-id> [--json] [--print]
   ham ask <agent-id> <message>
   ham stop <agent-id> [--json]
+  ham logs <agent-id> [--json] [--limit N]
   ham settings [--json]
   ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--quiet-hours=true|false] [--quiet-start-hour=0-23] [--quiet-end-hour=0-23] [--preview-text=true|false]
   ham settings appearance [--theme=auto|day|night]
@@ -282,6 +285,20 @@ func runStop(ctx context.Context, client *ipc.Client, args []string) error {
 	}
 
 	return renderStopResult(os.Stdout, agentID, asJSON)
+}
+
+func runLogs(ctx context.Context, client *ipc.Client, args []string) error {
+	agentID, limit, asJSON, err := parseLogsInput(args)
+	if err != nil {
+		return err
+	}
+
+	events, err := client.Events(ctx, agentLogFetchLimit(limit))
+	if err != nil {
+		return err
+	}
+
+	return printEvents(os.Stdout, eventsForAgent(events, agentID, limit), asJSON)
 }
 
 func runSettings(ctx context.Context, client *ipc.Client, args []string) error {
@@ -788,6 +805,31 @@ func parseStopInput(args []string) (agentID string, asJSON bool, err error) {
 	return
 }
 
+func parseLogsInput(args []string) (agentID string, limit int, asJSON bool, err error) {
+	flags := flag.NewFlagSet("logs", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	asJSONFlag := flags.Bool("json", false, "emit JSON")
+	limitFlag := flags.Int("limit", 20, "maximum events to show")
+	if err = flags.Parse(args); err != nil {
+		return
+	}
+
+	remaining := flags.Args()
+	if len(remaining) != 1 {
+		err = fmt.Errorf("agent id is required")
+		return
+	}
+	if *limitFlag < 1 {
+		err = fmt.Errorf("limit must be at least 1")
+		return
+	}
+
+	agentID = remaining[0]
+	limit = *limitFlag
+	asJSON = *asJSONFlag
+	return
+}
+
 func parseBoolFlag(argument string, prefix string) (bool, error) {
 	value := strings.TrimPrefix(argument, prefix)
 	switch value {
@@ -844,6 +886,14 @@ func renderStopResult(out io.Writer, agentID string, asJSON bool) error {
 
 	_, err := fmt.Fprintf(out, "stopped tracking %s\n", agentID)
 	return err
+}
+
+func agentLogFetchLimit(limit int) int {
+	fetchLimit := limit * 10
+	if fetchLimit < 100 {
+		return 100
+	}
+	return fetchLimit
 }
 
 func renderAgents(out io.Writer, agents []core.Agent, asJSON bool) error {
@@ -1076,6 +1126,20 @@ func printEvents(out io.Writer, events []core.Event, asJSON bool) error {
 		}
 	}
 	return nil
+}
+
+func eventsForAgent(events []core.Event, agentID string, limit int) []core.Event {
+	filtered := make([]core.Event, 0, len(events))
+	for _, event := range events {
+		if event.AgentID != agentID {
+			continue
+		}
+		filtered = append(filtered, event)
+	}
+	if len(filtered) <= limit {
+		return filtered
+	}
+	return filtered[len(filtered)-limit:]
 }
 
 func eventsAfterIDForDisplay(events []core.Event, afterEventID string, limit int) []core.Event {

@@ -662,6 +662,17 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: broader operator-facing CLI scanability, richer lifecycle coverage, daemon-backed attention model
 
+### 2026-03-25 (CLI logs baseline)
+- CLI spec 에 맞춰 `ham logs <agent>` baseline 을 추가하고, 현재 daemon event log 를 agent id 기준으로 client-side filtering 해서 per-agent recent log view 를 제공하게 만들었다.
+- logs 는 human path 에서 기존 event row formatting 을 재사용하고, JSON path 에서는 existing newline-delimited event JSON contract 를 그대로 유지한다.
+- fetch 는 recent-window best-effort baseline 으로 시작해, requested limit 보다 넓은 recent event window 를 먼저 읽고 그 안에서 해당 agent event 만 tail-limit 하도록 정리했다.
+- Go tests 로 logs input parsing, per-agent filtering/tail limiting, fetch-window floor 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: broader operator-facing CLI scanability, richer lifecycle coverage, daemon-backed attention model
+
 ### 2026-03-25 (severity-aware feed ordering baseline)
 - recent event feed ordering 을 severity-first, recency-second 로 정리해 warning/positive/info 계열 event 가 작은 recent-event window 에서 더 빠르게 보이도록 만들었다.
 - `MenuBarViewModel.recentEvents` 가 `AgentEventPresenter` ordering helper 를 사용하도록 연결하고, Swift tests 로 warning event 가 informational row 앞에 오는 ordering 을 보호했다.
