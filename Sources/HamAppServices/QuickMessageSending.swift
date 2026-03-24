@@ -2,7 +2,13 @@ import Foundation
 import HamCore
 
 public protocol QuickMessageSending: Sendable {
-    func send(message: String, to agent: Agent)
+    func send(message: String, to agent: Agent) -> QuickMessageResult
+}
+
+public enum QuickMessageResult: Equatable, Sendable {
+    case delivered(String)
+    case handoff(String)
+    case failed(String)
 }
 
 public enum QuickMessagePlan: Equatable, Sendable {
@@ -29,8 +35,9 @@ public struct QuickMessagePlanner: Sendable {
 public struct NoopQuickMessageSender: QuickMessageSending {
     public init() {}
 
-    public func send(message: String, to agent: Agent) {
+    public func send(message: String, to agent: Agent) -> QuickMessageResult {
         _ = message
         _ = agent
+        return .failed("Quick message sender is unavailable.")
     }
 }
