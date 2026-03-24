@@ -396,6 +396,49 @@ func TestEventsReturnsMostRecentEntriesWithinLimit(t *testing.T) {
 	}
 }
 
+func TestFollowEventsReturnsEntriesAfterCursor(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	if _, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider:    "claude",
+		DisplayName: "alpha",
+		ProjectPath: "/tmp/project",
+	}); err != nil {
+		t.Fatalf("register managed alpha: %v", err)
+	}
+
+	initialEvents, err := registry.Events(ctx, 10)
+	if err != nil {
+		t.Fatalf("load initial events: %v", err)
+	}
+
+	if _, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider:    "claude",
+		DisplayName: "beta",
+		ProjectPath: "/tmp/project",
+	}); err != nil {
+		t.Fatalf("register managed beta: %v", err)
+	}
+
+	followed, err := registry.FollowEvents(ctx, initialEvents[len(initialEvents)-1].ID, 10, 0)
+	if err != nil {
+		t.Fatalf("follow events: %v", err)
+	}
+	if len(followed) != 1 {
+		t.Fatalf("expected 1 followed event, got %d", len(followed))
+	}
+	if followed[0].AgentID == initialEvents[len(initialEvents)-1].AgentID {
+		t.Fatalf("expected only newer event, got %#v", followed[0])
+	}
+}
+
 func TestUpdateNotificationPolicyPersistsChange(t *testing.T) {
 	t.Parallel()
 

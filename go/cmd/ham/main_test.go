@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
 )
@@ -70,5 +72,45 @@ func TestChooseAttachableSessionReadsNumericSelection(t *testing.T) {
 	}
 	if !strings.Contains(output.String(), "Select iTerm session") {
 		t.Fatalf("expected prompt output, got %q", output.String())
+	}
+}
+
+func TestEventsAfterIDForDisplayFiltersOlderEvents(t *testing.T) {
+	t.Parallel()
+
+	events := []core.Event{
+		{ID: "event-1"},
+		{ID: "event-2"},
+		{ID: "event-3"},
+	}
+
+	filtered := eventsAfterIDForDisplay(events, "event-1", 20)
+	if len(filtered) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(filtered))
+	}
+	if filtered[0].ID != "event-2" || filtered[1].ID != "event-3" {
+		t.Fatalf("unexpected filtered events %#v", filtered)
+	}
+}
+
+func TestPrintEventsWritesJSONLinesWhenRequested(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	events := []core.Event{
+		{
+			ID:         "event-1",
+			AgentID:    "agent-1",
+			Type:       core.EventTypeAgentRegistered,
+			Summary:    "Registered.",
+			OccurredAt: time.Unix(1, 0).UTC(),
+		},
+	}
+
+	if err := printEvents(&output, events, true); err != nil {
+		t.Fatalf("print events: %v", err)
+	}
+	if !strings.Contains(output.String(), `"id":"event-1"`) {
+		t.Fatalf("expected json line output, got %q", output.String())
 	}
 }

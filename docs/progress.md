@@ -416,3 +416,14 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: live event stream / follow baseline, richer attached metadata sync, stronger settings sections
+
+### 2026-03-25 (live event stream / follow baseline)
+- daemon/runtime 에 `events.follow` long-poll surface 를 추가해 마지막 event id 이후의 새 이벤트만 기다려 반환할 수 있게 만들었다.
+- CLI `ham events` 에 `--follow`, `--after-id`, `--wait-ms` 를 추가해 기존 snapshot 조회 외에 follow mode 로 새 이벤트를 계속 읽을 수 있게 했다.
+- Swift daemon client 도 same follow command 를 호출할 수 있도록 `followEvents(afterEventID:limit:waitMilliseconds:)` surface 를 추가하고, Swift tests 로 request encoding/round-trip 을 보호했다.
+- Go tests 로 follow-after-cursor behavior 와 CLI event formatting helper 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer attached metadata sync, stronger settings sections, higher-fidelity event-driven UI updates

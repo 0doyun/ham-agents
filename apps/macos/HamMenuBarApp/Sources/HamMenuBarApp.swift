@@ -540,6 +540,13 @@ private struct PreviewDaemonClient: HamDaemonClientProtocol {
         ]
     }
 
+    func followEvents(afterEventID: String, limit: Int, waitMilliseconds: Int) async throws -> [AgentEventPayload] {
+        _ = afterEventID
+        _ = limit
+        _ = waitMilliseconds
+        return []
+    }
+
     func fetchSettings() async throws -> DaemonSettingsPayload {
         DaemonSettingsPayload(
             notifications: DaemonNotificationSettingsPayload(

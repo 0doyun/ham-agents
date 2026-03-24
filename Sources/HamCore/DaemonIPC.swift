@@ -8,6 +8,7 @@ public enum DaemonCommand: String, Codable, Sendable {
     case listAgents = "agents.list"
     case status = "agents.status"
     case events = "events.list"
+    case followEvents = "events.follow"
     case setNotificationPolicy = "agents.set_notification_policy"
     case setRole = "agents.set_role"
     case removeAgent = "agents.remove"
@@ -44,6 +45,8 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
     public var projectPath: String?
     public var role: String?
     public var limit: Int?
+    public var afterEventID: String?
+    public var waitMillis: Int?
     public var policy: String?
     public var settings: DaemonSettingsPayload?
 
@@ -55,6 +58,8 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         projectPath: String? = nil,
         role: String? = nil,
         limit: Int? = nil,
+        afterEventID: String? = nil,
+        waitMillis: Int? = nil,
         policy: String? = nil,
         settings: DaemonSettingsPayload? = nil
     ) {
@@ -65,6 +70,8 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         self.projectPath = projectPath
         self.role = role
         self.limit = limit
+        self.afterEventID = afterEventID
+        self.waitMillis = waitMillis
         self.policy = policy
         self.settings = settings
     }
@@ -77,6 +84,8 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         case projectPath = "project_path"
         case role
         case limit
+        case afterEventID = "after_event_id"
+        case waitMillis = "wait_millis"
         case policy
         case settings
     }

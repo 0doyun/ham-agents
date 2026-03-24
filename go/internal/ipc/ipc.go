@@ -28,6 +28,7 @@ const (
 	CommandListAgents            Command = "agents.list"
 	CommandStatus                Command = "agents.status"
 	CommandEvents                Command = "events.list"
+	CommandFollowEvents          Command = "events.follow"
 	CommandSetNotificationPolicy Command = "agents.set_notification_policy"
 	CommandSetRole               Command = "agents.set_role"
 	CommandRemoveAgent           Command = "agents.remove"
@@ -36,16 +37,18 @@ const (
 )
 
 type Request struct {
-	Command     Command        `json:"command"`
-	AgentID     string         `json:"agent_id,omitempty"`
-	Provider    string         `json:"provider,omitempty"`
-	DisplayName string         `json:"display_name,omitempty"`
-	ProjectPath string         `json:"project_path,omitempty"`
-	Role        string         `json:"role,omitempty"`
-	SessionRef  string         `json:"session_ref,omitempty"`
-	Limit       int            `json:"limit,omitempty"`
-	Policy      string         `json:"policy,omitempty"`
-	Settings    *core.Settings `json:"settings,omitempty"`
+	Command      Command        `json:"command"`
+	AgentID      string         `json:"agent_id,omitempty"`
+	Provider     string         `json:"provider,omitempty"`
+	DisplayName  string         `json:"display_name,omitempty"`
+	ProjectPath  string         `json:"project_path,omitempty"`
+	Role         string         `json:"role,omitempty"`
+	SessionRef   string         `json:"session_ref,omitempty"`
+	Limit        int            `json:"limit,omitempty"`
+	AfterEventID string         `json:"after_event_id,omitempty"`
+	WaitMillis   int            `json:"wait_millis,omitempty"`
+	Policy       string         `json:"policy,omitempty"`
+	Settings     *core.Settings `json:"settings,omitempty"`
 }
 
 type Response struct {
@@ -212,6 +215,19 @@ func (c *Client) Status(ctx context.Context) (core.RuntimeSnapshot, error) {
 
 func (c *Client) Events(ctx context.Context, limit int) ([]core.Event, error) {
 	response, err := c.request(ctx, Request{Command: CommandEvents, Limit: limit})
+	if err != nil {
+		return nil, err
+	}
+	return response.Events, nil
+}
+
+func (c *Client) FollowEvents(ctx context.Context, afterEventID string, limit int, wait time.Duration) ([]core.Event, error) {
+	response, err := c.request(ctx, Request{
+		Command:      CommandFollowEvents,
+		AfterEventID: afterEventID,
+		Limit:        limit,
+		WaitMillis:   int(wait / time.Millisecond),
+	})
 	if err != nil {
 		return nil, err
 	}
