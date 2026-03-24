@@ -314,6 +314,26 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: broader backend-persisted settings state, richer iTerm session identification/send acknowledgement, OS-level observed watching
 
+### 2026-03-25 (backend settings persistence baseline)
+- `go/internal/store/settings.go` 와 `runtime.SettingsService` 를 추가해 backend settings document 를 JSON 파일로 읽고 쓰는 baseline 을 만들었다.
+- daemon IPC 와 `ham settings --json` / `ham settings notifications ...` CLI path 를 추가해 settings 조회/갱신의 첫 automation surface 를 열었다.
+- Go tests 로 settings store/runtime/IPC persistence 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: broader settings schema, richer attached/iTerm session identification/send acknowledgement, OS-level observed watching
+
+### 2026-03-25 (settings UI integration baseline)
+- Swift daemon payload/client 에 settings fetch/update path 를 추가하고, `MenuBarViewModel` 이 notification settings document 를 함께 읽고 수정할 수 있게 했다.
+- menu bar popover에 notification settings toggle section 을 추가해 Done/Error/Waiting Input/Preview Text 토글을 backend-persisted settings 문서와 round-trip 하도록 연결했다.
+- Swift tests 로 settings fetch/update round-trip 이 published state 에 반영되는지 보호했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: broader settings schema, richer attached/iTerm session identification/send acknowledgement, OS-level observed watching
+
 ### 2026-03-25 (agent role rename baseline)
 - Go runtime/IPC/client 에 role update path 를 추가해 selected agent role 을 daemon-backed source of truth 쪽에서 갱신할 수 있게 했다.
 - popover detail pane에 role draft field 와 `Save` action 을 추가하고, Swift view model 이 daemon mutation 결과로 local agent list 를 갱신하도록 연결했다.

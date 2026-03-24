@@ -10,6 +10,8 @@ public enum DaemonCommand: String, Codable, Sendable {
     case setNotificationPolicy = "agents.set_notification_policy"
     case setRole = "agents.set_role"
     case removeAgent = "agents.remove"
+    case getSettings = "settings.get"
+    case updateSettings = "settings.update"
 }
 
 public struct DaemonRequest: Codable, Equatable, Sendable {
@@ -21,6 +23,7 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
     public var role: String?
     public var limit: Int?
     public var policy: String?
+    public var settings: DaemonSettingsPayload?
 
     public init(
         command: DaemonCommand,
@@ -30,7 +33,8 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         projectPath: String? = nil,
         role: String? = nil,
         limit: Int? = nil,
-        policy: String? = nil
+        policy: String? = nil,
+        settings: DaemonSettingsPayload? = nil
     ) {
         self.command = command
         self.agentID = agentID
@@ -40,6 +44,7 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         self.role = role
         self.limit = limit
         self.policy = policy
+        self.settings = settings
     }
 
     enum CodingKeys: String, CodingKey {
@@ -51,6 +56,39 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         case role
         case limit
         case policy
+        case settings
+    }
+}
+
+public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
+    public var done: Bool
+    public var error: Bool
+    public var waitingInput: Bool
+    public var quietHoursEnabled: Bool
+    public var previewText: Bool
+
+    public init(done: Bool, error: Bool, waitingInput: Bool, quietHoursEnabled: Bool, previewText: Bool) {
+        self.done = done
+        self.error = error
+        self.waitingInput = waitingInput
+        self.quietHoursEnabled = quietHoursEnabled
+        self.previewText = previewText
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case done
+        case error
+        case waitingInput = "waiting_input"
+        case quietHoursEnabled = "quiet_hours_enabled"
+        case previewText = "preview_text"
+    }
+}
+
+public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
+    public var notifications: DaemonNotificationSettingsPayload
+
+    public init(notifications: DaemonNotificationSettingsPayload) {
+        self.notifications = notifications
     }
 }
 
@@ -85,6 +123,7 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
     public var agents: [Agent]?
     public var events: [AgentEventPayload]?
     public var snapshot: DaemonRuntimeSnapshotPayload?
+    public var settings: DaemonSettingsPayload?
     public var error: String?
 
     public init(
@@ -92,12 +131,14 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
         agents: [Agent]? = nil,
         events: [AgentEventPayload]? = nil,
         snapshot: DaemonRuntimeSnapshotPayload? = nil,
+        settings: DaemonSettingsPayload? = nil,
         error: String? = nil
     ) {
         self.agent = agent
         self.agents = agents
         self.events = events
         self.snapshot = snapshot
+        self.settings = settings
         self.error = error
     }
 }

@@ -12,6 +12,15 @@ public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
     @Published public private(set) var quickMessageFeedback: String?
     @Published public var roleDraft = ""
+    @Published public private(set) var settings = DaemonSettingsPayload(
+        notifications: DaemonNotificationSettingsPayload(
+            done: true,
+            error: true,
+            waitingInput: true,
+            quietHoursEnabled: false,
+            previewText: false
+        )
+    )
 
     private let client: HamDaemonClientProtocol
     private let summaryService: MenuBarSummaryService
@@ -129,6 +138,26 @@ public final class MenuBarViewModel: ObservableObject {
         notificationPermissionStatus = await notificationPermissionController.requestPermission()
     }
 
+    public func updateNotificationSetting(
+        done: Bool? = nil,
+        error: Bool? = nil,
+        waitingInput: Bool? = nil,
+        previewText: Bool? = nil
+    ) async {
+        var updated = settings
+        if let done { updated.notifications.done = done }
+        if let error { updated.notifications.error = error }
+        if let waitingInput { updated.notifications.waitingInput = waitingInput }
+        if let previewText { updated.notifications.previewText = previewText }
+
+        do {
+            settings = try await client.updateSettings(updated)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     public func saveRole(forAgentID id: Agent.ID?) async {
         guard let id else {
             errorMessage = "No agent selected."
@@ -202,14 +231,17 @@ public final class MenuBarViewModel: ObservableObject {
         do {
             async let loadedSummary = summaryService.refresh(eventLimit: eventLimit)
             async let loadedAgents = client.fetchAgents()
+            async let loadedSettings = client.fetchSettings()
             async let permissionStatus = notificationPermissionController.currentPermissionStatus()
 
             let summaryValue = try await loadedSummary
             let loadedAgentsValue = try await loadedAgents
+            let loadedSettingsValue = try await loadedSettings
             let candidates = notificationEngine.candidates(previous: previousAgents, current: loadedAgentsValue)
 
             summary = summaryValue
             agents = loadedAgentsValue
+            settings = loadedSettingsValue
             notificationPermissionStatus = await permissionStatus
             if roleDraft.isEmpty, let firstAgent = agents.first {
                 roleDraft = firstAgent.role ?? ""

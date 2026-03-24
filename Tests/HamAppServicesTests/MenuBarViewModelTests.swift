@@ -298,6 +298,36 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.notificationPermissionStatus, .authorized)
     }
 
+    func testUpdateNotificationSettingsChangesPublishedSettings() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateNotificationSetting(done: false, previewText: true)
+
+        XCTAssertFalse(viewModel.settings.notifications.done)
+        XCTAssertTrue(viewModel.settings.notifications.previewText)
+    }
+
     func testSaveRoleUpdatesSelectedAgent() async {
         let agent = Agent(
             id: "agent-1",
@@ -524,6 +554,22 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
         return agent
     }
 
+    func fetchSettings() async throws -> DaemonSettingsPayload {
+        DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: true,
+                error: true,
+                waitingInput: true,
+                quietHoursEnabled: false,
+                previewText: false
+            )
+        )
+    }
+
+    func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {
+        settings
+    }
+
     func updateRole(agentID: String, role: String) async throws -> Agent {
         var agent = agents.first { $0.id == agentID } ?? snapshot.agents.first!
         agent.role = role
@@ -545,6 +591,15 @@ private struct FailingClient: HamDaemonClientProtocol, Sendable {
     }
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
+        throw HamDaemonClientError.transportFailed("unavailable")
+    }
+
+    func fetchSettings() async throws -> DaemonSettingsPayload {
+        throw HamDaemonClientError.transportFailed("unavailable")
+    }
+
+    func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {
+        _ = settings
         throw HamDaemonClientError.transportFailed("unavailable")
     }
 
@@ -591,6 +646,22 @@ private actor CyclingClient: HamDaemonClientProtocol {
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
         []
+    }
+
+    func fetchSettings() async throws -> DaemonSettingsPayload {
+        DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: true,
+                error: true,
+                waitingInput: true,
+                quietHoursEnabled: false,
+                previewText: false
+            )
+        )
+    }
+
+    func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {
+        settings
     }
 
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
@@ -657,6 +728,22 @@ private actor TransitioningClient: HamDaemonClientProtocol {
 
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
         []
+    }
+
+    func fetchSettings() async throws -> DaemonSettingsPayload {
+        DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: true,
+                error: true,
+                waitingInput: true,
+                quietHoursEnabled: false,
+                previewText: false
+            )
+        )
+    }
+
+    func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {
+        settings
     }
 
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {

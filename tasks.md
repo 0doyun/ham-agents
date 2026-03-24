@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **broader backend-persisted settings state** 다.
+현재 활성 범위는 **settings UI integration baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -69,16 +69,17 @@
 - [x] observed source contents를 읽어 status/confidence를 갱신하는 baseline 추가
 - [x] daemon serve 중 observed source polling 추가
 - [x] `ham open <agent>` baseline 추가
-- [ ] backend settings state baseline 추가
+- [x] backend settings state baseline 추가
+- [x] Swift menu bar에서 settings를 읽고 일부 토글을 수정할 수 있게 연결
 
 ### Current Slice Checklist
 
-- [ ] settings store schema 추가
-- [ ] daemon/runtime get/update settings path 추가
-- [ ] CLI `ham settings --json` baseline 추가
-- [ ] Go tests로 settings persistence 보호
+- [x] Swift daemon settings payload/client 추가
+- [x] MenuBarViewModel settings fetch/update 추가
+- [x] popover notifications settings UI 추가
+- [x] Swift tests로 settings round-trip 보호
 - [x] Swift bootstrap build/test green 유지
-- [ ] Go tests green 유지
+- [x] Go tests green 유지
 
 ## Out of Scope For Current Slice
 

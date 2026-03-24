@@ -90,6 +90,22 @@ private struct MenuBarContentView: View {
                     }
                 )
 
+                NotificationSettingsSection(
+                    settings: viewModel.settings.notifications,
+                    updateDone: { value in
+                        Task { await viewModel.updateNotificationSetting(done: value) }
+                    },
+                    updateError: { value in
+                        Task { await viewModel.updateNotificationSetting(error: value) }
+                    },
+                    updateWaiting: { value in
+                        Task { await viewModel.updateNotificationSetting(waitingInput: value) }
+                    },
+                    updatePreviewText: { value in
+                        Task { await viewModel.updateNotificationSetting(previewText: value) }
+                    }
+                )
+
                 Text("Agents")
                     .font(.subheadline.weight(.semibold))
 
@@ -164,6 +180,27 @@ private struct MenuBarContentView: View {
             }
             viewModel.setRoleDraft(from: selectedAgentID)
         }
+    }
+}
+
+private struct NotificationSettingsSection: View {
+    let settings: DaemonNotificationSettingsPayload
+    let updateDone: (Bool) -> Void
+    let updateError: (Bool) -> Void
+    let updateWaiting: (Bool) -> Void
+    let updatePreviewText: (Bool) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Notification Settings")
+                .font(.caption.weight(.semibold))
+
+            Toggle("Done", isOn: Binding(get: { settings.done }, set: updateDone))
+            Toggle("Error", isOn: Binding(get: { settings.error }, set: updateError))
+            Toggle("Waiting Input", isOn: Binding(get: { settings.waitingInput }, set: updateWaiting))
+            Toggle("Preview Text", isOn: Binding(get: { settings.previewText }, set: updatePreviewText))
+        }
+        .toggleStyle(.checkbox)
     }
 }
 
@@ -372,6 +409,22 @@ private struct PreviewDaemonClient: HamDaemonClientProtocol {
                 occurredAt: .now
             )
         ]
+    }
+
+    func fetchSettings() async throws -> DaemonSettingsPayload {
+        DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: true,
+                error: true,
+                waitingInput: true,
+                quietHoursEnabled: false,
+                previewText: false
+            )
+        )
+    }
+
+    func updateSettings(_ settings: DaemonSettingsPayload) async throws -> DaemonSettingsPayload {
+        settings
     }
 
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
