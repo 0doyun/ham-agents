@@ -132,3 +132,13 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: actual macOS notification delivery sink, popover agent detail actions, live event stream/follow integration
+
+### 2026-03-24 (macOS notification delivery sink)
+- `HamNotifications` 에 `UserNotificationCentering`, `LiveUserNotificationCenter`, `UserNotificationSink` 를 추가해 notification candidate를 실제 macOS notification request로 보낼 수 있게 했다.
+- sink는 첫 전송 시 권한 요청을 수행하고, 승인된 경우 `done` / `waiting_input` / `error` 후보를 `UNNotificationRequest` 로 변환해 전달한다.
+- menu bar app이 이제 noop sink 대신 실제 `UserNotificationSink` 를 주입받아 polling 기반 transition detection과 notification delivery를 바로 연결한다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: richer notification permission UX, popover agent detail actions, live event stream/follow integration

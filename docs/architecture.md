@@ -132,3 +132,4 @@
 - `apps/macos/HamMenuBarApp/Sources` now contains a compile-tested menu bar bootstrap that renders summary badges and a tracked-agent list using the shared Swift service layer.
 - `MenuBarViewModel` now owns initial refresh + polling/retry behavior so menu bar state can track daemon changes without waiting for popover interaction.
 - `HamNotifications` now owns transition-based notification candidate generation and a sink boundary so later macOS notification delivery can attach without changing polling logic.
+- `HamNotifications` now also includes a `UserNotifications`-backed sink so the current polling/menu bar flow can emit real macOS notification requests.

@@ -1,6 +1,7 @@
 import SwiftUI
 import HamAppServices
 import HamCore
+import HamNotifications
 
 @main
 struct HamMenuBarApp: App {
@@ -26,7 +27,10 @@ struct HamMenuBarApp: App {
         } else {
             client = PreviewDaemonClient()
         }
-        let viewModel = MenuBarViewModel(client: client)
+        let viewModel = MenuBarViewModel(
+            client: client,
+            notificationSink: UserNotificationSink()
+        )
         viewModel.start()
         return viewModel
     }

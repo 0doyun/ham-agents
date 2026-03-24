@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **notification trigger foundation from polled status transitions** 다.
+현재 활성 범위는 **macOS notification delivery sink + baseline permission request** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -50,13 +50,14 @@
 - [x] Swift menu bar executable target과 baseline status surface 추가
 - [x] menu bar 상태 surface가 launch 이후에도 daemon 상태를 주기적으로 따라가게 만들기
 - [x] status transition 기반 notification trigger foundation 추가
+- [x] actual macOS notification delivery sink 연결
 
 ### Current Slice Checklist
 
-- [x] done / waiting_input / error transition detection 추가
-- [x] notification sink boundary 추가
-- [x] menu bar polling layer와 notification engine 연결
-- [x] Swift tests로 transition/dedupe behavior 보호
+- [x] UserNotifications-backed sink 추가
+- [x] 최초 권한 요청 baseline 추가
+- [x] menu bar app에 실제 sink 연결
+- [x] Swift tests로 notification request behavior 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

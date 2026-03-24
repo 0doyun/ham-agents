@@ -59,7 +59,7 @@ let package = Package(
         ),
         .executableTarget(
             name: "HamMenuBarApp",
-            dependencies: ["HamAppServices", "HamCore"],
+            dependencies: ["HamAppServices", "HamCore", "HamNotifications"],
             path: "apps/macos/HamMenuBarApp/Sources"
         ),
         .testTarget(
