@@ -334,6 +334,16 @@
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: broader settings schema, richer attached/iTerm session identification/send acknowledgement, OS-level observed watching
 
+### 2026-03-25 (notification settings enforcement baseline)
+- `MenuBarViewModel` notification filtering 이 backend settings document 를 읽어 done/error/waiting_input 토글을 실제 delivery behavior 에 반영하도록 연결했다.
+- preview text 가 꺼져 있을 때 notification body 를 최소 문구로 마스킹하고, quiet hours enabled 가 켜져 있으면 current baseline 에서는 모든 notification candidate 를 suppress 하도록 만들었다.
+- Swift tests 로 done suppression, preview-text masking, quiet-hours suppression behavior 를 고정했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: richer quiet-hours schema, broader settings sections, richer attached/iTerm session identification/send acknowledgement
+
 ### 2026-03-25 (agent role rename baseline)
 - Go runtime/IPC/client 에 role update path 를 추가해 selected agent role 을 daemon-backed source of truth 쪽에서 갱신할 수 있게 했다.
 - popover detail pane에 role draft field 와 `Save` action 을 추가하고, Swift view model 이 daemon mutation 결과로 local agent list 를 갱신하도록 연결했다.

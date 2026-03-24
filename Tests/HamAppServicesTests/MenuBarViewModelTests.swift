@@ -328,6 +328,35 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.settings.notifications.previewText)
     }
 
+    func testUpdateNotificationSettingsCanToggleQuietHours() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateNotificationSetting(quietHoursEnabled: true)
+
+        XCTAssertTrue(viewModel.settings.notifications.quietHoursEnabled)
+    }
+
     func testSaveRoleUpdatesSelectedAgent() async {
         let agent = Agent(
             id: "agent-1",
@@ -616,6 +645,49 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.refresh()
 
         XCTAssertEqual(sink.candidates.first?.body, "Open ham-menubar for details.")
+    }
+
+    func testQuietHoursSuppressAllNotificationCandidates() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .error,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2),
+            lastUserVisibleSummary: "Build failed."
+        )
+        let settings = DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: true,
+                error: true,
+                waitingInput: true,
+                quietHoursEnabled: true,
+                previewText: true
+            )
+        )
+        let client = TransitioningClient(initialAgents: [previous], nextAgents: [current], settings: settings)
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(client: client, notificationSink: sink)
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertTrue(sink.candidates.isEmpty)
     }
 }
 

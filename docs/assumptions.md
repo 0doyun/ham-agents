@@ -41,3 +41,4 @@
 - 2026-03-25: observed polling baseline은 background ticker 로 source를 다시 읽는 수준에서 시작한다. OS-level watch 서비스는 later slice에서 붙인다.
 - 2026-03-25: `ham open` baseline은 daemon이 계산한 open target 을 CLI가 그대로 소비하는 방식으로 시작한다. richer platform-specific focus/open behavior는 later integration slices에서 확장한다.
 - 2026-03-25: first Swift settings integration only exposes notification toggles from the backend settings document; broader settings sections remain later slices.
+- 2026-03-25: quiet hours enforcement baseline currently treats `quiet_hours_enabled` as a global notification suppressor until a richer time-window schema exists.

@@ -109,3 +109,4 @@ The current `ham-menubar` baseline:
 - keeps observed-source status fresher while `hamd` is serving by polling observed paths in the background
 - resolves open targets for agents through the daemon and exposes that path via `ham open`
 - reads and updates a minimal notification settings document from the popover
+- enforces notification toggles and preview-text masking from that backend settings document

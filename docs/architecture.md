@@ -148,5 +148,6 @@
 - Quick-message result feedback currently stays in the Swift view-model layer so the popover can surface delivery vs fallback outcomes without requiring backend acknowledgements yet.
 - Selected-agent role editing now uses the same daemon mutation pattern as notification policy changes so role state remains backend-backed rather than Swift-local.
 - Stop-tracking now also uses a daemon mutation path, keeping agent removal authoritative in the backend rather than deleting rows only in Swift UI state.
+- Notification candidate dispatch now also reads the backend settings document so stored toggles and preview-text policy affect real delivery behavior.
 - Swift menu bar settings toggles now round-trip through the daemon-backed settings document instead of living only in UI state.
 - Mode and confidence are now surfaced directly in the Swift popover so the UI can start honoring the product rule that tracking certainty must be visible, even before attached/observed flows are fully implemented.
