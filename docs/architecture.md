@@ -130,3 +130,4 @@
 - `go/cmd/hamd` serves the runtime over the socket in normal mode and still supports `serve --once` / `snapshot` bootstrap inspection commands.
 - `Sources/HamAppServices` now gives Swift a matching daemon request/response contract, Unix socket transport, and summary service for future menu bar surfaces.
 - `apps/macos/HamMenuBarApp/Sources` now contains a compile-tested menu bar bootstrap that renders summary badges and a tracked-agent list using the shared Swift service layer.
+- `MenuBarViewModel` now owns initial refresh + polling/retry behavior so menu bar state can track daemon changes without waiting for popover interaction.

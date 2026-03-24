@@ -84,3 +84,8 @@ Swift menu bar prep currently lives in `HamAppServices`, which provides:
 - a Unix socket transport for `hamd`
 - a summary service that can turn snapshot + events into menu bar counts/feed data
 - a menu bar view model used by the baseline `ham-menubar` executable target
+
+The current `ham-menubar` baseline:
+- starts an initial refresh on launch
+- polls daemon state on an interval through the shared view model
+- supports manual refresh from the popover
