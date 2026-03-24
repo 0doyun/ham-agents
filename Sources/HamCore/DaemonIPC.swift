@@ -5,39 +5,48 @@ public enum DaemonCommand: String, Codable, Sendable {
     case listAgents = "agents.list"
     case status = "agents.status"
     case events = "events.list"
+    case setNotificationPolicy = "agents.set_notification_policy"
 }
 
 public struct DaemonRequest: Codable, Equatable, Sendable {
     public var command: DaemonCommand
+    public var agentID: String?
     public var provider: String?
     public var displayName: String?
     public var projectPath: String?
     public var role: String?
     public var limit: Int?
+    public var policy: String?
 
     public init(
         command: DaemonCommand,
+        agentID: String? = nil,
         provider: String? = nil,
         displayName: String? = nil,
         projectPath: String? = nil,
         role: String? = nil,
-        limit: Int? = nil
+        limit: Int? = nil,
+        policy: String? = nil
     ) {
         self.command = command
+        self.agentID = agentID
         self.provider = provider
         self.displayName = displayName
         self.projectPath = projectPath
         self.role = role
         self.limit = limit
+        self.policy = policy
     }
 
     enum CodingKeys: String, CodingKey {
         case command
+        case agentID = "agent_id"
         case provider
         case displayName = "display_name"
         case projectPath = "project_path"
         case role
         case limit
+        case policy
     }
 }
 

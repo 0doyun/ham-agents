@@ -141,3 +141,39 @@ func TestEventsReturnsMostRecentEntriesWithinLimit(t *testing.T) {
 		t.Fatalf("unexpected event type %q", events[0].Type)
 	}
 }
+
+func TestUpdateNotificationPolicyPersistsChange(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider:    "claude",
+		DisplayName: "builder",
+		ProjectPath: "/tmp/project",
+	})
+	if err != nil {
+		t.Fatalf("register managed: %v", err)
+	}
+
+	updated, err := registry.UpdateNotificationPolicy(ctx, agent.ID, core.NotificationPolicyMuted)
+	if err != nil {
+		t.Fatalf("update policy: %v", err)
+	}
+	if updated.NotificationPolicy != core.NotificationPolicyMuted {
+		t.Fatalf("expected muted policy, got %q", updated.NotificationPolicy)
+	}
+
+	listed, err := registry.List(ctx)
+	if err != nil {
+		t.Fatalf("list agents: %v", err)
+	}
+	if listed[0].NotificationPolicy != core.NotificationPolicyMuted {
+		t.Fatalf("expected persisted muted policy, got %q", listed[0].NotificationPolicy)
+	}
+}

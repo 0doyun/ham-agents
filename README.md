@@ -98,3 +98,4 @@ The current `ham-menubar` baseline:
 - lets the user pause/resume notifications per selected agent inside the popover
 - includes a quick-message field that prefers iTerm write automation and falls back to clipboard/session handoff
 - shows quick-message result feedback so fallback/error behavior is visible instead of silent
+- persists notification pause/resume through the daemon so mute state survives refreshes instead of living only in Swift UI memory

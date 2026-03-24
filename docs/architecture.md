@@ -137,6 +137,6 @@
 - Baseline popover actions currently start with project-folder opening via an injected opener boundary so later iTerm/session actions can follow the same pattern.
 - Notification permission state is now exposed back into the Swift view-model layer so the popover can surface permission UX without duplicating delivery logic.
 - Session opening now uses a small planning layer: if daemon data provides a URL-shaped `sessionRef`, Swift treats it as the preferred focus target; otherwise it falls back to workspace opening behavior.
-- Per-agent notification pause/resume currently lives as a local Swift override in the menu bar layer so the baseline UX can suppress noisy transitions before backend settings persistence exists.
+- Per-agent notification pause/resume now goes through daemon IPC and file-backed agent persistence so mute state survives refreshes and remains the backend source of truth.
 - Quick-message UI now routes through a dedicated sender boundary, with the current app-edge implementation preferring iTerm write automation and falling back to clipboard + session opening.
 - Quick-message result feedback currently stays in the Swift view-model layer so the popover can surface delivery vs fallback outcomes without requiring backend acknowledgements yet.

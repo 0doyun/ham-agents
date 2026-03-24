@@ -33,6 +33,7 @@ public protocol HamDaemonClientProtocol: Sendable {
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload
     func fetchAgents() async throws -> [Agent]
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload]
+    func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent
 }
 
 public struct HamMenuBarSummary: Equatable, Sendable {
@@ -92,6 +93,19 @@ public final class HamDaemonClient: HamDaemonClientProtocol, @unchecked Sendable
             throw HamDaemonClientError.server(error)
         }
         return response.events ?? []
+    }
+
+    public func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
+        let response = try await transport.send(
+            .init(command: .setNotificationPolicy, agentID: agentID, policy: policy.rawValue)
+        )
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
+        guard let agent = response.agent else {
+            throw HamDaemonClientError.missingPayload("agent")
+        }
+        return agent
     }
 }
 
