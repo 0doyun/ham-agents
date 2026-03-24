@@ -84,6 +84,13 @@ type OpenTarget struct {
 	SessionID   string         `json:"session_id,omitempty"`
 }
 
+type AttachableSession struct {
+	ID         string `json:"id"`
+	Title      string `json:"title"`
+	SessionRef string `json:"session_ref"`
+	IsActive   bool   `json:"is_active"`
+}
+
 func (s RuntimeSnapshot) TotalCount() int {
 	return len(s.Agents)
 }

@@ -7,6 +7,7 @@ import HamNotifications
 public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var summary: HamMenuBarSummary?
     @Published public private(set) var agents: [Agent] = []
+    @Published public private(set) var attachableSessions: [DaemonAttachableSessionPayload] = []
     @Published public private(set) var isRefreshing = false
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
@@ -251,6 +252,7 @@ public final class MenuBarViewModel: ObservableObject {
             let summaryValue = try await loadedSummary
             let loadedAgentsValue = try await loadedAgents
             let loadedSettingsValue = try await loadedSettings
+            let loadedAttachableSessionsValue = (try? await client.fetchAttachableSessions()) ?? []
             let candidates = filteredNotificationCandidates(
                 notificationEngine.candidates(previous: previousAgents, current: loadedAgentsValue),
                 settings: loadedSettingsValue
@@ -258,6 +260,7 @@ public final class MenuBarViewModel: ObservableObject {
 
             summary = summaryValue
             agents = loadedAgentsValue
+            attachableSessions = loadedAttachableSessionsValue
             settings = loadedSettingsValue
             notificationPermissionStatus = await permissionStatus
             if roleDraft.isEmpty, let firstAgent = agents.first {

@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **attach picker / iTerm session listing baseline** 다.
+현재 활성 범위는 **attached session termination detection baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -76,7 +76,8 @@
 - [x] daemon-backed `ham ask <agent> "..."` baseline 추가
 - [x] quiet hours 시간대 범위를 저장/적용하는 baseline 추가
 - [x] richer attached/iTerm session identification baseline 추가
-- [ ] attach picker / iTerm session listing baseline 추가
+- [x] attach picker / iTerm session listing baseline 추가
+- [ ] attached session termination detection baseline 추가
 
 ### Current Slice Checklist
 
@@ -94,9 +95,12 @@
 - [x] daemon/open-target path 에 richer session identification data 추가
 - [x] open/ask path 가 richer session identification 을 재사용하게 정리
 - [x] Go/Swift tests로 richer session identification behavior 보호
-- [ ] iTerm session listing adapter baseline 추가
-- [ ] attach 가능한 session list surface 를 CLI/UI 쪽에 노출
-- [ ] Go/Swift tests로 attach picker/listing behavior 보호
+- [x] iTerm session listing adapter baseline 추가
+- [x] attach 가능한 session list surface 를 CLI/UI 쪽에 노출
+- [x] Go/Swift tests로 attach picker/listing behavior 보호
+- [ ] attached session disconnect/termination heuristic 추가
+- [ ] daemon polling 또는 refresh path 에 disconnect detection 연결
+- [ ] Go/Swift tests로 attached disconnect behavior 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

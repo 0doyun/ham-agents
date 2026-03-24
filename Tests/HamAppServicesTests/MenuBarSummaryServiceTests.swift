@@ -86,6 +86,10 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
         snapshot.agents
     }
 
+    func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] {
+        []
+    }
+
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
         requestedEventLimit = limit
         return events

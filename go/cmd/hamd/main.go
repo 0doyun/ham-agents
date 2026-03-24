@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/ham-agents/ham-agents/go/internal/adapters"
 	"github.com/ham-agents/ham-agents/go/internal/ipc"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
 	"github.com/ham-agents/ham-agents/go/internal/store"
@@ -43,6 +44,7 @@ func run(args []string) error {
 		store.NewFileEventStore(eventPath),
 	)
 	settingsService := runtime.NewSettingsService(store.NewFileSettingsStore(settingsPath))
+	itermAdapter := adapters.NewIterm2Adapter(nil)
 
 	command := "serve"
 	if len(args) > 0 {
@@ -67,7 +69,7 @@ func run(args []string) error {
 			return nil
 		}
 
-		server := ipc.NewServer(ipcConfig.SocketPath, registry, settingsService)
+		server := ipc.NewServer(ipcConfig.SocketPath, registry, settingsService, itermAdapter)
 		go pollObserved(ctx, registry, 2*time.Second)
 		fmt.Printf("hamd serving on %s\n", ipcConfig.SocketPath)
 		return server.Serve(ctx)

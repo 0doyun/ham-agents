@@ -13,19 +13,25 @@ import (
 	hamruntime "github.com/ham-agents/ham-agents/go/internal/runtime"
 )
 
+type SessionLister interface {
+	ListSessions() ([]core.AttachableSession, error)
+}
+
 type Server struct {
-	socketPath string
-	registry   *hamruntime.Registry
-	settings   *hamruntime.SettingsService
+	socketPath    string
+	registry      *hamruntime.Registry
+	settings      *hamruntime.SettingsService
+	sessionLister SessionLister
 
 	listener net.Listener
 }
 
-func NewServer(socketPath string, registry *hamruntime.Registry, settings *hamruntime.SettingsService) *Server {
+func NewServer(socketPath string, registry *hamruntime.Registry, settings *hamruntime.SettingsService, sessionLister SessionLister) *Server {
 	return &Server{
-		socketPath: socketPath,
-		registry:   registry,
-		settings:   settings,
+		socketPath:    socketPath,
+		registry:      registry,
+		settings:      settings,
+		sessionLister: sessionLister,
 	}
 }
 
@@ -144,6 +150,15 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{OpenTarget: &target}, nil
+	case CommandListItermSessions:
+		if s.sessionLister == nil {
+			return Response{AttachableSessions: []core.AttachableSession{}}, nil
+		}
+		sessions, err := s.sessionLister.ListSessions()
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{AttachableSessions: sessions}, nil
 	case CommandListAgents:
 		agents, err := s.registry.List(ctx)
 		if err != nil {

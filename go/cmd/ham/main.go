@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strconv"
@@ -79,6 +81,8 @@ Usage:
   ham help
   ham run <provider> [name] [--project path] [--role role]
   ham attach <session-ref> [name] [--project path] [--role role] [--provider provider]
+  ham attach --pick-iterm-session [--json] [--project path] [--role role] [--provider provider]
+  ham attach --list-iterm-sessions [--json]
   ham observe <source-ref> [name] [--project path] [--role role] [--provider provider]
   ham open <agent-id> [--json] [--print]
   ham ask <agent-id> <message>
@@ -109,12 +113,93 @@ func runRegister(ctx context.Context, client *ipc.Client, args []string) error {
 }
 
 func runAttach(ctx context.Context, client *ipc.Client, args []string) error {
+	if len(args) > 0 {
+		switch args[0] {
+		case "--pick-iterm-session":
+			return runAttachPicker(ctx, client, args[1:], os.Stdin, os.Stdout)
+		case "--list-iterm-sessions":
+			return runListItermSessions(ctx, client, args[1:])
+		}
+	}
+
 	input, err := parseAttachInput(args)
 	if err != nil {
 		return err
 	}
 
 	agent, err := client.AttachSession(ctx, input)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("attached %s [%s] via %s\n", agent.DisplayName, agent.ID, agent.Provider)
+	return nil
+}
+
+func runListItermSessions(ctx context.Context, client *ipc.Client, args []string) error {
+	asJSON := false
+	for _, argument := range args {
+		switch argument {
+		case "--json":
+			asJSON = true
+		default:
+			return fmt.Errorf("unsupported attach listing flag %q", argument)
+		}
+	}
+
+	sessions, err := client.ListItermSessions(ctx)
+	if err != nil {
+		return err
+	}
+
+	if asJSON {
+		return writeJSON(sessions)
+	}
+	if len(sessions) == 0 {
+		fmt.Println("no attachable iTerm sessions")
+		return nil
+	}
+
+	for index, session := range sessions {
+		activeMarker := " "
+		if session.IsActive {
+			activeMarker = "*"
+		}
+		fmt.Printf("%s %d\t%s\t%s\n", activeMarker, index+1, session.Title, session.SessionRef)
+	}
+	return nil
+}
+
+func runAttachPicker(ctx context.Context, client *ipc.Client, args []string, in io.Reader, out io.Writer) error {
+	options, err := parseAttachPickerOptions(args)
+	if err != nil {
+		return err
+	}
+
+	sessions, err := client.ListItermSessions(ctx)
+	if err != nil {
+		return err
+	}
+	if len(sessions) == 0 {
+		return fmt.Errorf("no attachable iTerm sessions")
+	}
+
+	if options.asJSON {
+		return writeJSON(sessions)
+	}
+
+	selected, err := chooseAttachableSession(in, out, sessions)
+	if err != nil {
+		return err
+	}
+
+	agent, err := client.AttachSession(ctx, runtime.RegisterAttachedInput{
+		Provider:    options.provider,
+		DisplayName: selected.Title,
+		ProjectPath: options.projectPath,
+		Role:        options.role,
+		SessionRef:  selected.SessionRef,
+	})
 	if err != nil {
 		return err
 	}
@@ -431,6 +516,91 @@ func parseAttachInput(args []string) (runtime.RegisterAttachedInput, error) {
 	}
 
 	return input, nil
+}
+
+type attachPickerOptions struct {
+	projectPath string
+	role        string
+	provider    string
+	asJSON      bool
+}
+
+func parseAttachPickerOptions(args []string) (attachPickerOptions, error) {
+	options := attachPickerOptions{provider: "iterm2"}
+
+	for index := 0; index < len(args); index++ {
+		argument := args[index]
+
+		switch {
+		case argument == "--json":
+			options.asJSON = true
+		case argument == "--project":
+			index++
+			if index >= len(args) {
+				return attachPickerOptions{}, fmt.Errorf("missing value for --project")
+			}
+			options.projectPath = args[index]
+		case strings.HasPrefix(argument, "--project="):
+			options.projectPath = strings.TrimPrefix(argument, "--project=")
+		case argument == "--role":
+			index++
+			if index >= len(args) {
+				return attachPickerOptions{}, fmt.Errorf("missing value for --role")
+			}
+			options.role = args[index]
+		case strings.HasPrefix(argument, "--role="):
+			options.role = strings.TrimPrefix(argument, "--role=")
+		case argument == "--provider":
+			index++
+			if index >= len(args) {
+				return attachPickerOptions{}, fmt.Errorf("missing value for --provider")
+			}
+			options.provider = args[index]
+		case strings.HasPrefix(argument, "--provider="):
+			options.provider = strings.TrimPrefix(argument, "--provider=")
+		default:
+			return attachPickerOptions{}, fmt.Errorf("unsupported attach picker flag %q", argument)
+		}
+	}
+
+	return options, nil
+}
+
+func chooseAttachableSession(in io.Reader, out io.Writer, sessions []core.AttachableSession) (core.AttachableSession, error) {
+	if len(sessions) == 0 {
+		return core.AttachableSession{}, fmt.Errorf("no attachable sessions")
+	}
+	if len(sessions) == 1 {
+		return sessions[0], nil
+	}
+
+	for index, session := range sessions {
+		activeMarker := " "
+		if session.IsActive {
+			activeMarker = "*"
+		}
+		if _, err := fmt.Fprintf(out, "%s %d) %s [%s]\n", activeMarker, index+1, session.Title, session.ID); err != nil {
+			return core.AttachableSession{}, err
+		}
+	}
+	if _, err := fmt.Fprint(out, "Select iTerm session: "); err != nil {
+		return core.AttachableSession{}, err
+	}
+
+	line, err := bufio.NewReader(in).ReadString('\n')
+	if err != nil && err != io.EOF {
+		return core.AttachableSession{}, err
+	}
+
+	selection, err := strconv.Atoi(strings.TrimSpace(line))
+	if err != nil {
+		return core.AttachableSession{}, fmt.Errorf("invalid session selection %q", strings.TrimSpace(line))
+	}
+	if selection < 1 || selection > len(sessions) {
+		return core.AttachableSession{}, fmt.Errorf("session selection must be between 1 and %d", len(sessions))
+	}
+
+	return sessions[selection-1], nil
 }
 
 func parseObserveInput(args []string) (runtime.RegisterObservedInput, error) {

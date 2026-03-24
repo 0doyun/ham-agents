@@ -385,3 +385,14 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: attach picker / iTerm session listing baseline, broader settings sections, live event stream/follow integration
+
+### 2026-03-25 (attach picker / iTerm session listing baseline)
+- Go `Iterm2Adapter` 에 AppleScript 기반 session listing baseline 을 추가하고, attachable session snapshot (`id`, `title`, `session_ref`, `is_active`) 을 daemon/CLI 가 재사용할 수 있게 만들었다.
+- daemon IPC 에 `iterm.sessions` surface 를 추가하고, CLI `ham attach --list-iterm-sessions` / `ham attach --pick-iterm-session` 로 list + interactive picker attach baseline 을 열었다.
+- Swift daemon client / menu bar view model 도 attachable session snapshot 을 읽어 popover 에 상위 iTerm session 목록을 표시하도록 연결했다.
+- Go/Swift tests 로 session listing parsing, picker selection, daemon round-trip, Swift refresh exposure 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: attached session termination detection baseline, broader settings sections, live event stream/follow integration
