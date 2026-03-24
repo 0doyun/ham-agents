@@ -88,6 +88,15 @@ private struct MenuBarContentView: View {
                     LatestEventBanner(presentation: presentation, summary: summary)
                 }
 
+                let recentActivityChips = viewModel.recentEventSummaryChips(forAgentID: nil)
+                if !recentActivityChips.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Recent Activity")
+                            .font(.caption.weight(.semibold))
+                        EventSummaryChipsView(chips: recentActivityChips)
+                    }
+                }
+
                 NotificationPermissionRow(
                     status: viewModel.notificationPermissionStatus,
                     requestPermission: {
