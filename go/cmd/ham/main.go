@@ -40,6 +40,8 @@ func run(args []string) error {
 		return runRegister(ctx, client, args[1:])
 	case "attach":
 		return runAttach(ctx, client, args[1:])
+	case "observe":
+		return runObserve(ctx, client, args[1:])
 	case "list":
 		return runList(ctx, client, args[1:])
 	case "status":
@@ -67,6 +69,7 @@ Usage:
   ham help
   ham run <provider> [name] [--project path] [--role role]
   ham attach <session-ref> [name] [--project path] [--role role] [--provider provider]
+  ham observe <source-ref> [name] [--project path] [--role role] [--provider provider]
   ham list [--json]
   ham status [--json]
   ham events [--json] [--limit N]
@@ -103,6 +106,21 @@ func runAttach(ctx context.Context, client *ipc.Client, args []string) error {
 	}
 
 	fmt.Printf("attached %s [%s] via %s\n", agent.DisplayName, agent.ID, agent.Provider)
+	return nil
+}
+
+func runObserve(ctx context.Context, client *ipc.Client, args []string) error {
+	input, err := parseObserveInput(args)
+	if err != nil {
+		return err
+	}
+
+	agent, err := client.ObserveSource(ctx, input)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("observing %s [%s] via %s\n", agent.DisplayName, agent.ID, agent.Provider)
 	return nil
 }
 
@@ -268,6 +286,57 @@ func parseAttachInput(args []string) (runtime.RegisterAttachedInput, error) {
 			input.DisplayName = argument
 		default:
 			return runtime.RegisterAttachedInput{}, fmt.Errorf("unexpected argument %q", argument)
+		}
+	}
+
+	return input, nil
+}
+
+func parseObserveInput(args []string) (runtime.RegisterObservedInput, error) {
+	if len(args) == 0 {
+		return runtime.RegisterObservedInput{}, fmt.Errorf("source ref is required")
+	}
+
+	input := runtime.RegisterObservedInput{
+		Provider:   "log",
+		SessionRef: args[0],
+	}
+	remainder := args[1:]
+
+	for index := 0; index < len(remainder); index++ {
+		argument := remainder[index]
+
+		switch {
+		case argument == "--project":
+			index++
+			if index >= len(remainder) {
+				return runtime.RegisterObservedInput{}, fmt.Errorf("missing value for --project")
+			}
+			input.ProjectPath = remainder[index]
+		case strings.HasPrefix(argument, "--project="):
+			input.ProjectPath = strings.TrimPrefix(argument, "--project=")
+		case argument == "--role":
+			index++
+			if index >= len(remainder) {
+				return runtime.RegisterObservedInput{}, fmt.Errorf("missing value for --role")
+			}
+			input.Role = remainder[index]
+		case strings.HasPrefix(argument, "--role="):
+			input.Role = strings.TrimPrefix(argument, "--role=")
+		case argument == "--provider":
+			index++
+			if index >= len(remainder) {
+				return runtime.RegisterObservedInput{}, fmt.Errorf("missing value for --provider")
+			}
+			input.Provider = remainder[index]
+		case strings.HasPrefix(argument, "--provider="):
+			input.Provider = strings.TrimPrefix(argument, "--provider=")
+		case strings.HasPrefix(argument, "-"):
+			return runtime.RegisterObservedInput{}, fmt.Errorf("unsupported flag %q", argument)
+		case input.DisplayName == "":
+			input.DisplayName = argument
+		default:
+			return runtime.RegisterObservedInput{}, fmt.Errorf("unexpected argument %q", argument)
 		}
 	}
 

@@ -3,6 +3,7 @@ import Foundation
 public enum DaemonCommand: String, Codable, Sendable {
     case runManaged = "run.managed"
     case attachSession = "attach.session"
+    case observeSource = "observe.source"
     case listAgents = "agents.list"
     case status = "agents.status"
     case events = "events.list"

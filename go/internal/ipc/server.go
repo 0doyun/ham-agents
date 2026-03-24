@@ -124,6 +124,18 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{Agent: &agent}, nil
+	case CommandObserveSource:
+		agent, err := s.registry.RegisterObserved(ctx, hamruntime.RegisterObservedInput{
+			Provider:    request.Provider,
+			DisplayName: request.DisplayName,
+			ProjectPath: request.ProjectPath,
+			Role:        request.Role,
+			SessionRef:  request.SessionRef,
+		})
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Agent: &agent}, nil
 	case CommandListAgents:
 		agents, err := s.registry.List(ctx)
 		if err != nil {

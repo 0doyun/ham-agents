@@ -28,6 +28,14 @@ type RegisterAttachedInput struct {
 	SessionRef  string
 }
 
+type RegisterObservedInput struct {
+	Provider    string
+	DisplayName string
+	ProjectPath string
+	Role        string
+	SessionRef  string
+}
+
 type Registry struct {
 	store      store.AgentStore
 	eventStore store.EventStore
@@ -161,6 +169,77 @@ func (r *Registry) RegisterAttached(ctx context.Context, input RegisterAttachedI
 		StatusConfidence:       0.6,
 		LastEventAt:            now,
 		LastUserVisibleSummary: "Attached session registered.",
+		NotificationPolicy:     core.NotificationPolicyDefault,
+		SessionRef:             sessionRef,
+		AvatarVariant:          "default",
+	}
+
+	agents = append(agents, agent)
+	if err := r.store.SaveAgents(ctx, agents); err != nil {
+		return core.Agent{}, err
+	}
+
+	if r.eventStore != nil {
+		event := core.Event{
+			ID:         fmt.Sprintf("event-%d", now.UnixNano()),
+			AgentID:    agent.ID,
+			Type:       core.EventTypeAgentRegistered,
+			Summary:    agent.LastUserVisibleSummary,
+			OccurredAt: now,
+		}
+		_ = r.eventStore.Append(ctx, event)
+	}
+
+	return agent, nil
+}
+
+func (r *Registry) RegisterObserved(ctx context.Context, input RegisterObservedInput) (core.Agent, error) {
+	agents, err := r.store.LoadAgents(ctx)
+	if err != nil {
+		return core.Agent{}, err
+	}
+
+	now := r.clock().UTC()
+	hostname, err := r.hostname()
+	if err != nil {
+		hostname = "localhost"
+	}
+
+	sessionRef := strings.TrimSpace(input.SessionRef)
+	if sessionRef == "" {
+		return core.Agent{}, fmt.Errorf("observed source is required")
+	}
+
+	provider := strings.TrimSpace(input.Provider)
+	if provider == "" {
+		provider = "log"
+	}
+
+	displayName := strings.TrimSpace(input.DisplayName)
+	if displayName == "" {
+		displayName = "observed-agent"
+	}
+
+	projectPath := strings.TrimSpace(input.ProjectPath)
+	if projectPath == "" {
+		projectPath, err = os.Getwd()
+		if err != nil {
+			return core.Agent{}, fmt.Errorf("resolve working directory: %w", err)
+		}
+	}
+
+	agent := core.Agent{
+		ID:                     r.idProvider(now),
+		DisplayName:            displayName,
+		Provider:               provider,
+		Host:                   hostname,
+		Mode:                   core.AgentModeObserved,
+		ProjectPath:            projectPath,
+		Role:                   strings.TrimSpace(input.Role),
+		Status:                 core.AgentStatusIdle,
+		StatusConfidence:       0.35,
+		LastEventAt:            now,
+		LastUserVisibleSummary: "Observed source registered.",
 		NotificationPolicy:     core.NotificationPolicyDefault,
 		SessionRef:             sessionRef,
 		AvatarVariant:          "default",
