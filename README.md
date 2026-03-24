@@ -97,3 +97,4 @@ The current `ham-menubar` baseline:
 - uses `sessionRef` as a URL-based session target when available, otherwise falls back to opening the workspace in iTerm or Finder
 - lets the user pause/resume notifications per selected agent inside the popover
 - includes a quick-message field that prefers iTerm write automation and falls back to clipboard/session handoff
+- shows quick-message result feedback so fallback/error behavior is visible instead of silent

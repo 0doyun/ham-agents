@@ -139,3 +139,4 @@
 - Session opening now uses a small planning layer: if daemon data provides a URL-shaped `sessionRef`, Swift treats it as the preferred focus target; otherwise it falls back to workspace opening behavior.
 - Per-agent notification pause/resume currently lives as a local Swift override in the menu bar layer so the baseline UX can suppress noisy transitions before backend settings persistence exists.
 - Quick-message UI now routes through a dedicated sender boundary, with the current app-edge implementation preferring iTerm write automation and falling back to clipboard + session opening.
+- Quick-message result feedback currently stays in the Swift view-model layer so the popover can surface delivery vs fallback outcomes without requiring backend acknowledgements yet.
