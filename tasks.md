@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **menu bar detail panel + recent event context** 다.
+현재 활성 범위는 **popover agent detail actions baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -52,13 +52,13 @@
 - [x] status transition 기반 notification trigger foundation 추가
 - [x] actual macOS notification delivery sink 연결
 - [x] popover에서 선택 agent detail + recent event context 표시
+- [x] popover에서 최소 agent action 연결
 
 ### Current Slice Checklist
 
-- [x] selected agent detail helper 추가
-- [x] recent event filtering helper 추가
-- [x] popover detail panel UI 추가
-- [x] Swift tests로 detail/event selection behavior 보호
+- [x] open project folder action boundary 추가
+- [x] popover detail panel에 baseline action button 추가
+- [x] Swift tests로 action wiring 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

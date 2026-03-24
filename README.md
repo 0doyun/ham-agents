@@ -92,3 +92,4 @@ The current `ham-menubar` baseline:
 - detects done / waiting_input / error status transitions and routes notification candidates through a sink boundary
 - requests notification permission on first delivery attempt and can submit macOS notification requests through `UserNotifications`
 - shows a selected-agent detail pane with recent event context inside the popover
+- includes a baseline “Open Project Folder” action from the selected-agent detail pane

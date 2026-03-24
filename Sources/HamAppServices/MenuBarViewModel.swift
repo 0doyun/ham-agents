@@ -14,6 +14,7 @@ public final class MenuBarViewModel: ObservableObject {
     private let summaryService: MenuBarSummaryService
     private let notificationEngine: StatusChangeNotificationEngine
     private let notificationSink: NotificationSink
+    private let projectOpener: ProjectOpening
     private let pollIntervalNanoseconds: UInt64
     private let sleep: @Sendable (UInt64) async throws -> Void
     private var hasStarted = false
@@ -23,6 +24,7 @@ public final class MenuBarViewModel: ObservableObject {
         client: HamDaemonClientProtocol,
         notificationEngine: StatusChangeNotificationEngine = StatusChangeNotificationEngine(),
         notificationSink: NotificationSink = NoopNotificationSink(),
+        projectOpener: ProjectOpening = NoopProjectOpener(),
         pollIntervalNanoseconds: UInt64 = 15_000_000_000,
         sleep: @escaping @Sendable (UInt64) async throws -> Void = { nanoseconds in
             try await Task.sleep(nanoseconds: nanoseconds)
@@ -32,6 +34,7 @@ public final class MenuBarViewModel: ObservableObject {
         self.summaryService = MenuBarSummaryService(client: client)
         self.notificationEngine = notificationEngine
         self.notificationSink = notificationSink
+        self.projectOpener = projectOpener
         self.pollIntervalNanoseconds = pollIntervalNanoseconds
         self.sleep = sleep
     }
@@ -52,6 +55,11 @@ public final class MenuBarViewModel: ObservableObject {
         let events = summary?.recentEvents ?? []
         guard let id else { return events }
         return events.filter { $0.agentID == id }
+    }
+
+    public func openProject(forAgentID id: Agent.ID?) {
+        guard let agent = agent(withID: id) else { return }
+        projectOpener.openProject(at: agent.projectPath)
     }
 
     public func start() {

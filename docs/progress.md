@@ -151,3 +151,13 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: popover agent detail actions, richer notification permission UX, live event stream/follow integration
+
+### 2026-03-24 (popover baseline action wiring)
+- `ProjectOpening` boundary 와 default noop implementation을 추가해 menu bar/UI 쪽 action wiring을 testable 하게 만들었다.
+- popover detail pane에 `Open Project Folder` 버튼을 추가하고, app target에서는 `NSWorkspace` 기반 opener 로 연결했다.
+- Swift tests로 selected agent에서 project path 가 opener 로 전달되는지 검증했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: iTerm/session-focused actions, richer notification permission UX, live event stream/follow integration
