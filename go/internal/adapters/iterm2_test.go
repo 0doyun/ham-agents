@@ -10,9 +10,9 @@ func TestIterm2AdapterListsSessions(t *testing.T) {
 
 	adapter := NewIterm2Adapter(recordingOutputRunner{
 		outputs: map[string][]byte{
-			"osascript":                   []byte("abc\ttrue\tClaude Review\tttys001\nxyz\tfalse\tShell\t\n"),
-			"ps|-ax|-o|tty=,pid=,comm=":   []byte("ttys001 12345 /usr/local/bin/claude\n"),
-			"lsof|-a|-d|cwd|-p|12345|-Fn": []byte("p12345\nn/Users/User/projects/demo\n"),
+			"osascript":                    []byte("abc\ttrue\tClaude Review\tttys001\nxyz\tfalse\tShell\t\n"),
+			"ps|-ax|-o|tty=,pid=,command=": []byte("ttys001 12345 /usr/local/bin/claude\n"),
+			"lsof|-a|-d|cwd|-p|12345|-Fn":  []byte("p12345\nn/Users/User/projects/demo\n"),
 		},
 	})
 

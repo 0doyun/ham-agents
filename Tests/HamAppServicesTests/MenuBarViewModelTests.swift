@@ -612,6 +612,8 @@ final class MenuBarViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.summary?.recentEvents.last?.id, "event-2")
         let counts = await client.callCounts()
+        XCTAssertEqual(counts.fetchSnapshot, 1)
+        XCTAssertEqual(counts.fetchAgents, 2)
         XCTAssertEqual(counts.fetchSettings, 1)
         XCTAssertEqual(counts.fetchEvents, 1)
         XCTAssertEqual(counts.followEvents, 1)
@@ -1295,6 +1297,8 @@ private actor EventFollowingClient: HamDaemonClientProtocol {
     private let initialEvents: [AgentEventPayload]
     private let followedEvents: [AgentEventPayload]
     private var didFollow = false
+    private var fetchSnapshotCalls = 0
+    private var fetchAgentsCalls = 0
     private var fetchEventsCalls = 0
     private var fetchSettingsCalls = 0
     private var followEventsCalls = 0
@@ -1306,11 +1310,13 @@ private actor EventFollowingClient: HamDaemonClientProtocol {
     }
 
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload {
-        DaemonRuntimeSnapshotPayload(agents: [agent], generatedAt: Date(timeIntervalSince1970: 10))
+        fetchSnapshotCalls += 1
+        return DaemonRuntimeSnapshotPayload(agents: [agent], generatedAt: Date(timeIntervalSince1970: 10))
     }
 
     func fetchAgents() async throws -> [Agent] {
-        [agent]
+        fetchAgentsCalls += 1
+        return [agent]
     }
 
     func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] {
@@ -1359,8 +1365,8 @@ private actor EventFollowingClient: HamDaemonClientProtocol {
         _ = agentID
     }
 
-    func callCounts() -> (fetchEvents: Int, fetchSettings: Int, followEvents: Int) {
-        (fetchEventsCalls, fetchSettingsCalls, followEventsCalls)
+    func callCounts() -> (fetchSnapshot: Int, fetchAgents: Int, fetchEvents: Int, fetchSettings: Int, followEvents: Int) {
+        (fetchSnapshotCalls, fetchAgentsCalls, fetchEventsCalls, fetchSettingsCalls, followEventsCalls)
     }
 }
 
