@@ -43,6 +43,17 @@ public final class MenuBarViewModel: ObservableObject {
         return "ham \(summary.runningAgents)▶ \(summary.waitingAgents)? \(summary.doneAgents)✓"
     }
 
+    public func agent(withID id: Agent.ID?) -> Agent? {
+        guard let id else { return agents.first }
+        return agents.first(where: { $0.id == id }) ?? agents.first
+    }
+
+    public func recentEvents(forAgentID id: Agent.ID?) -> [AgentEventPayload] {
+        let events = summary?.recentEvents ?? []
+        guard let id else { return events }
+        return events.filter { $0.agentID == id }
+    }
+
     public func start() {
         guard !hasStarted else { return }
         hasStarted = true

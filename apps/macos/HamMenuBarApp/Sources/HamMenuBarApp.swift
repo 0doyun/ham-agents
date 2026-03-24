@@ -38,58 +38,139 @@ struct HamMenuBarApp: App {
 
 private struct MenuBarContentView: View {
     @ObservedObject var viewModel: MenuBarViewModel
+    @State private var selectedAgentID: Agent.ID?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Ham Office")
-                    .font(.headline)
-                Spacer()
-                if viewModel.isRefreshing {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-                Button("Refresh") {
-                    Task { await viewModel.refresh() }
-                }
-            }
-
-            if let summary = viewModel.summary {
+        HStack(alignment: .top, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack {
-                    SummaryBadge(title: "Total", value: summary.totalAgents)
-                    SummaryBadge(title: "Run", value: summary.runningAgents)
-                    SummaryBadge(title: "Wait", value: summary.waitingAgents)
-                    SummaryBadge(title: "Done", value: summary.doneAgents)
+                    Text("Ham Office")
+                        .font(.headline)
+                    Spacer()
+                    if viewModel.isRefreshing {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                    Button("Refresh") {
+                        Task { await viewModel.refresh() }
+                    }
+                }
+
+                if let summary = viewModel.summary {
+                    HStack {
+                        SummaryBadge(title: "Total", value: summary.totalAgents)
+                        SummaryBadge(title: "Run", value: summary.runningAgents)
+                        SummaryBadge(title: "Wait", value: summary.waitingAgents)
+                        SummaryBadge(title: "Done", value: summary.doneAgents)
+                    }
+                }
+
+                if let errorMessage = viewModel.errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("Agents")
+                    .font(.subheadline.weight(.semibold))
+
+                if viewModel.agents.isEmpty {
+                    Text("No tracked agents")
+                        .foregroundStyle(.secondary)
+                } else {
+                    List(selection: $selectedAgentID) {
+                        ForEach(viewModel.agents) { agent in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(agent.displayName)
+                                    .font(.body.weight(.medium))
+                                Text("\(agent.status.rawValue) · \(agent.projectPath)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            .tag(agent.id)
+                        }
+                    }
+                    .listStyle(.plain)
                 }
             }
+            .frame(minWidth: 190)
 
-            if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
+            Divider()
+
+            AgentDetailView(
+                agent: viewModel.agent(withID: selectedAgentID),
+                recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID)
+            )
+            .frame(minWidth: 140, maxWidth: .infinity, alignment: .topLeading)
+        }
+        .padding(14)
+        .onAppear {
+            if selectedAgentID == nil {
+                selectedAgentID = viewModel.agents.first?.id
+            }
+        }
+        .onChange(of: viewModel.agents.map(\.id)) { ids in
+            if selectedAgentID == nil || !ids.contains(selectedAgentID ?? "") {
+                selectedAgentID = ids.first
+            }
+        }
+    }
+}
+
+private struct AgentDetailView: View {
+    let agent: Agent?
+    let recentEvents: [AgentEventPayload]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Details")
+                .font(.subheadline.weight(.semibold))
+
+            if let agent {
+                Text(agent.displayName)
+                    .font(.headline)
+                Text("\(agent.provider) · \(agent.mode.rawValue)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(agent.projectPath)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+
+                if let summary = agent.lastUserVisibleSummary {
+                    Text(summary)
+                        .font(.caption)
+                }
+
+                Text("Recent Events")
+                    .font(.caption.weight(.semibold))
+                    .padding(.top, 4)
+
+                if recentEvents.isEmpty {
+                    Text("No recent events for this agent.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(recentEvents.prefix(3)) { event in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(event.type)
+                                .font(.caption.weight(.medium))
+                            Text(event.summary)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+            } else {
+                Text("Select an agent to inspect status, project, and recent events.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
-            Text("Agents")
-                .font(.subheadline.weight(.semibold))
-
-            if viewModel.agents.isEmpty {
-                Text("No tracked agents")
-                    .foregroundStyle(.secondary)
-            } else {
-                List(viewModel.agents) { agent in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(agent.displayName)
-                            .font(.body.weight(.medium))
-                        Text("\(agent.status.rawValue) · \(agent.projectPath)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                }
-                .listStyle(.plain)
-            }
+            Spacer()
         }
-        .padding(14)
     }
 }
 
