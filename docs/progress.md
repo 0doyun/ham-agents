@@ -667,3 +667,12 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: runtime coordinator follow-up, stronger feed semantics, lower-latency visual polish
+
+### 2026-03-25 (runtime coordinator follow-up: no-op refresh consistency)
+- attached refresh도 observed refresh와 같은 `applyRefreshedAgents` no-op guard 를 재사용하도록 정리해, 실제 변화가 없을 때는 불필요한 persistence/write 를 건너뛰게 만들었다.
+- Go regression test 로 unchanged attached refresh 가 extra save 를 만들지 않는지 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: runtime lifecycle coverage follow-up, stronger feed semantics, lower-latency visual polish
