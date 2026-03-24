@@ -37,6 +37,7 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.errorMessage)
         XCTAssertEqual(viewModel.agent(withID: "agent-1")?.displayName, "builder")
         XCTAssertEqual(viewModel.notificationPermissionStatus, .authorized)
+        XCTAssertEqual(viewModel.confidenceText(for: viewModel.agent(withID: "agent-1")), "100%")
     }
 
     func testRefreshCapturesErrors() async {
@@ -204,6 +205,23 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.agent(withID: "agent-2")?.displayName, "reviewer")
         XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-2").count, 1)
         XCTAssertEqual(viewModel.recentEvents(forAgentID: "agent-2").first?.summary, "Other agent registered.")
+    }
+
+    func testConfidenceTextRoundsPercentage() {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .attached,
+            projectPath: "/tmp/app",
+            status: .reading,
+            statusConfidence: 0.72,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(client: FailingClient())
+
+        XCTAssertEqual(viewModel.confidenceText(for: agent), "72%")
     }
 
     func testOpenProjectUsesInjectedOpener() async {

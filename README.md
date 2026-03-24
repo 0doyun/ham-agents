@@ -101,3 +101,4 @@ The current `ham-menubar` baseline:
 - persists notification pause/resume through the daemon so mute state survives refreshes instead of living only in Swift UI memory
 - lets the user edit and save the selected agent role through the daemon-backed detail pane
 - lets the user stop tracking the selected agent from the popover
+- shows mode and confidence inline so managed/attached distinctions are visible in the baseline UI

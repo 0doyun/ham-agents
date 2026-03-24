@@ -73,6 +73,11 @@ public final class MenuBarViewModel: ObservableObject {
         return events.filter { $0.agentID == id }
     }
 
+    public func confidenceText(for agent: Agent?) -> String {
+        guard let agent else { return "—" }
+        return "\(Int((agent.statusConfidence * 100).rounded()))%"
+    }
+
     public func openProject(forAgentID id: Agent.ID?) {
         guard let agent = agent(withID: id) else { return }
         projectOpener.openProject(at: agent.projectPath)

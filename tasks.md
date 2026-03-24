@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **stop tracking baseline** 다.
+현재 활성 범위는 **mode/confidence UI baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -63,13 +63,13 @@
 - [x] notification pause/resume 을 daemon persistence 로 이관
 - [x] selected agent role rename action 추가
 - [x] selected agent stop-tracking baseline 추가
+- [x] mode/confidence 를 popover에서 명시적으로 표시
 
 ### Current Slice Checklist
 
-- [x] Go runtime/store 에 remove agent 추가
-- [x] daemon IPC contract/client 에 stop-tracking 추가
-- [x] Swift detail pane에 stop-tracking action 추가
-- [x] Go/Swift tests 로 remove flow 보호
+- [x] agent list/detail 에 mode 표시 추가
+- [x] confidence 표시 formatting 추가
+- [x] Swift tests로 mode/confidence presentation helper 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 

@@ -260,6 +260,15 @@
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: actual session/process termination semantics, broader backend-persisted settings state, live event stream/follow integration
 
+### 2026-03-25 (mode/confidence UI baseline)
+- agent list 와 detail pane 에 `mode` 와 `statusConfidence` 기반 confidence text 를 노출해 managed/attached/observed 구분과 tracking certainty가 baseline UI 에서 바로 보이게 했다.
+- Swift view model 에 confidence formatting helper 를 추가하고, tests 로 percentage formatting 을 고정했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: actual session/process termination semantics, broader backend-persisted settings state, live event stream/follow integration
+
 ### 2026-03-25 (agent role rename baseline)
 - Go runtime/IPC/client 에 role update path 를 추가해 selected agent role 을 daemon-backed source of truth 쪽에서 갱신할 수 있게 했다.
 - popover detail pane에 role draft field 와 `Save` action 을 추가하고, Swift view model 이 daemon mutation 결과로 local agent list 를 갱신하도록 연결했다.

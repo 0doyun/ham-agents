@@ -35,3 +35,4 @@
 - 2026-03-25: quick message feedback baseline은 backend acknowledgement 없이 Swift sender result를 그대로 사용자에게 보여주는 방식으로 시작한다.
 - 2026-03-25: role rename baseline은 daemon-backed agent record 를 직접 갱신하는 방식으로 시작한다. richer validation/history 는 이후 collaboration slice 에서 확장한다.
 - 2026-03-25: stop-tracking baseline은 session/process termination 대신 registry removal만 수행한다. later slice에서 실제 kill/detach semantics를 붙인다.
+- 2026-03-25: mode/confidence baseline은 new heuristics without introducing new inference logic; it only exposes already-available daemon fields in the popover.

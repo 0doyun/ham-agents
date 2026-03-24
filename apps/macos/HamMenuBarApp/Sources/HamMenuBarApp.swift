@@ -102,7 +102,7 @@ private struct MenuBarContentView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(agent.displayName)
                                     .font(.body.weight(.medium))
-                                Text("\(agent.status.rawValue) · \(agent.projectPath)")
+                                Text("\(agent.status.rawValue) · \(agent.mode.rawValue) · \(viewModel.confidenceText(for: agent))")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(1)
@@ -122,6 +122,7 @@ private struct MenuBarContentView: View {
                 recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID),
                 notificationsMuted: viewModel.isNotificationsMuted(forAgentID: selectedAgentID),
                 quickMessageFeedback: viewModel.quickMessageFeedback,
+                confidenceText: viewModel.confidenceText(for: viewModel.agent(withID: selectedAgentID)),
                 roleDraft: Binding(
                     get: { viewModel.roleDraft },
                     set: { viewModel.roleDraft = $0 }
@@ -204,6 +205,7 @@ private struct AgentDetailView: View {
     let recentEvents: [AgentEventPayload]
     let notificationsMuted: Bool
     let quickMessageFeedback: String?
+    let confidenceText: String
     @Binding var roleDraft: String
     @Binding var quickMessage: String
     let openProject: () -> Void
@@ -228,6 +230,9 @@ private struct AgentDetailView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                Text("confidence \(confidenceText)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
 
                 Text("Role")
                     .font(.caption.weight(.semibold))
