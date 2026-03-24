@@ -260,6 +260,20 @@
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: actual session/process termination semantics, broader backend-persisted settings state, live event stream/follow integration
 
+### 2026-03-25 (attached mode minimal foundation)
+- Go runtime/IPC/CLI 에 `ham attach` path 를 추가해 explicit sessionRef 기반 attached agent 를 등록할 수 있게 했다.
+- attached agent 는 mode=`attached`, status=`idle`, confidence=`0.6` 으로 시작하게 해 managed 와 구분된 낮은 확신도를 baseline 에 반영했다.
+- unsandboxed smoke 로 `hamd serve --once=false` 뒤 `ham attach ...`, `ham list`, `ham status --json` 을 확인했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - unsandboxed smoke:
+    - `go run ./go/cmd/ham attach iterm2://session/abc ops --project /tmp/demo --role reviewer` ✅
+    - `go run ./go/cmd/ham list` → attached mode 노출 ✅
+    - `go run ./go/cmd/ham status --json` ✅
+- 다음 우선순위 후보: richer attached metadata/session identification, observed mode baseline, live event stream/follow integration
+
 ### 2026-03-25 (mode/confidence UI baseline)
 - agent list 와 detail pane 에 `mode` 와 `statusConfidence` 기반 confidence text 를 노출해 managed/attached/observed 구분과 tracking certainty가 baseline UI 에서 바로 보이게 했다.
 - Swift view model 에 confidence formatting helper 를 추가하고, tests 로 percentage formatting 을 고정했다.

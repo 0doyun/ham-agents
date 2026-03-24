@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **mode/confidence UI baseline** 다.
+현재 활성 범위는 **attached mode minimal foundation** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -64,14 +64,16 @@
 - [x] selected agent role rename action 추가
 - [x] selected agent stop-tracking baseline 추가
 - [x] mode/confidence 를 popover에서 명시적으로 표시
+- [ ] `ham attach` minimal flow 추가
 
 ### Current Slice Checklist
 
-- [x] agent list/detail 에 mode 표시 추가
-- [x] confidence 표시 formatting 추가
-- [x] Swift tests로 mode/confidence presentation helper 보호
-- [x] Swift bootstrap build/test green 유지
-- [x] Go tests green 유지
+- [ ] daemon/runtime 에 attached registration path 추가
+- [ ] CLI `ham attach` 추가
+- [ ] attached mode confidence default 추가
+- [ ] Go tests/CLI smoke 로 attach flow 보호
+- [ ] Swift bootstrap build/test green 유지
+- [ ] Go tests green 유지
 
 ## Out of Scope For Current Slice
 

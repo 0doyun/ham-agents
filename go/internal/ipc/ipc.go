@@ -21,6 +21,7 @@ type Command string
 
 const (
 	CommandRunManaged Command = "run.managed"
+	CommandAttachSession Command = "attach.session"
 	CommandListAgents Command = "agents.list"
 	CommandStatus     Command = "agents.status"
 	CommandEvents     Command = "events.list"
@@ -36,6 +37,7 @@ type Request struct {
 	DisplayName string  `json:"display_name,omitempty"`
 	ProjectPath string  `json:"project_path,omitempty"`
 	Role        string  `json:"role,omitempty"`
+	SessionRef  string  `json:"session_ref,omitempty"`
 	Limit       int     `json:"limit,omitempty"`
 	Policy      string  `json:"policy,omitempty"`
 }
@@ -90,6 +92,24 @@ func (c *Client) RunManaged(ctx context.Context, input hamruntime.RegisterManage
 		DisplayName: input.DisplayName,
 		ProjectPath: input.ProjectPath,
 		Role:        input.Role,
+	})
+	if err != nil {
+		return core.Agent{}, err
+	}
+	if response.Agent == nil {
+		return core.Agent{}, fmt.Errorf("daemon response missing agent payload")
+	}
+	return *response.Agent, nil
+}
+
+func (c *Client) AttachSession(ctx context.Context, input hamruntime.RegisterAttachedInput) (core.Agent, error) {
+	response, err := c.request(ctx, Request{
+		Command:     CommandAttachSession,
+		Provider:    input.Provider,
+		DisplayName: input.DisplayName,
+		ProjectPath: input.ProjectPath,
+		Role:        input.Role,
+		SessionRef:  input.SessionRef,
 	})
 	if err != nil {
 		return core.Agent{}, err

@@ -72,28 +72,41 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		t.Fatalf("unexpected display name %q", agent.DisplayName)
 	}
 
+	attached, err := client.AttachSession(context.Background(), runtime.RegisterAttachedInput{
+		Provider:    "iterm2",
+		DisplayName: "ops",
+		ProjectPath: "/tmp/project",
+		SessionRef:  "iterm2://session/abc",
+	})
+	if err != nil {
+		t.Fatalf("attach session via client: %v", err)
+	}
+	if attached.Mode != "attached" {
+		t.Fatalf("unexpected mode %q", attached.Mode)
+	}
+
 	agents, err := client.ListAgents(context.Background())
 	if err != nil {
 		t.Fatalf("list agents via client: %v", err)
 	}
-	if len(agents) != 1 {
-		t.Fatalf("expected 1 agent, got %d", len(agents))
+	if len(agents) != 2 {
+		t.Fatalf("expected 2 agents, got %d", len(agents))
 	}
 
 	snapshot, err := client.Status(context.Background())
 	if err != nil {
 		t.Fatalf("status via client: %v", err)
 	}
-	if snapshot.TotalCount() != 1 {
-		t.Fatalf("expected total count 1, got %d", snapshot.TotalCount())
+	if snapshot.TotalCount() != 2 {
+		t.Fatalf("expected total count 2, got %d", snapshot.TotalCount())
 	}
 
 	events, err := client.Events(context.Background(), 10)
 	if err != nil {
 		t.Fatalf("events via client: %v", err)
 	}
-	if len(events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(events))
+	if len(events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(events))
 	}
 	if events[0].AgentID != agent.ID {
 		t.Fatalf("unexpected event agent id %q", events[0].AgentID)
