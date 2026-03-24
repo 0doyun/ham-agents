@@ -219,6 +219,9 @@ func TestRefreshObservedUpdatesPersistedStatus(t *testing.T) {
 	if events[len(events)-1].Type != core.EventTypeAgentStatusUpdated {
 		t.Fatalf("expected observed status event, got %q", events[len(events)-1].Type)
 	}
+	if events[len(events)-1].Summary != "Status changed to waiting_input. Question-like output detected." {
+		t.Fatalf("unexpected observed status summary %q", events[len(events)-1].Summary)
+	}
 }
 
 func TestOpenTargetPrefersSessionRefURL(t *testing.T) {
@@ -298,6 +301,9 @@ func TestRefreshAttachedMarksMissingSessionsDisconnected(t *testing.T) {
 	if events[len(events)-1].Type != core.EventTypeAgentDisconnected {
 		t.Fatalf("expected disconnected event, got %q", events[len(events)-1].Type)
 	}
+	if events[len(events)-1].Summary != "Status changed to disconnected. Session missing from iTerm session list." {
+		t.Fatalf("unexpected disconnected summary %q", events[len(events)-1].Summary)
+	}
 }
 
 func TestRefreshAttachedRestoresDisconnectedSessionsWhenReachable(t *testing.T) {
@@ -367,6 +373,9 @@ func TestRefreshAttachedRestoresDisconnectedSessionsWhenReachable(t *testing.T) 
 	}
 	if events[len(events)-1].Type != core.EventTypeAgentReconnected {
 		t.Fatalf("expected reconnected event, got %q", events[len(events)-1].Type)
+	}
+	if events[len(events)-1].Summary != "Status changed to idle. Session reachable in iTerm again." {
+		t.Fatalf("unexpected reconnected summary %q", events[len(events)-1].Summary)
 	}
 }
 

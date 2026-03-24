@@ -619,3 +619,12 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: runtime lifecycle transition baseline, stronger feed semantics, richer attached shell-state fidelity
+
+### 2026-03-25 (runtime lifecycle transition baseline)
+- attached disconnect/reconnect 와 observed status updates 가 shared `Status changed to …` summary wording 을 사용하도록 정리해 lifecycle feed phrasing 을 일관화했다.
+- Go tests 로 observed/attached lifecycle event summary wording 을 고정해, event taxonomy 뿐 아니라 transition copy 도 drift 하지 않게 했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: stronger feed semantics, richer attached shell-state fidelity, lower-latency visual polish
