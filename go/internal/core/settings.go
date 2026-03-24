@@ -28,6 +28,10 @@ type AppearanceSettings struct {
 	Theme string `json:"theme"`
 }
 
+type IntegrationSettings struct {
+	ItermEnabled bool `json:"iterm_enabled"`
+}
+
 func (a *AppearanceSettings) UnmarshalJSON(data []byte) error {
 	type rawAppearanceSettings struct {
 		Theme *string `json:"theme"`
@@ -55,6 +59,26 @@ func (a AppearanceSettings) Validate() error {
 	default:
 		return fmt.Errorf("appearance theme must be one of auto, day, or night")
 	}
+}
+
+func (i *IntegrationSettings) UnmarshalJSON(data []byte) error {
+	type rawIntegrationSettings struct {
+		ItermEnabled *bool `json:"iterm_enabled"`
+	}
+
+	var raw rawIntegrationSettings
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	defaults := DefaultSettings().Integrations
+	*i = defaults
+
+	if raw.ItermEnabled != nil {
+		i.ItermEnabled = *raw.ItermEnabled
+	}
+
+	return nil
 }
 
 func (n *NotificationSettings) UnmarshalJSON(data []byte) error {
@@ -114,12 +138,14 @@ func (n NotificationSettings) Validate() error {
 type Settings struct {
 	Notifications NotificationSettings `json:"notifications"`
 	Appearance    AppearanceSettings   `json:"appearance"`
+	Integrations  IntegrationSettings  `json:"integrations"`
 }
 
 func (s *Settings) UnmarshalJSON(data []byte) error {
 	type rawSettings struct {
 		Notifications json.RawMessage `json:"notifications"`
 		Appearance    json.RawMessage `json:"appearance"`
+		Integrations  json.RawMessage `json:"integrations"`
 	}
 
 	var raw rawSettings
@@ -137,6 +163,11 @@ func (s *Settings) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.Appearance) > 0 {
 		if err := json.Unmarshal(raw.Appearance, &s.Appearance); err != nil {
+			return err
+		}
+	}
+	if len(raw.Integrations) > 0 {
+		if err := json.Unmarshal(raw.Integrations, &s.Integrations); err != nil {
 			return err
 		}
 	}
@@ -164,6 +195,9 @@ func DefaultSettings() Settings {
 		},
 		Appearance: AppearanceSettings{
 			Theme: DefaultTheme,
+		},
+		Integrations: IntegrationSettings{
+			ItermEnabled: true,
 		},
 	}
 }

@@ -385,6 +385,52 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(opener.openedAgentIDs, ["agent-1"])
     }
 
+    func testOpenSessionDoesNotUseOpenerWhenItermIntegrationDisabled() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "iterm2",
+            host: "localhost",
+            mode: .attached,
+            projectPath: "/tmp/app",
+            status: .idle,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let opener = RecordingSessionOpener()
+        let settings = DaemonSettingsPayload(
+            notifications: .init(
+                done: true,
+                error: true,
+                waitingInput: true,
+                quietHoursEnabled: false,
+                quietHoursStartHour: 22,
+                quietHoursEndHour: 8,
+                previewText: false
+            ),
+            appearance: .default,
+            integrations: .init(itermEnabled: false)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent],
+                settings: settings
+            ),
+            sessionOpener: opener
+        )
+
+        await viewModel.refresh()
+        viewModel.openSession(forAgentID: "agent-1")
+
+        XCTAssertTrue(opener.openedAgentIDs.isEmpty)
+        XCTAssertEqual(viewModel.errorMessage, "Enable iTerm integration in Settings to open sessions.")
+    }
+
     func testRequestNotificationPermissionUpdatesPublishedStatus() async {
         let client = FailingClient()
         let permissions = RecordingNotificationPermissionController(initial: .notDetermined, requestResult: .authorized)
@@ -487,6 +533,35 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.updateAppearanceSetting(theme: "night")
 
         XCTAssertEqual(viewModel.settings.appearance.theme, "night")
+    }
+
+    func testUpdateIntegrationSettingsChangesPublishedValue() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateIntegrationSetting(itermEnabled: false)
+
+        XCTAssertFalse(viewModel.settings.integrations.itermEnabled)
     }
 
     func testSaveRoleUpdatesSelectedAgent() async {

@@ -103,6 +103,10 @@ public final class MenuBarViewModel: ObservableObject {
 
     public func openSession(forAgentID id: Agent.ID?) {
         guard let agent = agent(withID: id) else { return }
+        guard settings.integrations.itermEnabled else {
+            errorMessage = "Enable iTerm integration in Settings to open sessions."
+            return
+        }
         sessionOpener.openSession(for: agent)
     }
 
@@ -176,6 +180,18 @@ public final class MenuBarViewModel: ObservableObject {
     public func updateAppearanceSetting(theme: String) async {
         var updated = settings
         updated.appearance.theme = theme
+
+        do {
+            settings = try await client.updateSettings(updated)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    public func updateIntegrationSetting(itermEnabled: Bool) async {
+        var updated = settings
+        updated.integrations.itermEnabled = itermEnabled
 
         do {
             settings = try await client.updateSettings(updated)

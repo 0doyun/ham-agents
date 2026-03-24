@@ -132,13 +132,16 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
 public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
     public var notifications: DaemonNotificationSettingsPayload
     public var appearance: DaemonAppearanceSettingsPayload
+    public var integrations: DaemonIntegrationSettingsPayload
 
     public init(
         notifications: DaemonNotificationSettingsPayload,
-        appearance: DaemonAppearanceSettingsPayload = .default
+        appearance: DaemonAppearanceSettingsPayload = .default,
+        integrations: DaemonIntegrationSettingsPayload = .default
     ) {
         self.notifications = notifications
         self.appearance = appearance
+        self.integrations = integrations
     }
 
     public static let `default` = DaemonSettingsPayload(
@@ -151,7 +154,8 @@ public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
             quietHoursEndHour: 8,
             previewText: false
         ),
-        appearance: .default
+        appearance: .default,
+        integrations: .default
     )
 }
 
@@ -163,6 +167,20 @@ public struct DaemonAppearanceSettingsPayload: Codable, Equatable, Sendable {
     }
 
     public static let `default` = DaemonAppearanceSettingsPayload(theme: "auto")
+}
+
+public struct DaemonIntegrationSettingsPayload: Codable, Equatable, Sendable {
+    public var itermEnabled: Bool
+
+    public init(itermEnabled: Bool) {
+        self.itermEnabled = itermEnabled
+    }
+
+    public static let `default` = DaemonIntegrationSettingsPayload(itermEnabled: true)
+
+    enum CodingKeys: String, CodingKey {
+        case itermEnabled = "iterm_enabled"
+    }
 }
 
 public struct DaemonRuntimeSnapshotPayload: Codable, Equatable, Sendable {
