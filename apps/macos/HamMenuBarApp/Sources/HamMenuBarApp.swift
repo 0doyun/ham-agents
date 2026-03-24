@@ -122,6 +122,10 @@ private struct MenuBarContentView: View {
                 recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID),
                 notificationsMuted: viewModel.isNotificationsMuted(forAgentID: selectedAgentID),
                 quickMessageFeedback: viewModel.quickMessageFeedback,
+                roleDraft: Binding(
+                    get: { viewModel.roleDraft },
+                    set: { viewModel.roleDraft = $0 }
+                ),
                 quickMessage: $quickMessage,
                 openProject: {
                     viewModel.openProject(forAgentID: selectedAgentID)
@@ -131,6 +135,9 @@ private struct MenuBarContentView: View {
                 },
                 toggleNotifications: {
                     viewModel.toggleNotificationPause(forAgentID: selectedAgentID)
+                },
+                saveRole: {
+                    await viewModel.saveRole(forAgentID: selectedAgentID)
                 },
                 sendQuickMessage: {
                     viewModel.sendQuickMessage(quickMessage, forAgentID: selectedAgentID)
@@ -144,11 +151,13 @@ private struct MenuBarContentView: View {
             if selectedAgentID == nil {
                 selectedAgentID = viewModel.agents.first?.id
             }
+            viewModel.setRoleDraft(from: selectedAgentID)
         }
         .onChange(of: viewModel.agents.map(\.id)) { ids in
             if selectedAgentID == nil || !ids.contains(selectedAgentID ?? "") {
                 selectedAgentID = ids.first
             }
+            viewModel.setRoleDraft(from: selectedAgentID)
         }
     }
 }
@@ -191,10 +200,12 @@ private struct AgentDetailView: View {
     let recentEvents: [AgentEventPayload]
     let notificationsMuted: Bool
     let quickMessageFeedback: String?
+    @Binding var roleDraft: String
     @Binding var quickMessage: String
     let openProject: () -> Void
     let openSession: () -> Void
     let toggleNotifications: () -> Void
+    let saveRole: () async -> Void
     let sendQuickMessage: () -> Void
 
     var body: some View {
@@ -212,6 +223,17 @@ private struct AgentDetailView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+
+                Text("Role")
+                    .font(.caption.weight(.semibold))
+                HStack {
+                    TextField("Role…", text: $roleDraft)
+                        .textFieldStyle(.roundedBorder)
+                    Button("Save") {
+                        Task { await saveRole() }
+                    }
+                    .buttonStyle(.bordered)
+                }
 
                 if let summary = agent.lastUserVisibleSummary {
                     Text(summary)
@@ -340,6 +362,13 @@ private struct PreviewDaemonClient: HamDaemonClientProtocol {
         let agents = try await fetchAgents()
         var agent = agents.first { $0.id == agentID } ?? agents.first!
         agent.notificationPolicy = policy
+        return agent
+    }
+
+    func updateRole(agentID: String, role: String) async throws -> Agent {
+        let agents = try await fetchAgents()
+        var agent = agents.first { $0.id == agentID } ?? agents.first!
+        agent.role = role
         return agent
     }
 }

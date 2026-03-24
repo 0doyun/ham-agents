@@ -107,6 +107,14 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		t.Fatalf("unexpected notification policy %q", updated.NotificationPolicy)
 	}
 
+	renamed, err := client.UpdateRole(context.Background(), agent.ID, "reviewer")
+	if err != nil {
+		t.Fatalf("update role via client: %v", err)
+	}
+	if renamed.Role != "reviewer" {
+		t.Fatalf("unexpected role %q", renamed.Role)
+	}
+
 	cancel()
 	if err := <-serverErrors; err != nil && !errors.Is(err, context.Canceled) {
 		t.Fatalf("server shutdown: %v", err)

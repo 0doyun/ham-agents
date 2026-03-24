@@ -25,6 +25,7 @@ const (
 	CommandStatus     Command = "agents.status"
 	CommandEvents     Command = "events.list"
 	CommandSetNotificationPolicy Command = "agents.set_notification_policy"
+	CommandSetRole               Command = "agents.set_role"
 )
 
 type Request struct {
@@ -130,6 +131,21 @@ func (c *Client) UpdateNotificationPolicy(ctx context.Context, agentID string, p
 		Command: CommandSetNotificationPolicy,
 		AgentID: agentID,
 		Policy:  string(policy),
+	})
+	if err != nil {
+		return core.Agent{}, err
+	}
+	if response.Agent == nil {
+		return core.Agent{}, fmt.Errorf("daemon response missing agent payload")
+	}
+	return *response.Agent, nil
+}
+
+func (c *Client) UpdateRole(ctx context.Context, agentID string, role string) (core.Agent, error) {
+	response, err := c.request(ctx, Request{
+		Command: CommandSetRole,
+		AgentID: agentID,
+		Role:    role,
 	})
 	if err != nil {
 		return core.Agent{}, err

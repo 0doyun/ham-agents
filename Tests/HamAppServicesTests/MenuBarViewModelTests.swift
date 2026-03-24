@@ -280,6 +280,39 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.notificationPermissionStatus, .authorized)
     }
 
+    func testSaveRoleUpdatesSelectedAgent() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            role: "reviewer",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        viewModel.setRoleDraft(from: "agent-1")
+        viewModel.roleDraft = "lead"
+        await viewModel.saveRole(forAgentID: "agent-1")
+
+        XCTAssertEqual(viewModel.agent(withID: "agent-1")?.role, "lead")
+        XCTAssertEqual(viewModel.roleDraft, "lead")
+    }
+
     func testSendQuickMessageUsesInjectedSender() async {
         let agent = Agent(
             id: "agent-1",
@@ -442,6 +475,12 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
         agent.notificationPolicy = policy
         return agent
     }
+
+    func updateRole(agentID: String, role: String) async throws -> Agent {
+        var agent = agents.first { $0.id == agentID } ?? snapshot.agents.first!
+        agent.role = role
+        return agent
+    }
 }
 
 private struct FailingClient: HamDaemonClientProtocol, Sendable {
@@ -460,6 +499,12 @@ private struct FailingClient: HamDaemonClientProtocol, Sendable {
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent {
         _ = agentID
         _ = policy
+        throw HamDaemonClientError.transportFailed("unavailable")
+    }
+
+    func updateRole(agentID: String, role: String) async throws -> Agent {
+        _ = agentID
+        _ = role
         throw HamDaemonClientError.transportFailed("unavailable")
     }
 }
@@ -495,6 +540,13 @@ private actor CyclingClient: HamDaemonClientProtocol {
         _ = agentID
         var updated = agent
         updated.notificationPolicy = policy
+        return updated
+    }
+
+    func updateRole(agentID: String, role: String) async throws -> Agent {
+        _ = agentID
+        var updated = agent
+        updated.role = role
         return updated
     }
 }
@@ -552,6 +604,13 @@ private actor TransitioningClient: HamDaemonClientProtocol {
         policyOverride = policy
         var updated = agent
         updated.notificationPolicy = policy
+        return updated
+    }
+
+    func updateRole(agentID: String, role: String) async throws -> Agent {
+        _ = agentID
+        var updated = applyPolicyOverride(to: nextAgents).first ?? applyPolicyOverride(to: initialAgents).first!
+        updated.role = role
         return updated
     }
 
