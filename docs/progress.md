@@ -509,3 +509,13 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer event-driven UI semantics, lower-latency visual updates, richer attached shell-state fidelity
+
+### 2026-03-25 (richer event-driven UI semantics baseline)
+- `HamAppServices` 에 event presentation helper 를 추가해 richer daemon event types를 UI label/emphasis semantics로 매핑하도록 만들었다.
+- menu bar detail 의 recent event section 이 raw event type 문자열만 보여주지 않고, richer semantic badge (`Disconnected`, `Reconnected`, `Notifications`, 등) 를 함께 렌더링하도록 바꿨다.
+- Swift tests 로 event presentation mapping 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: lower-latency visual updates, stronger feed semantics, richer attached shell-state fidelity

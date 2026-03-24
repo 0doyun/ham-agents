@@ -515,9 +515,19 @@ private struct AgentDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(recentEvents.prefix(3)) { event in
+                        let presentation = AgentEventPresenter.present(event)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(event.type)
-                                .font(.caption.weight(.medium))
+                            HStack(spacing: 6) {
+                                Text(presentation.label)
+                                    .font(.caption2.weight(.semibold))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(eventBadgeBackground(for: presentation.emphasis))
+                                    .clipShape(Capsule())
+                                Text(event.type)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
                             Text(event.summary)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
@@ -533,6 +543,19 @@ private struct AgentDetailView: View {
 
             Spacer()
         }
+    }
+}
+
+private func eventBadgeBackground(for emphasis: AgentEventEmphasis) -> Color {
+    switch emphasis {
+    case .positive:
+        return .green.opacity(0.18)
+    case .warning:
+        return .orange.opacity(0.18)
+    case .info:
+        return .blue.opacity(0.18)
+    case .neutral:
+        return .gray.opacity(0.18)
     }
 }
 
