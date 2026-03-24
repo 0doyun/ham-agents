@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **CLI list summary baseline** 다.
+현재 활성 범위는 **CLI doctor baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -113,6 +113,7 @@
 - [x] CLI stop baseline 추가
 - [x] CLI logs baseline 추가
 - [x] CLI list summary baseline 추가
+- [x] CLI doctor baseline 추가
 
 ### Current Slice Checklist
 
@@ -202,6 +203,9 @@
 - [x] `ham list` human output 에 summary line 추가
 - [x] list summary 가 human-only formatting 임을 유지
 - [x] Go tests로 CLI list summary baseline 보호
+- [x] `ham doctor` baseline 추가
+- [x] doctor output 의 human/JSON path 정리
+- [x] Go tests로 CLI doctor baseline 보호
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호

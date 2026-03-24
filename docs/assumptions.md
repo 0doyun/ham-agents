@@ -83,3 +83,4 @@
 - 2026-03-25: `ham stop` baseline currently maps to the existing registry removal / stop-tracking path, not provider/session termination; human output can say “stopped tracking” even though actual process shutdown remains a later slice.
 - 2026-03-25: `ham logs` baseline reuses the current global recent event log and filters by agent on the client side, so it is a best-effort recent-window view rather than a dedicated indexed per-agent history yet.
 - 2026-03-25: CLI list summary baseline keeps the top `summary ...` line human-only so operator scanability can improve without changing the JSON list array contract.
+- 2026-03-25: `ham doctor` baseline is currently a local path/socket inspection tool, not a full self-healing doctor; it reports resolved paths and socket reachability but does not attempt automatic repair yet.

@@ -683,6 +683,17 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer lifecycle coverage, daemon-backed attention model, severity-aware feed scanning
 
+### 2026-03-25 (CLI doctor baseline)
+- CLI spec 에 맞춰 `ham doctor` baseline 을 추가하고, current local installation 상태를 socket/state/event/settings path 기준으로 바로 확인할 수 있게 만들었다.
+- doctor 는 human path 에서 root source + resolved paths + socket reachability/파일 존재 상태를 읽기 쉬운 줄 단위로 보여주고, JSON path 에서는 같은 정보를 structured payload 로 반환한다.
+- baseline 은 local path/socket inspection 에 집중하고, HAM_AGENTS_HOME override 와 default app-support 경로를 함께 진단하도록 정리했다.
+- Go tests 로 env-root report gathering, human/JSON render contract 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed attention model, severity-aware feed scanning
+
 ### 2026-03-25 (severity-aware feed ordering baseline)
 - recent event feed ordering 을 severity-first, recency-second 로 정리해 warning/positive/info 계열 event 가 작은 recent-event window 에서 더 빠르게 보이도록 만들었다.
 - `MenuBarViewModel.recentEvents` 가 `AgentEventPresenter` ordering helper 를 사용하도록 연결하고, Swift tests 로 warning event 가 informational row 앞에 오는 ordering 을 보호했다.
