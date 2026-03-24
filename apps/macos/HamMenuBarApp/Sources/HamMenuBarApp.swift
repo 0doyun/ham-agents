@@ -104,6 +104,12 @@ private struct MenuBarContentView: View {
                     updateQuietHours: { value in
                         Task { await viewModel.updateNotificationSetting(quietHoursEnabled: value) }
                     },
+                    updateQuietStartHour: { value in
+                        Task { await viewModel.updateNotificationSetting(quietHoursStartHour: value) }
+                    },
+                    updateQuietEndHour: { value in
+                        Task { await viewModel.updateNotificationSetting(quietHoursEndHour: value) }
+                    },
                     updatePreviewText: { value in
                         Task { await viewModel.updateNotificationSetting(previewText: value) }
                     }
@@ -192,6 +198,8 @@ private struct NotificationSettingsSection: View {
     let updateError: (Bool) -> Void
     let updateWaiting: (Bool) -> Void
     let updateQuietHours: (Bool) -> Void
+    let updateQuietStartHour: (Int) -> Void
+    let updateQuietEndHour: (Int) -> Void
     let updatePreviewText: (Bool) -> Void
 
     var body: some View {
@@ -203,9 +211,48 @@ private struct NotificationSettingsSection: View {
             Toggle("Error", isOn: Binding(get: { settings.error }, set: updateError))
             Toggle("Waiting Input", isOn: Binding(get: { settings.waitingInput }, set: updateWaiting))
             Toggle("Quiet Hours", isOn: Binding(get: { settings.quietHoursEnabled }, set: updateQuietHours))
+            if settings.quietHoursEnabled {
+                HStack {
+                    Text("Start")
+                    Spacer()
+                    Text(hourLabel(settings.quietHoursStartHour))
+                        .foregroundStyle(.secondary)
+                    Stepper(
+                        "",
+                        value: Binding(
+                            get: { settings.quietHoursStartHour },
+                            set: updateQuietStartHour
+                        ),
+                        in: 0...23
+                    )
+                    .labelsHidden()
+                }
+                HStack {
+                    Text("End")
+                    Spacer()
+                    Text(hourLabel(settings.quietHoursEndHour))
+                        .foregroundStyle(.secondary)
+                    Stepper(
+                        "",
+                        value: Binding(
+                            get: { settings.quietHoursEndHour },
+                            set: updateQuietEndHour
+                        ),
+                        in: 0...23
+                    )
+                    .labelsHidden()
+                }
+                Text("Current window \(hourLabel(settings.quietHoursStartHour)) → \(hourLabel(settings.quietHoursEndHour))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
             Toggle("Preview Text", isOn: Binding(get: { settings.previewText }, set: updatePreviewText))
         }
         .toggleStyle(.checkbox)
+    }
+
+    private func hourLabel(_ hour: Int) -> String {
+        String(format: "%02d:00", hour)
     }
 }
 
@@ -423,6 +470,8 @@ private struct PreviewDaemonClient: HamDaemonClientProtocol {
                 error: true,
                 waitingInput: true,
                 quietHoursEnabled: false,
+                quietHoursStartHour: 22,
+                quietHoursEndHour: 8,
                 previewText: false
             )
         )

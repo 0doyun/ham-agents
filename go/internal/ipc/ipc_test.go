@@ -114,12 +114,17 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		t.Fatalf("get settings via client: %v", err)
 	}
 	settings.Notifications.PreviewText = true
+	settings.Notifications.QuietHoursStartHour = 21
+	settings.Notifications.QuietHoursEndHour = 6
 	updatedSettings, err := client.UpdateSettings(context.Background(), settings)
 	if err != nil {
 		t.Fatalf("update settings via client: %v", err)
 	}
 	if !updatedSettings.Notifications.PreviewText {
 		t.Fatal("expected preview text to persist")
+	}
+	if updatedSettings.Notifications.QuietHoursStartHour != 21 || updatedSettings.Notifications.QuietHoursEndHour != 6 {
+		t.Fatalf("expected quiet hours 21-6, got %d-%d", updatedSettings.Notifications.QuietHoursStartHour, updatedSettings.Notifications.QuietHoursEndHour)
 	}
 
 	agents, err := client.ListAgents(context.Background())

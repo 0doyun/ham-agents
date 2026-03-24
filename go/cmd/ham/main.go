@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -82,7 +83,7 @@ Usage:
   ham open <agent-id> [--json] [--print]
   ham ask <agent-id> <message>
   ham settings [--json]
-  ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--preview-text=true|false]
+  ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--quiet-hours=true|false] [--quiet-start-hour=0-23] [--quiet-end-hour=0-23] [--preview-text=true|false]
   ham list [--json]
   ham status [--json]
   ham events [--json] [--limit N]
@@ -228,6 +229,24 @@ func runSettingsNotifications(ctx context.Context, client *ipc.Client, args []st
 				return err
 			}
 			settings.Notifications.WaitingInput = value
+		case strings.HasPrefix(argument, "--quiet-hours="):
+			value, err := parseBoolFlag(argument, "--quiet-hours=")
+			if err != nil {
+				return err
+			}
+			settings.Notifications.QuietHoursEnabled = value
+		case strings.HasPrefix(argument, "--quiet-start-hour="):
+			value, err := parseHourFlag(argument, "--quiet-start-hour=")
+			if err != nil {
+				return err
+			}
+			settings.Notifications.QuietHoursStartHour = value
+		case strings.HasPrefix(argument, "--quiet-end-hour="):
+			value, err := parseHourFlag(argument, "--quiet-end-hour=")
+			if err != nil {
+				return err
+			}
+			settings.Notifications.QuietHoursEndHour = value
 		case strings.HasPrefix(argument, "--preview-text="):
 			value, err := parseBoolFlag(argument, "--preview-text=")
 			if err != nil {
@@ -514,6 +533,18 @@ func parseBoolFlag(argument string, prefix string) (bool, error) {
 	default:
 		return false, fmt.Errorf("invalid boolean value %q", value)
 	}
+}
+
+func parseHourFlag(argument string, prefix string) (int, error) {
+	value := strings.TrimPrefix(argument, prefix)
+	hour, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, fmt.Errorf("invalid hour value %q", value)
+	}
+	if hour < core.MinQuietHour || hour > core.MaxQuietHour {
+		return 0, fmt.Errorf("hour value %d must be between %d and %d", hour, core.MinQuietHour, core.MaxQuietHour)
+	}
+	return hour, nil
 }
 
 func splitProvider(args []string) (string, []string) {

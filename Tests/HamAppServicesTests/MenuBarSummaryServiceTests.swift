@@ -98,6 +98,8 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
                 error: true,
                 waitingInput: true,
                 quietHoursEnabled: false,
+                quietHoursStartHour: 22,
+                quietHoursEndHour: 8,
                 previewText: false
             )
         )
