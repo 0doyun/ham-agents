@@ -18,28 +18,25 @@ This repository is structured so autonomous execution workflows such as `ralph` 
 
 ## Current Technical Direction
 
-- Language: Swift
-- Build system: Swift Package Manager
+- UI: SwiftUI/AppKit menu bar app
+- CLI/runtime: Go
 - Platform: macOS
-- UI direction: SwiftUI/AppKit menu bar app
-- Initial delivery strategy: managed mode first, then runtime, then menu bar, then richer orchestration
+- IPC direction: Unix domain socket + JSON event stream
+- Initial delivery strategy: managed mode first, then runtime/persistence, then menu bar, then richer orchestration
 
 ## Repository Layout
 
 ```text
 Apps/
-  HamMenuBarApp/          # macOS app target planning surface
+  HamMenuBarApp/          # Swift macOS app planning surface
+go/
+  cmd/ham/                # Go CLI entrypoint
+  cmd/hamd/               # Go daemon entrypoint
+  internal/...            # runtime, store, inference, adapters, ipc
 Sources/
-  HamCLI/                 # CLI entrypoint
-  HamCore/                # shared domain models
-  HamRuntime/             # session/runtime coordination
-  HamPersistence/         # local persistence abstractions
-  HamNotifications/       # notification layer
-  HamInference/           # status inference engine
-  HamAdapters/            # external integrations such as iTerm2
+  ...                     # transitional Swift bootstrap code
 Tests/
-  HamCoreTests/
-  HamRuntimeTests/
+  ...                     # transitional Swift bootstrap tests
 docs/
   architecture.md
   assumptions.md
@@ -56,4 +53,10 @@ The bootstrap slice should remain green with:
 ```bash
 swift build
 swift test
+```
+
+The target architecture will add:
+
+```bash
+go test ./...
 ```
