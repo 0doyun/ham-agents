@@ -28,3 +28,4 @@
 - 2026-03-24: notification foundation 단계에서는 daemon event stream 대신 polled status transition 비교로 done / waiting_input / error 후보를 만든다.
 - 2026-03-24: initial macOS notification delivery는 first-send authorization request + immediate local notification request 방식으로 시작한다. richer permission UX는 이후 menu/settings slice에서 다듬는다.
 - 2026-03-24: initial iTerm action baseline은 existing session focus 대신 workspace opening을 우선 지원한다. iTerm이 없으면 project-folder opener로 graceful fallback 한다.
+- 2026-03-24: permission UX baseline은 full settings screen 대신 popover에서 현재 status 표시 + explicit request button 제공으로 시작한다.

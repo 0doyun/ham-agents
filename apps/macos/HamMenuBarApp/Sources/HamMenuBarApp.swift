@@ -28,9 +28,11 @@ struct HamMenuBarApp: App {
         } else {
             client = PreviewDaemonClient()
         }
+        let notificationSink = UserNotificationSink()
         let viewModel = MenuBarViewModel(
             client: client,
-            notificationSink: UserNotificationSink(),
+            notificationSink: notificationSink,
+            notificationPermissionController: notificationSink,
             projectOpener: WorkspaceProjectOpener(),
             sessionOpener: ItermSessionOpener(projectOpener: WorkspaceProjectOpener())
         )
@@ -73,6 +75,13 @@ private struct MenuBarContentView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+
+                NotificationPermissionRow(
+                    status: viewModel.notificationPermissionStatus,
+                    requestPermission: {
+                        Task { await viewModel.requestNotificationPermission() }
+                    }
+                )
 
                 Text("Agents")
                     .font(.subheadline.weight(.semibold))
@@ -123,6 +132,39 @@ private struct MenuBarContentView: View {
             if selectedAgentID == nil || !ids.contains(selectedAgentID ?? "") {
                 selectedAgentID = ids.first
             }
+        }
+    }
+}
+
+private struct NotificationPermissionRow: View {
+    let status: NotificationPermissionStatus
+    let requestPermission: () -> Void
+
+    var body: some View {
+        HStack {
+            Text("Notifications")
+                .font(.caption.weight(.semibold))
+            Spacer()
+            Text(statusLabel)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            if status != .authorized {
+                Button("Enable") {
+                    requestPermission()
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+    }
+
+    private var statusLabel: String {
+        switch status {
+        case .authorized:
+            "Enabled"
+        case .denied:
+            "Denied"
+        case .notDetermined:
+            "Not requested"
         }
     }
 }

@@ -171,3 +171,13 @@
   - `swift test --disable-sandbox` ✅
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - 다음 우선순위 후보: real existing-session focus semantics, iTerm message/send actions, richer notification permission UX
+
+### 2026-03-24 (notification permission UX baseline)
+- `UserNotificationSink` 에 current/request permission status surface 를 추가해 notification delivery 와 permission UX 가 같은 boundary 를 공유하게 만들었다.
+- `MenuBarViewModel` 이 refresh 시 notification permission status 를 함께 읽고, popover에서 `Notifications` 상태와 `Enable` 액션을 보여줄 수 있게 했다.
+- Swift tests로 permission status refresh 와 explicit request action 이 published state 를 갱신하는지 고정했다.
+- 검증:
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- 다음 우선순위 후보: real existing-session focus semantics, iTerm message/send actions, live event stream/follow integration

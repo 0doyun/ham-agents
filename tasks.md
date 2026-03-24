@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **iTerm/workspace action baseline** 다.
+현재 활성 범위는 **notification permission UX baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -54,13 +54,13 @@
 - [x] popover에서 선택 agent detail + recent event context 표시
 - [x] popover에서 최소 agent action 연결
 - [x] iTerm/workspace opening action baseline 추가
+- [x] notification permission 상태를 popover에서 인지/요청 가능하게 만들기
 
 ### Current Slice Checklist
 
-- [x] session/iTerm opener boundary 추가
-- [x] popover detail panel에 iTerm action button 추가
-- [x] graceful fallback(open project folder) 정의
-- [x] Swift tests로 session action wiring 보호
+- [x] notification permission status boundary 추가
+- [x] popover에 permission state + request action 추가
+- [x] Swift tests로 permission refresh/request behavior 보호
 - [x] Swift bootstrap build/test green 유지
 - [x] Go tests green 유지
 
@@ -124,13 +124,13 @@
 - [x] CLI/runtime과 상태 소스가 분리되지 않음
 
 ### Epic 5: Notifications
-- [ ] done / waiting_input / error 알림 정의
-- [ ] dedupe / mute 정책 초안
-- [ ] notification trigger 연동
+- [x] done / waiting_input / error 알림 정의
+- [x] dedupe / mute 정책 초안
+- [x] notification trigger 연동
 
 #### Acceptance Criteria
-- [ ] 핵심 상태 알림이 동작함
-- [ ] 과도한 noisy progress 알림은 기본 비활성
+- [x] 핵심 상태 알림이 동작함
+- [x] 과도한 noisy progress 알림은 기본 비활성
 
 ### Epic 6: iTerm2 Integration
 - [ ] 세션 식별 방식 결정

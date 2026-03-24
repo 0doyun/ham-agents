@@ -135,3 +135,4 @@
 - `HamNotifications` now also includes a `UserNotifications`-backed sink so the current polling/menu bar flow can emit real macOS notification requests.
 - The current popover baseline includes agent selection, detail metadata, and per-agent recent-event context without requiring a second backend query path.
 - Baseline popover actions currently start with project-folder opening via an injected opener boundary so later iTerm/session actions can follow the same pattern.
+- Notification permission state is now exposed back into the Swift view-model layer so the popover can surface permission UX without duplicating delivery logic.
