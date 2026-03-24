@@ -907,6 +907,9 @@ func renderAgents(out io.Writer, agents []core.Agent, asJSON bool) error {
 		_, err := fmt.Fprintln(out, "no tracked agents")
 		return err
 	}
+	if _, err := fmt.Fprintf(out, "%s\n", formatAgentListSummary(agents)); err != nil {
+		return err
+	}
 
 	for _, agent := range agents {
 		if _, err := fmt.Fprintln(out, formatAgentListLine(agent)); err != nil {
@@ -914,6 +917,18 @@ func renderAgents(out io.Writer, agents []core.Agent, asJSON bool) error {
 		}
 	}
 	return nil
+}
+
+func formatAgentListSummary(agents []core.Agent) string {
+	managedCount, attachedCount, observedCount := modeBreakdown(agents)
+	return fmt.Sprintf(
+		"summary total=%d attention=%d managed=%d attached=%d observed=%d",
+		len(agents),
+		countAttentionAgents(agents),
+		managedCount,
+		attachedCount,
+		observedCount,
+	)
 }
 
 func formatAgentListLine(agent core.Agent) string {
@@ -973,6 +988,20 @@ func attentionBreakdown(agents []core.Agent) (errorCount, waitingCount, disconne
 		}
 	}
 	return errorCount, waitingCount, disconnectedCount
+}
+
+func modeBreakdown(agents []core.Agent) (managedCount, attachedCount, observedCount int) {
+	for _, agent := range agents {
+		switch agent.Mode {
+		case core.AgentModeManaged:
+			managedCount++
+		case core.AgentModeAttached:
+			attachedCount++
+		case core.AgentModeObserved:
+			observedCount++
+		}
+	}
+	return managedCount, attachedCount, observedCount
 }
 
 func renderStatus(out io.Writer, snapshot core.RuntimeSnapshot, asJSON bool) error {
