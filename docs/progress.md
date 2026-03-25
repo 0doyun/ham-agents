@@ -1040,3 +1040,24 @@
 - Go regression tests 로 removed event summary generation과 human CLI rendering 을 함께 보호했다.
 - 검증:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/cmd/ham ./go/internal/runtime` ✅
+
+### 2026-03-25 (observed inference keyword refinement baseline)
+- observed inference 가 generic `?` heuristic 만 보지 않고 `waiting for input`, `need input`, `all tests passed`, `task complete` 같은 explicit 문구를 더 직접 해석하도록 정리했다.
+- observed mode confidence 는 여전히 low-to-mid 범위에 머물게 두되, explicit signal 에는 generic keyword보다 높은 confidence/reason/summary 를 부여했다.
+- Go regression tests 로 explicit input/completion signal detection 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (observed inference precedence guard baseline)
+- observed inference 가 `0 failed`, `no error`, `not completed` 같은 obvious negation 문맥에 덜 흔들리도록 precedence guard 를 추가했다.
+- explicit completion/input/error phrase 는 계속 우선 처리하되, negated generic substring 은 thinking fallback 을 방해하지 않게 정리했다.
+- Go regression tests 로 `0 failed` / `no error` / `not completed` / `don't need input` false positive guard 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (observed inference latest-line precedence baseline)
+- observed inference 가 mixed log 전체를 동일 가중치로 보지 않고 최신 non-empty line 을 먼저 해석하게 정리했다.
+- 그래서 오래된 `error`/`waiting for input` line 이 더 최신 `all tests passed` / `don't need input anymore` line 을 덮지 않게 만들었다.
+- Go regression tests 로 latest-line precedence 와 mixed-log fallback 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅

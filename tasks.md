@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **removed-event lifecycle detail follow-up** 다.
+현재 활성 범위는 **observed inference latest-line precedence baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -139,6 +139,9 @@
 - [x] CLI human event detail baseline 추가
 - [x] richer lifecycle coverage follow-up 추가
 - [x] removed-event lifecycle detail follow-up 추가
+- [x] observed inference keyword refinement baseline 추가
+- [x] observed inference precedence guard baseline 추가
+- [x] observed inference latest-line precedence baseline 추가
 
 ### Current Slice Checklist
 
@@ -298,6 +301,15 @@
 - [x] remove event 가 generic `Tracking stopped.` 대신 lifecycle-aware detail 을 제공
 - [x] human CLI / Swift surfaces 가 removed event 에서 더 구체적인 detail 을 보게 유지
 - [x] Go tests로 removed-event lifecycle detail follow-up 보호
+- [x] observed inference 가 waiting/error/done 신호를 더 구체적으로 해석
+- [x] low-confidence observed wording 을 유지하면서 explicit signal confidence 를 끌어올림
+- [x] Go tests로 observed inference keyword refinement baseline 보호
+- [x] observed inference 가 `no error` / `0 failed` / `not completed` 같은 부정 문맥에 덜 흔들림
+- [x] explicit signal precedence 가 generic substring 보다 우선함을 유지
+- [x] Go tests로 observed inference precedence guard baseline 보호
+- [x] mixed observed logs 에서 최신 line signal 이 오래된 line signal 보다 우선함
+- [x] 오래된 error/waiting line 이 최신 done/continue line 을 덮지 않게 정리
+- [x] Go tests로 observed inference latest-line precedence baseline 보호
 - [x] `ham events --json` 이 lifecycle_confidence 필드를 유지
 - [x] `ham logs --json` 도 same lifecycle_confidence contract 를 유지
 - [x] Go tests로 CLI event lifecycle confidence contract baseline 보호
