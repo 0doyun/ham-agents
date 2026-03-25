@@ -337,6 +337,82 @@ func TestRegisterObservedPersistsModeAndConfidence(t *testing.T) {
 	}
 }
 
+func TestRegisterAttachedReusesExistingSessionRef(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	first, err := registry.RegisterAttached(ctx, runtime.RegisterAttachedInput{
+		Provider:    "iterm2",
+		DisplayName: "ops",
+		ProjectPath: "/tmp/project",
+		SessionRef:  "iterm2://session/abc",
+	})
+	if err != nil {
+		t.Fatalf("register attached: %v", err)
+	}
+
+	second, err := registry.RegisterAttached(ctx, runtime.RegisterAttachedInput{
+		Provider:    "iterm2",
+		DisplayName: "ops-reused",
+		ProjectPath: "/tmp/project-two",
+		SessionRef:  "iterm2://session/abc",
+	})
+	if err != nil {
+		t.Fatalf("register attached reuse: %v", err)
+	}
+
+	if second.ID != first.ID {
+		t.Fatalf("expected attach reuse to keep same agent id, first=%q second=%q", first.ID, second.ID)
+	}
+	if second.DisplayName != "ops-reused" || second.ProjectPath != "/tmp/project-two" {
+		t.Fatalf("expected metadata to refresh on reuse, got %#v", second)
+	}
+}
+
+func TestRegisterObservedReusesExistingSourceRef(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	first, err := registry.RegisterObserved(ctx, runtime.RegisterObservedInput{
+		Provider:    "transcript",
+		DisplayName: "watcher",
+		ProjectPath: "/tmp/project",
+		SessionRef:  filepath.Join(root, "watcher.log"),
+	})
+	if err != nil {
+		t.Fatalf("register observed: %v", err)
+	}
+
+	second, err := registry.RegisterObserved(ctx, runtime.RegisterObservedInput{
+		Provider:    "transcript",
+		DisplayName: "watcher-two",
+		ProjectPath: "/tmp/project-two",
+		SessionRef:  filepath.Join(root, "watcher.log"),
+	})
+	if err != nil {
+		t.Fatalf("register observed reuse: %v", err)
+	}
+
+	if second.ID != first.ID {
+		t.Fatalf("expected observed reuse to keep same agent id, first=%q second=%q", first.ID, second.ID)
+	}
+	if second.DisplayName != "watcher-two" || second.ProjectPath != "/tmp/project-two" {
+		t.Fatalf("expected observed metadata to refresh on reuse, got %#v", second)
+	}
+}
+
 func TestListRefreshesObservedAgentFromSource(t *testing.T) {
 	t.Parallel()
 

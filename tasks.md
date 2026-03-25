@@ -19,32 +19,32 @@
 - [x] Epic 13: Notification Completeness
 - [x] Epic 14: Settings Completeness
 - [x] Epic 15: Provider Adapter Layer
-- [ ] Epic 16: Final Polish and Performance
+- [x] Epic 16: Final Polish and Performance
 
 ---
 
 ## Active Scope
 
-현재 활성 범위는 **Epic 16: Final Polish and Performance** 이다.
+현재 활성 feature scope는 없다. **Epic 1–16 전체가 완료**되었다.
 
-이 epic의 목표는 export/log masking/performance/UX 마무리를 통해 v1 flow를 end-to-end로 다듬는 것이다.
+남은 작업이 생기면 이 섹션은 새로운 사용자 요청 또는 polish backlog 기준으로 다시 갱신한다.
 
 ### Current Slice Checklist
 
-- [ ] exportable logs — `ham logs --export` 또는 파일 내보내기 (§20 v1.0)
-- [ ] detach/reattach UX 개선 (§20 v1.0)
-- [ ] 알림 flap bundling 고도화 (§11)
-- [ ] observed inference heuristic 고도화 (§15)
-- [ ] 민감 경로/환경변수 마스킹 (§16)
-- [ ] 성능 목표 검증 및 최적화 (§19) — idle CPU <2%/<1%, 메모리 <150MB/<100MB, 팝오버 <200ms
-- [ ] 디자인 polish / sprite variation
-- [ ] iTerm2 레이아웃 변경 감지 (§14, Won't v1 이지만 best-effort)
-- [ ] Go/Swift tests + 성능 벤치마크
+- [x] exportable logs — `ham logs --export` 또는 파일 내보내기 (§20 v1.0)
+- [x] detach/reattach UX 개선 (§20 v1.0)
+- [x] 알림 flap bundling 고도화 (§11)
+- [x] observed inference heuristic 고도화 (§15)
+- [x] 민감 경로/환경변수 마스킹 (§16)
+- [x] 성능 목표 검증 및 최적화 (§19) — idle CPU <2%/<1%, 메모리 <150MB/<100MB, 팝오버 <200ms
+- [x] 디자인 polish / sprite variation
+- [x] iTerm2 레이아웃 변경 감지 (§14, Won't v1 이지만 best-effort)
+- [x] Go/Swift tests + 성능 벤치마크
 
 #### Acceptance Criteria
-- [ ] spec §19 성능 목표 달성
-- [ ] 민감 정보가 마스킹됨
-- [ ] 전체 UX 플로우(§18)가 end-to-end로 동작
+- [x] spec §19 성능 목표 달성
+- [x] 민감 정보가 마스킹됨
+- [x] 전체 UX 플로우(§18)가 end-to-end로 동작
 
 ---
 
@@ -243,7 +243,7 @@ spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
 13. ~~Epic 13: Notification Completeness~~ ✅
 14. ~~Epic 14: Settings Completeness~~ ✅
 15. ~~Epic 15: Provider Adapter Layer~~ ✅
-16. **Epic 16: Final Polish and Performance** ← 현재
+16. ~~Epic 16: Final Polish and Performance~~ ✅
 
 ---
 

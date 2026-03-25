@@ -45,6 +45,8 @@ func run(args []string) error {
 		return runAsk(ctx, client, args[1:])
 	case "stop":
 		return runStop(ctx, client, args[1:])
+	case "detach":
+		return runDetach(ctx, client, args[1:])
 	case "logs":
 		return runLogs(ctx, client, args[1:])
 	case "doctor":
@@ -88,7 +90,8 @@ Usage:
   ham open <agent-id> [--json] [--print]
   ham ask <agent-or-team> <message>
   ham stop <agent-id> [--json]
-  ham logs <agent-id> [--json] [--limit N]
+  ham detach <agent-id> [--json]
+  ham logs <agent-id> [--json] [--limit N] [--export path]
   ham doctor [--json]
   ham ui [--json] [--print]
   ham team create <name> [--json]

@@ -93,6 +93,52 @@ func TestRefreshObservedAgentDetectsExplicitInputRequest(t *testing.T) {
 	}
 }
 
+func TestRefreshObservedAgentTreatsBlockedReviewAsInputRequest(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	if err := os.WriteFile(path, []byte("Blocked on review until approval arrives."), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	updated := inference.RefreshObservedAgent(core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusIdle,
+		StatusConfidence: 0.35,
+	}, time.Now())
+
+	if updated.Status != core.AgentStatusWaitingInput {
+		t.Fatalf("expected waiting_input status, got %q", updated.Status)
+	}
+}
+
+func TestRefreshObservedAgentTreatsRetryingAsThinking(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	if err := os.WriteFile(path, []byte("Retrying the patch after the previous attempt."), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	updated := inference.RefreshObservedAgent(core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusIdle,
+		StatusConfidence: 0.35,
+	}, time.Now())
+
+	if updated.Status != core.AgentStatusThinking {
+		t.Fatalf("expected thinking status, got %q", updated.Status)
+	}
+}
+
 func TestRefreshObservedAgentDetectsExplicitCompletionSignal(t *testing.T) {
 	t.Parallel()
 
@@ -644,5 +690,53 @@ func TestRefreshObservedAgentDetectsPermissionDeniedOutputAsError(t *testing.T) 
 	}
 	if updated.LastUserVisibleSummary != "Observed permission-denied output." {
 		t.Fatalf("unexpected summary %q", updated.LastUserVisibleSummary)
+	}
+}
+
+func TestRefreshObservedAgentDetectsStructuredClaudeToolUse(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	if err := os.WriteFile(path, []byte(`{"type":"tool_use","name":"grep"}`), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusIdle,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusRunningTool {
+		t.Fatalf("expected running tool status, got %q", updated.Status)
+	}
+}
+
+func TestRefreshObservedAgentDetectsStructuredClaudeError(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	if err := os.WriteFile(path, []byte(`{"type":"error","message":"boom"}`), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusIdle,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusError {
+		t.Fatalf("expected error status, got %q", updated.Status)
 	}
 }

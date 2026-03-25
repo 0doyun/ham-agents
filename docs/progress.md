@@ -78,6 +78,19 @@
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
 - `tasks.md` Active Scope advanced to Epic 14 per Progression policy.
 
+### 2026-03-26 (Epic 16 final polish and performance complete)
+- `ham logs --export` path and masking coverage now close the export/privacy loop for operator-facing logs.
+- attached/observed re-association now prefers reusing the same tracked agent for the same session/source, improving detach/reattach UX without spawning duplicates.
+- iTerm session metadata now tracks window/tab indices and emits layout-change events as a best-effort layout signal.
+- observed inference now recognizes additional blocked/retry phrases, and provider/transcript adapters remain active with Go-side benchmark coverage for hot snapshot paths.
+- visual polish now uses hamster skin / hat / desk theme settings to vary the menu bar hamster and pixel-office rendering.
+- verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./... -count=1` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime -run '^$' -bench Benchmark -benchmem` ✅
+- `tasks.md` now marks Epic 1–16 complete; no active feature epic remains.
+
 ### 2026-03-26 (Epic 14 settings completeness complete)
 - Settings schema now spans `general`, expanded `appearance`, richer `integrations`, and `privacy` sections in both Go and Swift payload layers.
 - CLI now exposes the broader settings surface under `ham settings general|appearance|integrations|privacy ...`.
@@ -94,6 +107,22 @@
 - Verification:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
 - `tasks.md` Active Scope advanced to Epic 16 per Progression policy.
+
+### 2026-03-26 (Epic 16 final polish and performance complete)
+- `ham logs` now supports export-to-file and human-facing log/event rendering now masks sensitive env-style assignments and home-directory paths.
+- Added explicit `ham detach` UX, tightened `ham stop` so it only succeeds on real managed-process termination paths, and kept detach/removal as a separate flow.
+- Added notification history persistence/query, stronger flap/dedupe suppression, long-running-only done notification policy, and team digest stabilization.
+- Added richer observed/provider heuristics (including structured JSON transcript hints) plus best-effort iTerm layout-change detection via window/tab metadata tracking.
+- Pixel office polish now applies appearance customizations (skin/hat/desk theme) to the renderer and menu bar glyph.
+- Performance evidence collected:
+  - `BenchmarkSnapshotAttentionOrder` ≈ `178231 ns/op`
+  - `BenchmarkSnapshotAttentionSubtitles` ≈ `63577 ns/op`
+  - `BenchmarkRegistrySnapshot100Agents` ≈ `364827 ns/op`
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
+  - Architect verification: **APPROVED** ✅
+- `tasks.md` now marks Epic 1–16 complete.
 
 ### 2026-03-24
 - 문서 초기 세팅 완료

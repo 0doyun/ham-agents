@@ -1,6 +1,7 @@
 package inference
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -56,12 +57,12 @@ func RefreshObservedAgent(agent core.Agent, now time.Time) core.Agent {
 	genericDoneSignals := []string{"done", "completed"}
 	genericDoneNegations := []string{"not done", "not completed", "incomplete", "not yet done", "not yet completed", "task not complete", "not task complete"}
 
-	explicitInputSignals := []string{"waiting for input", "needs input", "need input", "please confirm", "approval needed", "approve?"}
+	explicitInputSignals := []string{"waiting for input", "needs input", "need input", "please confirm", "approval needed", "approve?", "blocked on review", "waiting on review", "need reviewer input"}
 	genericInputNegations := []string{"no input needed", "don't need input", "doesn't need input", "input not needed", "approval not needed", "no approval needed", "do not need input"}
 
 	explicitToolSignals := []string{"running tool", "tool call", "invoking tool", "executing command", "apply_patch"}
 	explicitReadingSignals := []string{"reading ", "inspecting ", "analyzing ", "reviewing ", "searching "}
-	explicitThinkingSignals := []string{"thinking", "planning", "investigating", "drafting", "reasoning"}
+	explicitThinkingSignals := []string{"thinking", "planning", "investigating", "drafting", "reasoning", "retrying", "iterating"}
 	explicitIdleSignals := []string{"idle", "ready", "standing by", "standing-by", "awaiting work"}
 	explicitSleepingSignals := []string{"sleeping", "paused", "waiting for changes"}
 	explicitBootingSignals := []string{"starting up", "initializing", "booting", "launching", "warming up"}
@@ -200,6 +201,9 @@ func classifyObservedSignal(
 	explicitBootingSignals []string,
 ) (kind string, signalText string) {
 	if latestLine != "" {
+		if structuredKind := classifyObservedStructuredJSON(latestLine); structuredKind != "" {
+			return structuredKind, latestLine
+		}
 		if kind := classifyObservedText(latestLine, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDisconnectedSignals, explicitDisconnectedNegations, explicitReconnectedSignals, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations, explicitToolSignals, explicitReadingSignals, explicitThinkingSignals, explicitIdleSignals, explicitSleepingSignals, explicitBootingSignals); kind != "" {
 			return kind, latestLine
 		}
@@ -208,6 +212,24 @@ func classifyObservedSignal(
 		}
 	}
 	return classifyObservedText(fullContent, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDisconnectedSignals, explicitDisconnectedNegations, explicitReconnectedSignals, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations, explicitToolSignals, explicitReadingSignals, explicitThinkingSignals, explicitIdleSignals, explicitSleepingSignals, explicitBootingSignals), fullContent
+}
+
+func classifyObservedStructuredJSON(text string) string {
+	var payload map[string]any
+	if err := json.Unmarshal([]byte(strings.TrimSpace(text)), &payload); err != nil {
+		return ""
+	}
+	typeValue, _ := payload["type"].(string)
+	switch strings.TrimSpace(typeValue) {
+	case "tool_use":
+		return "running_tool"
+	case "error":
+		return "error"
+	case "assistant", "message":
+		return "thinking"
+	default:
+		return ""
+	}
 }
 
 func classifyObservedText(

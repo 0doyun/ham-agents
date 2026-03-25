@@ -134,6 +134,8 @@
 - 2026-03-25: observed reconnection event presentation baseline treats those recovery-driven `idle` transitions as `Reconnected` in feed/event presentation, so observed recovery is visually distinct from ordinary idle.
 - 2026-03-25: long-silence notification baseline uses a threshold-crossing rule for active states (`booting`, `thinking`, `reading`, `running_tool`) so silence alerts fire once when an agent goes quiet rather than on every refresh.
 - 2026-03-25: silence notification setting baseline keeps silence alerts opt-in at the settings level (`silence: false` by default), so the new alert path exists without surprising existing users.
+- 2026-03-26: managed provider launches prefer the system `script` wrapper when available so CLI providers get a best-effort pseudo-terminal without adding a PTY dependency.
+- 2026-03-26: iTerm layout-change detection is currently best-effort via window/tab index changes surfaced from AppleScript session polling; it is not a canonical full layout graph model.
 - 2026-03-25: silence settings decode coverage baseline keeps Swift payload decoding backward-compatible by defaulting missing `silence` to `false` instead of treating it as a required field.
 - 2026-03-25: observed error phrase refinement baseline extends explicit error detection to timeout/permission-denied style failures, but still keeps them in the same low-confidence observed-error bucket rather than inventing finer error subtypes.
 - 2026-03-25: observed explicit error summary refinement baseline makes timeout and permission-denied phrases keep the shared `error` status while upgrading their reason/summary copy to more specific user-visible wording.

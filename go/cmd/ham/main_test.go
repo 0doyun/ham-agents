@@ -1062,3 +1062,30 @@ func TestRenderStopResultJSON(t *testing.T) {
 		t.Fatalf("expected json stop output to avoid human wording, got %q", payload)
 	}
 }
+
+func TestRenderDetachResultHumanReadable(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	if err := renderDetachResult(&output, "agent-1", false); err != nil {
+		t.Fatalf("render detach result: %v", err)
+	}
+
+	if got := output.String(); got != "detached agent-1\n" {
+		t.Fatalf("unexpected human detach output %q", got)
+	}
+}
+
+func TestRenderDetachResultJSON(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	if err := renderDetachResult(&output, "agent-1", true); err != nil {
+		t.Fatalf("render detach result json: %v", err)
+	}
+
+	payload := output.String()
+	if !strings.Contains(payload, `"detached": "agent-1"`) {
+		t.Fatalf("expected detached field in payload %q", payload)
+	}
+}

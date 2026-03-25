@@ -23,6 +23,17 @@ func renderStopResult(out io.Writer, agentID string, asJSON bool) error {
 	return err
 }
 
+func renderDetachResult(out io.Writer, agentID string, asJSON bool) error {
+	if asJSON {
+		return writeJSONTo(out, map[string]any{
+			"detached": agentID,
+		})
+	}
+
+	_, err := fmt.Fprintf(out, "detached %s\n", agentID)
+	return err
+}
+
 func agentLogFetchLimit(limit int) int {
 	fetchLimit := limit * 10
 	if fetchLimit < 100 {

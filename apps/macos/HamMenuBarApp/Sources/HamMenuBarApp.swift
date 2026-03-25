@@ -19,7 +19,9 @@ struct HamMenuBarApp: App {
                 MenuBarHamsterGlyph(
                     state: viewModel.menuBarHamsterState,
                     animationSpeed: viewModel.settings.appearance.animationSpeedMultiplier,
-                    reduceMotion: viewModel.settings.appearance.reduceMotion
+                    reduceMotion: viewModel.settings.appearance.reduceMotion,
+                    hamsterSkin: viewModel.settings.appearance.hamsterSkin,
+                    hat: viewModel.settings.appearance.hat
                 )
                 Text(viewModel.statusLine)
             }

@@ -85,7 +85,7 @@ func parseAttachableSessions(payload []byte) ([]core.AttachableSession, error) {
 	sessions := make([]core.AttachableSession, 0, len(lines))
 
 	for _, line := range lines {
-		fields := strings.SplitN(strings.TrimSpace(line), "\t", 4)
+		fields := strings.SplitN(strings.TrimSpace(line), "\t", 6)
 		if len(fields) < 2 {
 			return nil, fmt.Errorf("invalid iTerm2 session row %q", line)
 		}
@@ -97,8 +97,16 @@ func parseAttachableSessions(payload []byte) ([]core.AttachableSession, error) {
 			title = strings.TrimSpace(fields[2])
 		}
 		tty := ""
-		if len(fields) == 4 {
+		if len(fields) >= 4 {
 			tty = strings.TrimSpace(fields[3])
+		}
+		windowIndex := 0
+		if len(fields) >= 5 {
+			windowIndex, _ = strconv.Atoi(strings.TrimSpace(fields[4]))
+		}
+		tabIndex := 0
+		if len(fields) >= 6 {
+			tabIndex, _ = strconv.Atoi(strings.TrimSpace(fields[5]))
 		}
 
 		if sessionID == "" {
@@ -106,11 +114,13 @@ func parseAttachableSessions(payload []byte) ([]core.AttachableSession, error) {
 		}
 
 		sessions = append(sessions, core.AttachableSession{
-			ID:         sessionID,
-			Title:      title,
-			SessionRef: "iterm2://session/" + sessionID,
-			IsActive:   activeValue == "true",
-			TTY:        tty,
+			ID:          sessionID,
+			Title:       title,
+			SessionRef:  "iterm2://session/" + sessionID,
+			IsActive:    activeValue == "true",
+			TTY:         tty,
+			WindowIndex: windowIndex,
+			TabIndex:    tabIndex,
 		})
 	}
 
@@ -125,8 +135,12 @@ func listSessionsAppleScript() string {
 	script.WriteString(`        set currentSessionID to (id of current session of current window) as string` + "\n")
 	script.WriteString(`    end try` + "\n")
 	script.WriteString(`    set sessionOutput to ""` + "\n")
+	script.WriteString(`    set windowIndex to 0` + "\n")
 	script.WriteString(`    repeat with aWindow in windows` + "\n")
+	script.WriteString(`        set windowIndex to windowIndex + 1` + "\n")
+	script.WriteString(`        set tabIndex to 0` + "\n")
 	script.WriteString(`        repeat with aTab in tabs of aWindow` + "\n")
+	script.WriteString(`            set tabIndex to tabIndex + 1` + "\n")
 	script.WriteString(`            repeat with aSession in sessions of aTab` + "\n")
 	script.WriteString(`                set sessionID to (id of aSession) as string` + "\n")
 	script.WriteString(`                set sessionName to (name of aSession) as string` + "\n")
@@ -136,7 +150,7 @@ func listSessionsAppleScript() string {
 	script.WriteString(`                try` + "\n")
 	script.WriteString(`                    set sessionTTY to (tty of aSession) as string` + "\n")
 	script.WriteString(`                end try` + "\n")
-	script.WriteString(`                set sessionOutput to sessionOutput & sessionID & tab & activeFlag & tab & sessionName & tab & sessionTTY & linefeed` + "\n")
+	script.WriteString(`                set sessionOutput to sessionOutput & sessionID & tab & activeFlag & tab & sessionName & tab & sessionTTY & tab & windowIndex & tab & tabIndex & linefeed` + "\n")
 	script.WriteString(`            end repeat` + "\n")
 	script.WriteString(`        end repeat` + "\n")
 	script.WriteString(`    end repeat` + "\n")
