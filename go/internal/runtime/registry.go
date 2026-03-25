@@ -398,9 +398,11 @@ func (r *Registry) Remove(ctx context.Context, agentID string) error {
 
 	filtered := make([]core.Agent, 0, len(agents))
 	removed := false
+	var removedAgent core.Agent
 	for _, agent := range agents {
 		if agent.ID == agentID {
 			removed = true
+			removedAgent = agent
 			continue
 		}
 		filtered = append(filtered, agent)
@@ -411,9 +413,13 @@ func (r *Registry) Remove(ctx context.Context, agentID string) error {
 	}
 
 	return r.saveAgentsAndEvents(ctx, filtered, []core.Event{{
-		AgentID: agentID,
-		Type:    core.EventTypeAgentRemoved,
-		Summary: "Tracking stopped.",
+		AgentID:             agentID,
+		Type:                core.EventTypeAgentRemoved,
+		Summary:             "Tracking stopped.",
+		LifecycleStatus:     string(removedAgent.Status),
+		LifecycleMode:       string(removedAgent.Mode),
+		LifecycleReason:     removedAgent.StatusReason,
+		LifecycleConfidence: removedAgent.StatusConfidence,
 	}})
 }
 
