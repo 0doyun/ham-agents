@@ -29,6 +29,7 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
 		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
 	)
+	managedService := runtime.NewManagedService(registry)
 	settingsService := runtime.NewSettingsService(
 		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
 	)
@@ -36,7 +37,7 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, settingsService, teamService, stubSessionLister{
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, stubSessionLister{
 		sessions: []core.AttachableSession{
 			{ID: "abc", Title: "Claude", SessionRef: "iterm2://session/abc", IsActive: true},
 		},
@@ -248,6 +249,7 @@ func TestServerRejectsDirectoryAtSocketPath(t *testing.T) {
 		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
 		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
 	)
+	managedService := runtime.NewManagedService(registry)
 	settingsService := runtime.NewSettingsService(
 		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
 	)
@@ -255,7 +257,7 @@ func TestServerRejectsDirectoryAtSocketPath(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, settingsService, teamService, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil)
 	err := server.Serve(context.Background())
 	if err == nil {
 		t.Fatal("expected server startup to fail when socket path is a directory")
@@ -279,6 +281,7 @@ func TestClientServerRoundTripForTeamCommands(t *testing.T) {
 		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
 		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
 	)
+	managedService := runtime.NewManagedService(registry)
 	settingsService := runtime.NewSettingsService(
 		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
 	)
@@ -286,7 +289,7 @@ func TestClientServerRoundTripForTeamCommands(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, settingsService, teamService, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -352,4 +355,87 @@ func TestClientServerRoundTripForTeamCommands(t *testing.T) {
 	if err := <-serverErrors; err != nil && !errors.Is(err, context.Canceled) {
 		t.Fatalf("server shutdown: %v", err)
 	}
+}
+
+func TestClientServerStopManagedStopsProcess(t *testing.T) {
+	root, err := os.MkdirTemp("/tmp", "hamd-ipc-stop-")
+	if err != nil {
+		t.Fatalf("create temp dir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+
+	t.Setenv("HAM_MANAGED_PROVIDER_LONGPROC_SHELL", "trap 'exit 0' TERM; while true; do sleep 1; done")
+
+	socketPath := filepath.Join(root, "s.sock")
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+	managedService := runtime.NewManagedService(registry)
+	settingsService := runtime.NewSettingsService(
+		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
+	)
+	teamService := runtime.NewTeamService(
+		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
+	)
+
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- server.Serve(ctx)
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if _, err := os.Stat(socketPath); err == nil {
+			break
+		}
+		select {
+		case err := <-serverErrors:
+			if err != nil && strings.Contains(err.Error(), "operation not permitted") {
+				t.Skipf("unix socket binding unavailable in sandbox: %v", err)
+			}
+			t.Fatalf("server exited before socket became ready: %v", err)
+		default:
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("socket did not appear: %s", socketPath)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	client := ipc.NewClient(socketPath)
+	agent, err := client.RunManaged(context.Background(), runtime.RegisterManagedInput{
+		Provider:    "longproc",
+		DisplayName: "builder",
+		ProjectPath: root,
+	})
+	if err != nil {
+		t.Fatalf("run managed: %v", err)
+	}
+
+	if err := client.StopManaged(context.Background(), agent.ID); err != nil {
+		t.Fatalf("stop managed: %v", err)
+	}
+
+	stopDeadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(stopDeadline) {
+		snapshot, err := registry.Snapshot(context.Background())
+		if err != nil {
+			t.Fatalf("snapshot: %v", err)
+		}
+		if len(snapshot.Agents) > 0 && snapshot.Agents[0].Status == core.AgentStatusDone && snapshot.Agents[0].StatusReason == "Managed process stopped." {
+			cancel()
+			if err := <-serverErrors; err != nil && !errors.Is(err, context.Canceled) {
+				t.Fatalf("server shutdown: %v", err)
+			}
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	t.Fatal("managed process did not transition to stopped state before timeout")
 }

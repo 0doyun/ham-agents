@@ -26,6 +26,7 @@ const (
 	CommandCreateTeam            Command = "teams.create"
 	CommandAddTeamMember         Command = "teams.add_member"
 	CommandListTeams             Command = "teams.list"
+	CommandStopManaged           Command = "managed.stop"
 	CommandOpenTarget            Command = "agents.open_target"
 	CommandListItermSessions     Command = "iterm.sessions"
 	CommandListAgents            Command = "agents.list"
@@ -304,6 +305,14 @@ func (c *Client) UpdateRole(ctx context.Context, agentID string, role string) (c
 func (c *Client) RemoveAgent(ctx context.Context, agentID string) error {
 	_, err := c.request(ctx, Request{
 		Command: CommandRemoveAgent,
+		AgentID: agentID,
+	})
+	return err
+}
+
+func (c *Client) StopManaged(ctx context.Context, agentID string) error {
+	_, err := c.request(ctx, Request{
+		Command: CommandStopManaged,
 		AgentID: agentID,
 	})
 	return err

@@ -281,8 +281,10 @@ func runStop(ctx context.Context, client *ipc.Client, args []string) error {
 		return err
 	}
 
-	if err := client.RemoveAgent(ctx, agentID); err != nil {
-		return err
+	if err := client.StopManaged(ctx, agentID); err != nil {
+		if removeErr := client.RemoveAgent(ctx, agentID); removeErr != nil {
+			return err
+		}
 	}
 
 	return renderStopResult(os.Stdout, agentID, asJSON)
