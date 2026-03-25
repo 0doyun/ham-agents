@@ -553,3 +553,34 @@ func TestRefreshObservedAgentDetectsDisconnectedLikeOutput(t *testing.T) {
 		t.Fatalf("unexpected summary %q", updated.LastUserVisibleSummary)
 	}
 }
+
+func TestRefreshObservedAgentDetectsTimeoutLikeOutputAsError(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "Request timed out while contacting the remote service\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusThinking,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusError {
+		t.Fatalf("expected error status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Explicit error-like output detected." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+	if updated.LastUserVisibleSummary != "Observed explicit error-like output." {
+		t.Fatalf("unexpected summary %q", updated.LastUserVisibleSummary)
+	}
+}

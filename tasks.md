@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **observed disconnected phrase inference baseline** 다.
+현재 활성 범위는 **observed error phrase refinement baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -158,6 +158,7 @@
 - [x] booting event presentation baseline 추가
 - [x] observed idle phrase inference baseline 추가
 - [x] observed disconnected phrase inference baseline 추가
+- [x] observed error phrase refinement baseline 추가
 
 ### Current Slice Checklist
 
@@ -374,6 +375,9 @@
 - [x] observed 로그의 explicit disconnected/offline/session-lost line 이 file-missing fallback 전에 `disconnected` 로 추론됨
 - [x] explicit disconnected phrase layer 가 error/idle fallback 과 분리됨
 - [x] Go tests로 observed disconnected phrase inference baseline 보호
+- [x] observed 로그의 timeout/permission-denied 류 문구가 더 직접적으로 `error` 로 추론됨
+- [x] explicit error phrase coverage 가 generic `error`/`failed` fallback 보다 풍부해짐
+- [x] Go tests로 observed error phrase refinement baseline 보호
 - [x] `ham events --json` 이 lifecycle_confidence 필드를 유지
 - [x] `ham logs --json` 도 same lifecycle_confidence contract 를 유지
 - [x] Go tests로 CLI event lifecycle confidence contract baseline 보호

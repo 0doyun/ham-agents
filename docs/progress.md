@@ -1167,6 +1167,13 @@
 - 검증:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
 
+### 2026-03-25 (observed error phrase refinement baseline)
+- observed 로그의 explicit `timed out` / `timeout` / `permission denied` / `unauthorized` 류 문구가 generic error fallback 전에 더 직접적으로 `error` 로 추론되게 정리했다.
+- 그래서 more explicit failure text 가 just `error` / `failed` substring 에만 의존하지 않게 됐다.
+- Go regression test 로 observed error phrase refinement baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
 ### 2026-03-25 (booting event presentation baseline)
 - daemon event presentation hint 와 Swift presenter 가 `booting` 상태도 `Booting` 으로 직접 보여주게 정리했다.
 - 그래서 observed booting inference 가 activity feed 에서 generic `Status` 로 다시 뭉개지지 않게 됐다.
