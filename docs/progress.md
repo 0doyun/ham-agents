@@ -1182,6 +1182,13 @@
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime` ✅
   - `swift test --filter EventPresentationTests --disable-sandbox` ✅
 
+### 2026-03-25 (attached activity inference baseline)
+- attached reachable session 의 command/activity metadata 를 읽어 `running_tool` / `reading` 상태를 직접 추론하는 baseline 을 추가했다.
+- 그래서 attached mode 도 disconnected/idle 외에 실제 shell activity 를 좀 더 직접 반영할 수 있게 됐다.
+- Go regression tests 로 attached activity inference baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime` ✅
+
 ### 2026-03-25 (silence notification settings UI baseline)
 - menu bar popover notification settings section 에 silence toggle 을 추가해 long-silence alerts 를 UI 에서 직접 켜고 끌 수 있게 정리했다.
 - 기존 MenuBarViewModel notification settings update path 를 그대로 재사용해서 새 UI-only state 를 만들지 않았다.
@@ -1247,3 +1254,18 @@
 - 검증:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime` ✅
   - `swift test --filter EventPresentationTests --disable-sandbox` ✅
+
+### 2026-03-25 (scope review and course correction)
+- Epic 1–8 전체 완료 확인. 146 커밋, 58 파일, 17,161줄 추가.
+- 후반부 커밋 분석 결과 polishing loop 패턴 발견: observed inference 영역에서 키워드 하나씩 추가하며 13+ 커밋 생성, 같은 영역에서 presentation/wording refinement 반복.
+- 중복 커밋 3쌍 발견 (role rename, idle wording, silence alert — 동일 메시지로 2회 커밋).
+- Go/Swift 양쪽에서 코드 중복 발견:
+  - Go: `attentionSeverity`, `humanAgentStatusLabel`, `eventsAfterID` 가 registry.go와 main.go에 각각 중복
+  - Go: 3개 Register 메서드가 거의 동일 패턴
+  - Swift: `appleScriptEscaped` 중복, `humanizedStatusLabel` 중복, running status set 3곳 반복
+- 대형 파일: `main.go` (1,493줄), `registry.go` (1,013줄), `HamMenuBarApp.swift` (977줄)
+- 교정 조치:
+  - `AGENTS.md`에 Progression policy (scope 완료 → 다음 epic 이동) 및 Code quality policy (중복 검색, 파일 분할 기준) 추가
+  - `tasks.md`를 재구성: 완료 항목 archive, Epic 9 (Code Cleanup)를 다음 active scope로 설정
+  - 이후 epic 순서: Code Cleanup → Team/Workspace → Managed Process Lifecycle → Pixel Office
+- 다음 활성 범위: **Epic 9: Code Cleanup** — 중복 제거 + 파일 분할
