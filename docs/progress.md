@@ -1233,6 +1233,13 @@
 - 검증:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
 
+### 2026-03-25 (observed explicit error summary refinement baseline)
+- observed timeout/permission-denied 류 failure text 가 same `error` status 안에서도 더 구체적인 reason/summary copy 를 남기게 정리했다.
+- 그래서 downstream observed lifecycle event/feed copy 가 generic error wording 대신 timeout/permission-denied 맥락을 더 직접 반영한다.
+- Go regression tests 로 observed explicit error summary refinement baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
 ### 2026-03-25 (booting event presentation baseline)
 - daemon event presentation hint 와 Swift presenter 가 `booting` 상태도 `Booting` 으로 직접 보여주게 정리했다.
 - 그래서 observed booting inference 가 activity feed 에서 generic `Status` 로 다시 뭉개지지 않게 됐다.

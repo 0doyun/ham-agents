@@ -88,8 +88,8 @@ func RefreshObservedAgent(agent core.Agent, now time.Time) core.Agent {
 	case "error":
 		agent.Status = core.AgentStatusError
 		agent.StatusConfidence = observedSignalConfidence(signalText, 0.65, 0.55, explicitErrorSignals...)
-		agent.StatusReason = observedSignalReason(signalText, "Explicit error-like output detected.", "Error-like output detected.", explicitErrorSignals...)
-		agent.LastUserVisibleSummary = observedSignalSummary(signalText, "Observed explicit error-like output.", "Observed error-like output.", explicitErrorSignals...)
+		agent.StatusReason = observedErrorReason(signalText)
+		agent.LastUserVisibleSummary = observedErrorSummary(signalText)
 	case "done":
 		agent.Status = core.AgentStatusDone
 		agent.StatusConfidence = observedSignalConfidence(signalText, 0.65, 0.5, explicitDoneSignals...)
@@ -290,4 +290,30 @@ func observedSignalSummary(content string, explicitSummary string, genericSummar
 		return explicitSummary
 	}
 	return genericSummary
+}
+
+func observedErrorReason(content string) string {
+	switch {
+	case containsAny(content, "permission denied", "unauthorized"):
+		return "Permission-denied output detected."
+	case containsAny(content, "timed out", "timeout"):
+		return "Timeout-like output detected."
+	case containsAny(content, "traceback", "panic:", "fatal:", "exception"):
+		return "Explicit error-like output detected."
+	default:
+		return "Error-like output detected."
+	}
+}
+
+func observedErrorSummary(content string) string {
+	switch {
+	case containsAny(content, "permission denied", "unauthorized"):
+		return "Observed permission-denied output."
+	case containsAny(content, "timed out", "timeout"):
+		return "Observed timeout-like output."
+	case containsAny(content, "traceback", "panic:", "fatal:", "exception"):
+		return "Observed explicit error-like output."
+	default:
+		return "Observed error-like output."
+	}
 }

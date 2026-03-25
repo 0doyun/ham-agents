@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **silence notification preview masking baseline** 다.
+현재 활성 범위는 **observed explicit error summary refinement baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -167,6 +167,7 @@
 - [x] silence notification settings UI baseline 추가
 - [x] silence notification summary copy baseline 추가
 - [x] silence notification preview masking baseline 추가
+- [x] observed explicit error summary refinement baseline 추가
 
 ### Current Slice Checklist
 
@@ -184,6 +185,9 @@
 - [x] previewText 가 켜진 silence notification 에서 마지막 관측 요약을 보여줌
 - [x] Swift tests로 silence notification summary copy baseline 보호
 - [x] previewText=false 일 때 silence notification body 가 generic detail copy 로 마스킹됨
+- [x] observed timeout/permission-denied 류 error phrase 가 더 구체적인 reason/summary 를 남김
+- [x] explicit error phrase refinement 이 downstream observed lifecycle copy 품질을 높임
+- [x] Go tests로 observed explicit error summary refinement baseline 보호
 - [x] silence notification 도 기존 preview masking policy 를 동일하게 따름
 - [x] Swift tests로 silence notification preview masking baseline 보호
 - [x] Go/Swift tests로 silence notification setting baseline 보호

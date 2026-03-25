@@ -132,6 +132,7 @@
 - 2026-03-25: silence notification setting baseline keeps silence alerts opt-in at the settings level (`silence: false` by default), so the new alert path exists without surprising existing users.
 - 2026-03-25: silence settings decode coverage baseline keeps Swift payload decoding backward-compatible by defaulting missing `silence` to `false` instead of treating it as a required field.
 - 2026-03-25: observed error phrase refinement baseline extends explicit error detection to timeout/permission-denied style failures, but still keeps them in the same low-confidence observed-error bucket rather than inventing finer error subtypes.
+- 2026-03-25: observed explicit error summary refinement baseline makes timeout and permission-denied phrases keep the shared `error` status while upgrading their reason/summary copy to more specific user-visible wording.
 - 2026-03-25: booting event presentation baseline keeps that newly inferred `booting` state visible in event/feed presentation with a direct `Booting` label instead of generic `Status`.
 - 2026-03-25: CLI event lifecycle metadata contract baseline keeps `lifecycle_status` / `lifecycle_mode` additive on JSON event/log output only; human CLI event rows still use the existing tab-separated format.
 - 2026-03-25: CLI event lifecycle reason contract baseline keeps `lifecycle_reason` additive on JSON event/log output only; human CLI event rows still rely on the existing tab-separated summary format.
