@@ -1033,3 +1033,10 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: daemon-backed lifecycle detail follow-up, stronger feed semantics, lower-latency visual polish
+
+### 2026-03-25 (removed-event lifecycle detail follow-up)
+- daemon removal event 의 `presentation_summary` 가 generic `Tracking stopped.` 대신 마지막 lifecycle status/reason 을 반영한 detail(`Stopped tracking while ...`)을 제공하게 정리했고, `waiting_input` 같은 raw status 는 `waiting for input` 으로 humanize 했다.
+- human `ham events` / `ham logs` 도 같은 daemon-backed removal detail 을 그대로 보여주도록 유지했다.
+- Go regression tests 로 removed event summary generation과 human CLI rendering 을 함께 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/cmd/ham ./go/internal/runtime` ✅

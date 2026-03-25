@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **richer lifecycle coverage follow-up** 다.
+현재 활성 범위는 **removed-event lifecycle detail follow-up** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -138,6 +138,7 @@
 - [x] low-confidence lifecycle event presentation baseline 추가
 - [x] CLI human event detail baseline 추가
 - [x] richer lifecycle coverage follow-up 추가
+- [x] removed-event lifecycle detail follow-up 추가
 
 ### Current Slice Checklist
 
@@ -294,6 +295,9 @@
 - [x] remove event 가 lifecycle metadata 를 유지
 - [x] downstream consumers 가 removed event context 를 잃지 않게 유지
 - [x] Go tests로 richer lifecycle coverage follow-up 보호
+- [x] remove event 가 generic `Tracking stopped.` 대신 lifecycle-aware detail 을 제공
+- [x] human CLI / Swift surfaces 가 removed event 에서 더 구체적인 detail 을 보게 유지
+- [x] Go tests로 removed-event lifecycle detail follow-up 보호
 - [x] `ham events --json` 이 lifecycle_confidence 필드를 유지
 - [x] `ham logs --json` 도 same lifecycle_confidence contract 를 유지
 - [x] Go tests로 CLI event lifecycle confidence contract baseline 보호

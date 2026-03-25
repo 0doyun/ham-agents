@@ -826,7 +826,7 @@ func (r *Registry) appendEvent(ctx context.Context, event core.Event) {
 		event.OccurredAt = r.clock().UTC()
 	}
 	if event.PresentationLabel == "" || event.PresentationEmphasis == "" || event.PresentationSummary == "" {
-		label, emphasis, presentationSummary := eventPresentationHint(event.Type, event.Summary)
+		label, emphasis, presentationSummary := eventPresentationHint(event)
 		if event.PresentationLabel == "" {
 			event.PresentationLabel = label
 		}
@@ -840,46 +840,73 @@ func (r *Registry) appendEvent(ctx context.Context, event core.Event) {
 	_ = r.eventStore.Append(ctx, event)
 }
 
-func eventPresentationHint(eventType core.EventType, summary string) (label string, emphasis string, presentationSummary string) {
-	lowerSummary := strings.ToLower(summary)
+func eventPresentationHint(event core.Event) (label string, emphasis string, presentationSummary string) {
+	lowerSummary := strings.ToLower(event.Summary)
 
-	switch eventType {
+	switch event.Type {
 	case core.EventTypeAgentRegistered:
 		switch {
 		case strings.Contains(lowerSummary, "attached session registered"):
-			return "Attached", "info", summary
+			return "Attached", "info", event.Summary
 		case strings.Contains(lowerSummary, "observed source registered"):
-			return "Observed", "info", summary
+			return "Observed", "info", event.Summary
 		default:
-			return "Managed", "info", summary
+			return "Managed", "info", event.Summary
 		}
 	case core.EventTypeAgentRoleUpdated:
-		return "Role", "info", summary
+		return "Role", "info", event.Summary
 	case core.EventTypeAgentNotificationPolicyUpdated:
-		return "Notifications", "info", summary
+		return "Notifications", "info", event.Summary
 	case core.EventTypeAgentDisconnected:
-		return "Disconnected", "warning", trimLifecyclePresentationSummary(summary)
+		return "Disconnected", "warning", trimLifecyclePresentationSummary(event.Summary)
 	case core.EventTypeAgentReconnected:
-		return "Reconnected", "positive", trimLifecyclePresentationSummary(summary)
+		return "Reconnected", "positive", trimLifecyclePresentationSummary(event.Summary)
 	case core.EventTypeAgentRemoved:
-		return "Stopped", "neutral", summary
+		return "Stopped", "neutral", removalPresentationSummary(event)
 	case core.EventTypeAgentStatusUpdated:
 		switch {
 		case strings.Contains(lowerSummary, "status changed to error"):
-			return "Error", "warning", trimLifecyclePresentationSummary(summary)
+			return "Error", "warning", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to waiting_input"):
-			return "Needs Input", "warning", trimLifecyclePresentationSummary(summary)
+			return "Needs Input", "warning", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to done"):
-			return "Done", "positive", trimLifecyclePresentationSummary(summary)
+			return "Done", "positive", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to disconnected"):
-			return "Disconnected", "warning", trimLifecyclePresentationSummary(summary)
+			return "Disconnected", "warning", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to idle"):
-			return "Idle", "info", trimLifecyclePresentationSummary(summary)
+			return "Idle", "info", trimLifecyclePresentationSummary(event.Summary)
 		default:
-			return "Status", "info", summary
+			return "Status", "info", event.Summary
 		}
 	default:
 		return "", "", ""
+	}
+}
+
+func removalPresentationSummary(event core.Event) string {
+	status := strings.TrimSpace(event.LifecycleStatus)
+	reason := strings.TrimSpace(event.LifecycleReason)
+
+	if status == "" && reason == "" {
+		return event.Summary
+	}
+
+	base := "Stopped tracking."
+	if status != "" {
+		base = fmt.Sprintf("Stopped tracking while %s.", humanLifecycleStatusForPresentation(status))
+	}
+	if reason == "" {
+		return base
+	}
+	return fmt.Sprintf("%s %s", base, reason)
+}
+
+func humanLifecycleStatusForPresentation(status string) string {
+	switch strings.TrimSpace(status) {
+	case "waiting_input":
+		return "waiting for input"
+	default:
+		return strings.TrimSpace(status)
 	}
 }
 
