@@ -56,7 +56,11 @@ func RefreshObservedAgent(agent core.Agent, now time.Time) core.Agent {
 	explicitInputSignals := []string{"waiting for input", "needs input", "need input", "please confirm", "approval needed", "approve?"}
 	genericInputNegations := []string{"no input needed", "don't need input", "doesn't need input", "input not needed", "approval not needed", "no approval needed", "do not need input"}
 
-	kind, signalText := classifyObservedSignal(latestLine, content, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations)
+	explicitToolSignals := []string{"running tool", "tool call", "invoking tool", "executing command", "apply_patch"}
+	explicitReadingSignals := []string{"reading ", "inspecting ", "analyzing ", "reviewing ", "searching "}
+
+	kind, signalText := classifyObservedSignal(latestLine, content, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations, explicitToolSignals, explicitReadingSignals)
+	continuationLine := latestLine != "" && indicatesObservedContinuation(latestLine)
 
 	switch kind {
 	case "error":
@@ -74,8 +78,23 @@ func RefreshObservedAgent(agent core.Agent, now time.Time) core.Agent {
 		agent.StatusConfidence = observedSignalConfidence(signalText, 0.65, 0.45, explicitInputSignals...)
 		agent.StatusReason = observedSignalReason(signalText, "Explicit input request detected.", "Question-like output detected.", explicitInputSignals...)
 		agent.LastUserVisibleSummary = observedSignalSummary(signalText, "Observed explicit input request.", "Observed question-like output.", explicitInputSignals...)
+	case "running_tool":
+		agent.Status = core.AgentStatusRunningTool
+		agent.StatusConfidence = 0.5
+		agent.StatusReason = "Tool-like output detected."
+		agent.LastUserVisibleSummary = "Observed tool-like activity."
+	case "reading":
+		agent.Status = core.AgentStatusReading
+		agent.StatusConfidence = 0.45
+		agent.StatusReason = "Reading-like output detected."
+		agent.LastUserVisibleSummary = "Observed reading-like activity."
 	default:
-		if age <= 2*time.Minute {
+		if continuationLine {
+			agent.Status = core.AgentStatusThinking
+			agent.StatusConfidence = 0.42
+			agent.StatusReason = "Continuation-like output detected."
+			agent.LastUserVisibleSummary = "Observed continuing output."
+		} else if age <= 2*time.Minute {
 			agent.Status = core.AgentStatusThinking
 			agent.StatusConfidence = 0.4
 			agent.StatusReason = fmt.Sprintf("Output changed %s ago.", age.Round(time.Second))
@@ -133,13 +152,18 @@ func classifyObservedSignal(
 	genericDoneNegations []string,
 	explicitInputSignals []string,
 	genericInputNegations []string,
+	explicitToolSignals []string,
+	explicitReadingSignals []string,
 ) (kind string, signalText string) {
 	if latestLine != "" {
-		if kind := classifyObservedText(latestLine, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations); kind != "" {
+		if kind := classifyObservedText(latestLine, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations, explicitToolSignals, explicitReadingSignals); kind != "" {
 			return kind, latestLine
 		}
+		if indicatesObservedContinuation(latestLine) {
+			return "", latestLine
+		}
 	}
-	return classifyObservedText(fullContent, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations), fullContent
+	return classifyObservedText(fullContent, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations, explicitToolSignals, explicitReadingSignals), fullContent
 }
 
 func classifyObservedText(
@@ -152,6 +176,8 @@ func classifyObservedText(
 	genericDoneNegations []string,
 	explicitInputSignals []string,
 	genericInputNegations []string,
+	explicitToolSignals []string,
+	explicitReadingSignals []string,
 ) string {
 	switch {
 	case containsSignal(text, explicitErrorSignals, nil) || containsSignal(text, genericErrorSignals, genericErrorNegations):
@@ -160,9 +186,26 @@ func classifyObservedText(
 		return "done"
 	case containsSignal(text, explicitInputSignals, genericInputNegations) || (strings.Contains(text, "?") && !containsAny(text, genericInputNegations...)):
 		return "waiting_input"
+	case containsAny(text, explicitToolSignals...):
+		return "running_tool"
+	case containsAny(text, explicitReadingSignals...):
+		return "reading"
 	default:
 		return ""
 	}
+}
+
+func indicatesObservedContinuation(text string) bool {
+	return containsAny(
+		text,
+		"continuing",
+		"still working",
+		"working on",
+		"in progress",
+		"processing",
+		"retrying",
+		"resuming",
+	)
 }
 
 func observedSignalConfidence(content string, explicitConfidence float64, genericConfidence float64, explicitPatterns ...string) float64 {

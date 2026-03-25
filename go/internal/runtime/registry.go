@@ -869,6 +869,14 @@ func eventPresentationHint(event core.Event) (label string, emphasis string, pre
 			return "Error", "warning", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to waiting_input"):
 			return "Needs Input", "warning", trimLifecyclePresentationSummary(event.Summary)
+		case strings.Contains(lowerSummary, "status changed to running_tool"):
+			return "Running Tool", "info", trimLifecyclePresentationSummary(event.Summary)
+		case strings.Contains(lowerSummary, "status changed to reading"):
+			return "Reading", "info", trimLifecyclePresentationSummary(event.Summary)
+		case strings.Contains(lowerSummary, "status changed to thinking"):
+			return "Thinking", "info", trimLifecyclePresentationSummary(event.Summary)
+		case strings.Contains(lowerSummary, "status changed to sleeping"):
+			return "Sleeping", "neutral", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to done"):
 			return "Done", "positive", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to disconnected"):

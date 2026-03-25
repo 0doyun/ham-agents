@@ -1061,3 +1061,38 @@
 - Go regression tests 로 latest-line precedence 와 mixed-log fallback 을 보호했다.
 - 검증:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (observed inference continuation-line guard baseline)
+- 최신 line 이 explicit signal 은 아니어도 `continuing`, `still working`, `processing` 같은 continuation phrase 면 stale full-log signal fallback 을 억제하도록 정리했다.
+- 그래서 오래된 waiting/error line 뒤에 이어진 neutral progress line 이 있으면 recent-activity 기반 thinking fallback 이 유지된다.
+- Go regression test 로 continuation-line guard 를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (observed continuation summary baseline)
+- continuation phrase 로 thinking fallback 에 들어간 경우 generic freshness 문장 대신 `Continuation-like output detected.` / `Observed continuing output.` 을 보여주게 정리했다.
+- 그래서 observed thinking 상태가 단순 최근 출력과 실제 continuation line 을 더 잘 구분한다.
+- Go regression tests 로 continuation summary 와 generic freshness fallback 분리를 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (observed tool-read inference baseline)
+- observed 로그의 explicit tool-like line 을 `running_tool`, reading/analyzing line 을 `reading` 상태로 추론하는 baseline 을 추가했다.
+- 그래서 observed mode 도 generic thinking 전에 spec 상태 집합 일부를 더 직접 반영할 수 있게 됐다.
+- Go regression tests 로 tool/read inference baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (tool-read event presentation baseline)
+- daemon event presentation hint 와 Swift presenter 가 `running_tool` / `reading` 상태를 각각 `Running Tool` / `Reading` 으로 더 직접 보여주게 정리했다.
+- 그래서 observed tool/read inference 가 activity feed 에서 generic `Status` 로 다시 뭉개지지 않게 됐다.
+- Go/Swift regression tests 로 tool-read event presentation baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime` ✅
+
+### 2026-03-25 (thinking-sleeping event presentation baseline)
+- daemon event presentation hint 와 Swift presenter 가 `thinking` / `sleeping` 상태도 각각 `Thinking` / `Sleeping` 으로 직접 보여주게 정리했다.
+- 그래서 observed recent-activity / idle transition 이 feed 에서 generic `Status` 로 보이지 않게 됐다.
+- Go/Swift regression tests 로 thinking-sleeping event presentation baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime` ✅

@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **observed inference latest-line precedence baseline** 다.
+현재 활성 범위는 **thinking-sleeping event presentation baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -142,6 +142,11 @@
 - [x] observed inference keyword refinement baseline 추가
 - [x] observed inference precedence guard baseline 추가
 - [x] observed inference latest-line precedence baseline 추가
+- [x] observed inference continuation-line guard baseline 추가
+- [x] observed continuation summary baseline 추가
+- [x] observed tool-read inference baseline 추가
+- [x] tool-read event presentation baseline 추가
+- [x] thinking-sleeping event presentation baseline 추가
 
 ### Current Slice Checklist
 
@@ -310,6 +315,21 @@
 - [x] mixed observed logs 에서 최신 line signal 이 오래된 line signal 보다 우선함
 - [x] 오래된 error/waiting line 이 최신 done/continue line 을 덮지 않게 정리
 - [x] Go tests로 observed inference latest-line precedence baseline 보호
+- [x] signal이 없는 최신 continuation line 도 stale waiting/error fallback 을 억제
+- [x] 최신 `continuing` / `still working` 류 line 이 thinking fallback 으로 연결됨
+- [x] Go tests로 observed inference continuation-line guard baseline 보호
+- [x] continuation line 이 generic time-only reason 대신 더 직접적인 thinking reason/summary 를 제공
+- [x] observed thinking fallback 이 recent output vs continuation output 을 구분해 표현
+- [x] Go tests로 observed continuation summary baseline 보호
+- [x] observed 로그에서 tool-like line 이 `running_tool` 로 추론됨
+- [x] observed 로그에서 reading/analyzing line 이 `reading` 으로 추론됨
+- [x] Go tests로 observed tool-read inference baseline 보호
+- [x] `agent.status_updated` 가 `running_tool` / `reading` 을 더 직접적인 event label 로 보여줌
+- [x] Swift feed/presenter 와 daemon presentation hint 가 tool/read 상태에 대해 정렬됨
+- [x] Go/Swift tests로 tool-read event presentation baseline 보호
+- [x] `agent.status_updated` 가 `thinking` / `sleeping` 도 더 직접적인 event label 로 보여줌
+- [x] Swift feed/presenter 와 daemon presentation hint 가 thinking/sleeping 상태에 대해 정렬됨
+- [x] Go/Swift tests로 thinking-sleeping event presentation baseline 보호
 - [x] `ham events --json` 이 lifecycle_confidence 필드를 유지
 - [x] `ham logs --json` 도 same lifecycle_confidence contract 를 유지
 - [x] Go tests로 CLI event lifecycle confidence contract baseline 보호

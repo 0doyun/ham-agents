@@ -283,3 +283,118 @@ func TestRefreshObservedAgentPrefersLatestNegatedInputLineOverEarlierWaitingLine
 		t.Fatalf("expected thinking status, got %q", updated.Status)
 	}
 }
+
+func TestRefreshObservedAgentTreatsLatestContinuationLineAsThinking(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "waiting for input\ncontinuing automatically with fallback.\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusIdle,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusThinking {
+		t.Fatalf("expected thinking status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Continuation-like output detected." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+	if updated.LastUserVisibleSummary != "Observed continuing output." {
+		t.Fatalf("unexpected visible summary %q", updated.LastUserVisibleSummary)
+	}
+}
+
+func TestRefreshObservedAgentRecentGenericOutputKeepsTimeBasedThinkingReason(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "plain heartbeat output\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusIdle,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusThinking {
+		t.Fatalf("expected thinking status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Output changed 0s ago." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+}
+
+func TestRefreshObservedAgentDetectsToolLikeOutput(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "Running tool apply_patch on tasks.md\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusIdle,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusRunningTool {
+		t.Fatalf("expected running_tool status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Tool-like output detected." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+}
+
+func TestRefreshObservedAgentDetectsReadingLikeOutput(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "Reviewing architecture notes before next change\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusIdle,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusReading {
+		t.Fatalf("expected reading status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Reading-like output detected." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+}
