@@ -716,6 +716,23 @@ func TestRenderAgentsHumanReadablePrioritizesAttentionAgents(t *testing.T) {
 	}
 }
 
+func TestApplyNotificationSettingsArgsParsesSilenceFlag(t *testing.T) {
+	t.Parallel()
+
+	settings := core.DefaultSettings().Notifications
+
+	if err := applyNotificationSettingsArgs(&settings, []string{"--silence=true", "--done=false"}); err != nil {
+		t.Fatalf("apply notification settings args: %v", err)
+	}
+
+	if !settings.Silence {
+		t.Fatal("expected silence notifications to be enabled")
+	}
+	if settings.Done {
+		t.Fatal("expected done notifications to be disabled")
+	}
+}
+
 func TestRenderAgentsHumanReadableUsesRecencyWithinSameSeverity(t *testing.T) {
 	t.Parallel()
 

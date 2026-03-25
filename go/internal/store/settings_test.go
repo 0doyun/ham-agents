@@ -22,6 +22,7 @@ func TestFileSettingsStoreRoundTrip(t *testing.T) {
 		t.Fatalf("load default settings: %v", err)
 	}
 	settings.Notifications.PreviewText = true
+	settings.Notifications.Silence = true
 	settings.Notifications.QuietHoursStartHour = 21
 	settings.Notifications.QuietHoursEndHour = 7
 	settings.Appearance.Theme = "night"
@@ -37,6 +38,9 @@ func TestFileSettingsStoreRoundTrip(t *testing.T) {
 	}
 	if !reloaded.Notifications.PreviewText {
 		t.Fatal("expected preview text to persist")
+	}
+	if !reloaded.Notifications.Silence {
+		t.Fatal("expected silence notifications to persist")
 	}
 	if reloaded.Notifications.QuietHoursStartHour != 21 {
 		t.Fatalf("expected quiet start hour 21, got %d", reloaded.Notifications.QuietHoursStartHour)
@@ -80,6 +84,9 @@ func TestFileSettingsStoreBackfillsQuietHoursDefaultsForLegacyFiles(t *testing.T
 
 	if settings.Notifications.QuietHoursStartHour != core.DefaultQuietStartHour {
 		t.Fatalf("expected quiet start default %d, got %d", core.DefaultQuietStartHour, settings.Notifications.QuietHoursStartHour)
+	}
+	if settings.Notifications.Silence {
+		t.Fatal("expected silence flag to default to disabled when absent")
 	}
 	if settings.Notifications.QuietHoursEndHour != core.DefaultQuietEndHour {
 		t.Fatalf("expected quiet end default %d, got %d", core.DefaultQuietEndHour, settings.Notifications.QuietHoursEndHour)

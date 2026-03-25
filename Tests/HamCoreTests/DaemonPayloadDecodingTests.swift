@@ -111,6 +111,59 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         XCTAssertEqual(snapshot.attentionSubtitles, [:])
     }
 
+    func testDaemonSettingsPayloadDecodesSilenceNotificationFlag() throws {
+        let payload = """
+        {
+          "notifications": {
+            "done": true,
+            "error": true,
+            "waiting_input": true,
+            "silence": true,
+            "quiet_hours_enabled": false,
+            "quiet_hours_start_hour": 22,
+            "quiet_hours_end_hour": 8,
+            "preview_text": false
+          },
+          "appearance": {
+            "theme": "auto"
+          },
+          "integrations": {
+            "iterm_enabled": true
+          }
+        }
+        """
+
+        let settings = try DaemonJSONDecoder.make().decode(DaemonSettingsPayload.self, from: Data(payload.utf8))
+
+        XCTAssertTrue(settings.notifications.silence)
+    }
+
+    func testDaemonSettingsPayloadDefaultsMissingSilenceNotificationFlag() throws {
+        let payload = """
+        {
+          "notifications": {
+            "done": true,
+            "error": true,
+            "waiting_input": true,
+            "quiet_hours_enabled": false,
+            "quiet_hours_start_hour": 22,
+            "quiet_hours_end_hour": 8,
+            "preview_text": false
+          },
+          "appearance": {
+            "theme": "auto"
+          },
+          "integrations": {
+            "iterm_enabled": true
+          }
+        }
+        """
+
+        let settings = try DaemonJSONDecoder.make().decode(DaemonSettingsPayload.self, from: Data(payload.utf8))
+
+        XCTAssertFalse(settings.notifications.silence)
+    }
+
     func testAgentEventPayloadDecodesFromGoEventsJSON() throws {
         let payload = """
         [

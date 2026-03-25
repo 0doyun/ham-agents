@@ -1174,6 +1174,22 @@
 - 검증:
   - `swift test --filter StatusChangeNotificationEngineTests --disable-sandbox` ✅
 
+### 2026-03-25 (silence settings decode coverage baseline)
+- Swift daemon settings payload decode 가 explicit `silence=true` 를 읽고, field 가 빠진 legacy payload 에서는 `false` 로 안전하게 backfill 하도록 정리했다.
+- 그래서 newer daemon settings 와 older payload 양쪽 모두에서 silence toggle decode 가 안정적으로 동작한다.
+- Swift regression tests 로 silence settings decode coverage baseline 을 보호했다.
+- 검증:
+  - `swift test --filter DaemonPayloadDecodingTests --disable-sandbox` ✅
+
+### 2026-03-25 (silence notification setting baseline)
+- notification settings schema 에 `silence` toggle 을 추가하고, daemon/CLI/Swift 경로가 이를 round-trip 하게 정리했다.
+- silence notification filtering 이 `settings.notifications.silence` 를 존중하게 해서 long-silence alert 을 설정으로 끌 수 있게 만들었다.
+- Go/Swift regression tests 로 silence notification setting baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/store ./go/internal/runtime ./go/cmd/ham` ✅
+  - `swift test --filter MenuBarViewModelTests --disable-sandbox` ✅
+  - `swift test --filter StatusChangeNotificationEngineTests --disable-sandbox` ✅
+
 ### 2026-03-25 (observed error phrase refinement baseline)
 - observed 로그의 explicit `timed out` / `timeout` / `permission denied` / `unauthorized` 류 문구가 generic error fallback 전에 더 직접적으로 `error` 로 추론되게 정리했다.
 - 그래서 more explicit failure text 가 just `error` / `failed` substring 에만 의존하지 않게 됐다.

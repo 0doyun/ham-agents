@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **long-silence notification baseline** 다.
+현재 활성 범위는 **silence settings decode coverage baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -160,6 +160,8 @@
 - [x] observed disconnected phrase inference baseline 추가
 - [x] observed error phrase refinement baseline 추가
 - [x] long-silence notification baseline 추가
+- [x] silence notification setting baseline 추가
+- [x] silence settings decode coverage baseline 추가
 
 ### Current Slice Checklist
 
@@ -167,6 +169,13 @@
 - [x] active agent 가 silence threshold 를 막 넘길 때 long-silence notification candidate 생성
 - [x] long-silence notification 은 threshold crossing 때만 1회 생성되어 반복 spam 을 줄임
 - [x] Swift tests로 long-silence notification baseline 보호
+- [x] notification settings 에 silence toggle 이 추가됨
+- [x] daemon/CLI/Swift 설정 경로가 silence toggle 을 round-trip 함
+- [x] silence notification filtering 이 settings.notifications.silence 를 존중함
+- [x] Go/Swift tests로 silence notification setting baseline 보호
+- [x] Swift payload decode 가 explicit silence=true 를 읽음
+- [x] Swift payload decode 가 missing silence field 를 false 로 backfill 함
+- [x] Swift tests로 silence settings decode coverage baseline 보호
 - [x] preview-text masking behavior 추가
 - [x] Swift tests로 settings-driven notification behavior 보호
 - [x] daemon-backed message target resolution 재사용

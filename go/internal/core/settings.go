@@ -18,6 +18,7 @@ type NotificationSettings struct {
 	Done                bool `json:"done"`
 	Error               bool `json:"error"`
 	WaitingInput        bool `json:"waiting_input"`
+	Silence             bool `json:"silence"`
 	QuietHoursEnabled   bool `json:"quiet_hours_enabled"`
 	QuietHoursStartHour int  `json:"quiet_hours_start_hour"`
 	QuietHoursEndHour   int  `json:"quiet_hours_end_hour"`
@@ -86,6 +87,7 @@ func (n *NotificationSettings) UnmarshalJSON(data []byte) error {
 		Done                *bool `json:"done"`
 		Error               *bool `json:"error"`
 		WaitingInput        *bool `json:"waiting_input"`
+		Silence             *bool `json:"silence"`
 		QuietHoursEnabled   *bool `json:"quiet_hours_enabled"`
 		QuietHoursStartHour *int  `json:"quiet_hours_start_hour"`
 		QuietHoursEndHour   *int  `json:"quiet_hours_end_hour"`
@@ -108,6 +110,9 @@ func (n *NotificationSettings) UnmarshalJSON(data []byte) error {
 	}
 	if raw.WaitingInput != nil {
 		n.WaitingInput = *raw.WaitingInput
+	}
+	if raw.Silence != nil {
+		n.Silence = *raw.Silence
 	}
 	if raw.QuietHoursEnabled != nil {
 		n.QuietHoursEnabled = *raw.QuietHoursEnabled
@@ -188,6 +193,7 @@ func DefaultSettings() Settings {
 			Done:                true,
 			Error:               true,
 			WaitingInput:        true,
+			Silence:             false,
 			QuietHoursEnabled:   false,
 			QuietHoursStartHour: DefaultQuietStartHour,
 			QuietHoursEndHour:   DefaultQuietEndHour,
