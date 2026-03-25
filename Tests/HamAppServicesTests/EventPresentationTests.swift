@@ -68,6 +68,23 @@ final class EventPresentationTests: XCTestCase {
         XCTAssertFalse(presentation.showsTechnicalType)
     }
 
+    func testLowConfidenceLifecyclePresentationGetsLikelyPrefix() {
+        let event = AgentEventPayload(
+            id: "event-4b",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to waiting_input. Needs confirmation.",
+            occurredAt: Date(timeIntervalSince1970: 4),
+            lifecycleStatus: "waiting_input",
+            lifecycleConfidence: 0.45
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Likely Needs Input")
+        XCTAssertEqual(presentation.emphasis, .warning)
+    }
+
     func testManagedRegisteredEventGetsManagedPresentation() {
         let event = AgentEventPayload(
             id: "event-5",
@@ -135,6 +152,24 @@ final class EventPresentationTests: XCTestCase {
         XCTAssertEqual(AgentEventPresenter.displaySummary(for: event), "Observed source registered.")
     }
 
+    func testLowConfidencePresentationHintAlsoGetsLikelyPrefix() {
+        let event = AgentEventPayload(
+            id: "event-7b",
+            agentID: "agent-1",
+            type: "agent.registered",
+            summary: "Managed session registered.",
+            occurredAt: Date(timeIntervalSince1970: 7),
+            presentationLabel: "Managed",
+            presentationEmphasis: "info",
+            lifecycleConfidence: 0.4
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Likely Managed")
+        XCTAssertEqual(presentation.emphasis, .info)
+    }
+
     func testLifecycleMetadataOverridesSummaryInference() {
         let event = AgentEventPayload(
             id: "event-9",
@@ -161,6 +196,34 @@ final class EventPresentationTests: XCTestCase {
         )
 
         XCTAssertEqual(AgentEventPresenter.displaySummary(for: event), "Status changed to idle. Observed recent output.")
+    }
+
+    func testDisplaySummaryUsesLifecycleReasonWhenNoPresentationSummaryExists() {
+        let event = AgentEventPayload(
+            id: "event-10",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to waiting_input. Needs confirmation.",
+            occurredAt: Date(timeIntervalSince1970: 10),
+            lifecycleReason: "Needs confirmation.",
+            lifecycleConfidence: 0.9
+        )
+
+        XCTAssertEqual(AgentEventPresenter.displaySummary(for: event), "Needs confirmation.")
+    }
+
+    func testDisplaySummarySoftensLowConfidenceLifecycleReason() {
+        let event = AgentEventPayload(
+            id: "event-11",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to waiting_input. Needs confirmation.",
+            occurredAt: Date(timeIntervalSince1970: 11),
+            lifecycleReason: "Needs confirmation.",
+            lifecycleConfidence: 0.45
+        )
+
+        XCTAssertEqual(AgentEventPresenter.displaySummary(for: event), "Needs confirmation. (low confidence)")
     }
 
     func testSummarizeGroupsEventsByPresentation() {

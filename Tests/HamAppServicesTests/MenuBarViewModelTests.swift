@@ -1112,7 +1112,45 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.refresh()
 
         XCTAssertEqual(viewModel.latestEventPresentation?.label, "Disconnected")
+        XCTAssertEqual(viewModel.latestEventSummary, "Attached session disappeared from iTerm.")
         XCTAssertTrue(viewModel.statusLine.hasPrefix("⚠︎ ham"))
+    }
+
+    func testLatestEventSummaryPrefersLifecycleReasonFallback() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "ops",
+            provider: "iterm2",
+            host: "localhost",
+            mode: .attached,
+            projectPath: "/tmp/app",
+            status: .disconnected,
+            statusConfidence: 0.45,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let client = StubClient(
+            snapshot: DaemonRuntimeSnapshotPayload(
+                agents: [agent],
+                generatedAt: Date(timeIntervalSince1970: 10)
+            ),
+            events: [
+                AgentEventPayload(
+                    id: "event-1",
+                    agentID: "agent-1",
+                    type: "agent.status_updated",
+                    summary: "Status changed to waiting_input. Needs confirmation.",
+                    occurredAt: Date(timeIntervalSince1970: 2),
+                    lifecycleReason: "Needs confirmation.",
+                    lifecycleConfidence: 0.45
+                )
+            ],
+            agents: [agent]
+        )
+        let viewModel = MenuBarViewModel(client: client)
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.latestEventSummary, "Needs confirmation. (low confidence)")
     }
 
     func testSaveRoleUpdatesSelectedAgent() async {
