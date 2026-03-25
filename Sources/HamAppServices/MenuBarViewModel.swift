@@ -307,11 +307,17 @@ public final class MenuBarViewModel: ObservableObject {
 
     public func updateAppearanceSetting(
         animationSpeedMultiplier: Double? = nil,
-        reduceMotion: Bool? = nil
+        reduceMotion: Bool? = nil,
+        hamsterSkin: String? = nil,
+        hat: String? = nil,
+        deskTheme: String? = nil
     ) async {
         var updated = settings
         if let animationSpeedMultiplier { updated.appearance.animationSpeedMultiplier = animationSpeedMultiplier }
         if let reduceMotion { updated.appearance.reduceMotion = reduceMotion }
+        if let hamsterSkin { updated.appearance.hamsterSkin = hamsterSkin }
+        if let hat { updated.appearance.hat = hat }
+        if let deskTheme { updated.appearance.deskTheme = deskTheme }
 
         do {
             settings = try await client.updateSettings(updated)
@@ -321,9 +327,51 @@ public final class MenuBarViewModel: ObservableObject {
         }
     }
 
-    public func updateIntegrationSetting(itermEnabled: Bool) async {
+    public func updateGeneralSetting(
+        launchAtLogin: Bool? = nil,
+        compactMode: Bool? = nil,
+        showMenuBarAnimationAlways: Bool? = nil
+    ) async {
         var updated = settings
-        updated.integrations.itermEnabled = itermEnabled
+        if let launchAtLogin { updated.general.launchAtLogin = launchAtLogin }
+        if let compactMode { updated.general.compactMode = compactMode }
+        if let showMenuBarAnimationAlways { updated.general.showMenuBarAnimationAlways = showMenuBarAnimationAlways }
+
+        do {
+            settings = try await client.updateSettings(updated)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    public func updateIntegrationSetting(
+        itermEnabled: Bool? = nil,
+        transcriptDirs: [String]? = nil,
+        providerAdapters: [String: Bool]? = nil
+    ) async {
+        var updated = settings
+        if let itermEnabled { updated.integrations.itermEnabled = itermEnabled }
+        if let transcriptDirs { updated.integrations.transcriptDirs = transcriptDirs }
+        if let providerAdapters { updated.integrations.providerAdapters = providerAdapters }
+
+        do {
+            settings = try await client.updateSettings(updated)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    public func updatePrivacySetting(
+        localOnlyMode: Bool? = nil,
+        eventHistoryRetentionDays: Int? = nil,
+        transcriptExcerptStorage: Bool? = nil
+    ) async {
+        var updated = settings
+        if let localOnlyMode { updated.privacy.localOnlyMode = localOnlyMode }
+        if let eventHistoryRetentionDays { updated.privacy.eventHistoryRetentionDays = eventHistoryRetentionDays }
+        if let transcriptExcerptStorage { updated.privacy.transcriptExcerptStorage = transcriptExcerptStorage }
 
         do {
             settings = try await client.updateSettings(updated)
@@ -481,7 +529,9 @@ public final class MenuBarViewModel: ObservableObject {
 
     private func filteredNotificationCandidates(
         _ candidates: [NotificationCandidate],
-        settings: DaemonSettingsPayload
+        settings: DaemonSettingsPayload,
+        observedAt: Date,
+        previousAgents: [Agent]
     ) -> [NotificationCandidate] {
         if isQuietHoursActive(settings.notifications, at: now()) {
             return []
@@ -501,7 +551,7 @@ public final class MenuBarViewModel: ObservableObject {
                 guard settings.notifications.error || settings.notifications.waitingInput else { return nil }
             }
 
-            if shouldSuppressNotification(candidate, at: now()) {
+            if shouldSuppressNotification(candidate, at: observedAt, previousAgents: previousAgents) {
                 return nil
             }
 
@@ -531,10 +581,14 @@ public final class MenuBarViewModel: ObservableObject {
                 previousObservedAt: self.summary?.generatedAt,
                 currentObservedAt: summary.generatedAt
             ),
-            settings: settings
+            settings: settings,
+            observedAt: summary.generatedAt,
+            previousAgents: previousAgents
         ) + filteredNotificationCandidates(
             teamDigestCandidates(previousAgents: previousAgents, currentAgents: agents, teams: teams),
-            settings: settings
+            settings: settings,
+            observedAt: summary.generatedAt,
+            previousAgents: previousAgents
         )
 
         self.summary = summary
@@ -547,7 +601,7 @@ public final class MenuBarViewModel: ObservableObject {
                 key: notificationKey(for: candidate),
                 title: candidate.title,
                 body: candidate.body,
-                createdAt: now()
+                createdAt: summary.generatedAt
             )
             notificationHistoryStore.append(entry)
             notificationHistory.append(entry)
@@ -555,7 +609,7 @@ public final class MenuBarViewModel: ObservableObject {
         }
     }
 
-    private func shouldSuppressNotification(_ candidate: NotificationCandidate, at date: Date) -> Bool {
+    private func shouldSuppressNotification(_ candidate: NotificationCandidate, at date: Date, previousAgents: [Agent]) -> Bool {
         let key = notificationKey(for: candidate)
         let recentWindow: TimeInterval = 60
         if let recent = notificationHistory.last(where: { $0.key == key }) {
@@ -569,7 +623,7 @@ public final class MenuBarViewModel: ObservableObject {
             }
         case .done(let agent):
             let longRunningThreshold: TimeInterval = 5 * 60
-            if let previousAgent = agents.first(where: { $0.id == agent.id }) {
+            if let previousAgent = previousAgents.first(where: { $0.id == agent.id }) {
                 return date.timeIntervalSince(previousAgent.lastEventAt) < longRunningThreshold
             }
         default:

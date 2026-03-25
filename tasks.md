@@ -16,7 +16,7 @@
 - [x] Epic 10: Team and Workspace
 - [x] Epic 11: Managed Process Lifecycle
 - [x] Epic 12: Pixel Office Experience
-- [ ] Epic 13: Notification Completeness
+- [x] Epic 13: Notification Completeness
 - [ ] Epic 14: Settings Completeness
 - [ ] Epic 15: Provider Adapter Layer
 - [ ] Epic 16: Final Polish and Performance
@@ -25,23 +25,27 @@
 
 ## Active Scope
 
-현재 활성 범위는 **Epic 13: Notification Completeness** 이다.
+현재 활성 범위는 **Epic 14: Settings Completeness** 이다.
 
-이 epic의 목표는 알림 정책의 누락분을 채워서 상태 flap/dedupe/history/team digest가 안정적으로 동작하게 만드는 것이다.
+이 epic의 목표는 spec §17 설정면의 누락 항목들을 daemon/CLI/menu bar 전체에서 round-trip 가능하게 완성하는 것이다.
 
 ### Current Slice Checklist
 
-- [ ] 팀 요약 알림 — Epic 10 이후 team이 있을 때 team 단위 digest (§11)
-- [ ] 상태 flap bundling — 같은 agent가 짧은 시간에 상태를 왕복하면 묶어서 1건 처리 (§11)
-- [ ] 연속 유사 알림 dedupe 강화 — 현재 transition-based dedupe 위에 time-window dedupe 추가 (§11)
-- [ ] notification history 저장 — 과거 알림 이력을 store에 기록 (§16)
-- [ ] `done` 알림을 long-running task에만 제한하는 정책 (§11 기본 정책)
+- [ ] General — Launch at login (§17)
+- [ ] General — Compact mode (§17)
+- [ ] General — Show menu bar animation always (§17)
+- [ ] Integrations — Transcript directories 설정 (§17)
+- [ ] Integrations — Provider adapters on/off (§17)
+- [ ] Privacy — local-only mode (§17)
+- [ ] Privacy — event history retention period (§17)
+- [ ] Privacy — transcript excerpt storage on/off (§17)
+- [ ] Appearance — 햄스터 스킨/모자/책상 테마 (§17, Epic 12 이후)
+- [ ] daemon settings schema 확장 + CLI/Swift round-trip
 - [ ] Go/Swift tests
 
 #### Acceptance Criteria
-- [ ] 상태가 빠르게 왕복해도 알림이 1건만 옴
-- [ ] 과거 알림 이력을 조회할 수 있음
-- [ ] team 요약 알림이 동작함
+- [ ] spec §17의 5개 섹션이 모두 동작함
+- [ ] CLI와 menu bar에서 모든 설정을 수정 가능
 
 ---
 
@@ -237,8 +241,8 @@ spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
 10. ~~Epic 10: Team and Workspace~~ ✅
 11. ~~Epic 11: Managed Process Lifecycle~~ ✅
 12. ~~Epic 12: Pixel Office Experience~~ ✅
-13. **Epic 13: Notification Completeness** ← 현재
-14. Epic 14: Settings Completeness
+13. ~~Epic 13: Notification Completeness~~ ✅
+14. **Epic 14: Settings Completeness** ← 현재
 15. Epic 15: Provider Adapter Layer
 16. Epic 16: Final Polish and Performance
 

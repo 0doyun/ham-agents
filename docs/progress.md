@@ -70,6 +70,14 @@
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
 - `tasks.md` Active Scope advanced to Epic 13 per Progression policy.
 
+### 2026-03-26 (Epic 13 notification completeness complete)
+- Notification flow now records history entries through a store boundary, exposes recent history in the popover, and applies time-window suppression for repeated/flapping alerts.
+- Team digest notifications are now treated as first-class notification events with stable sink identifiers.
+- Notification policy now includes stronger done-notification filtering plus recent duplicate suppression in the view-model path.
+- Verification:
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 14 per Progression policy.
+
 ### 2026-03-24
 - 문서 초기 세팅 완료
 - spec / roadmap / AGENTS / tasks / docs 뼈대 작성

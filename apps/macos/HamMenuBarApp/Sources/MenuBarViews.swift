@@ -66,10 +66,40 @@ struct MenuBarContentView: View {
                     }
                 }
 
+                if !viewModel.notificationHistory.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Notification History")
+                            .font(.caption.weight(.semibold))
+                        ForEach(viewModel.notificationHistory.suffix(3).reversed()) { entry in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entry.title)
+                                    .font(.caption2.weight(.semibold))
+                                Text(entry.body)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                        }
+                    }
+                }
+
                 NotificationPermissionRow(
                     status: viewModel.notificationPermissionStatus,
                     requestPermission: {
                         Task { await viewModel.requestNotificationPermission() }
+                    }
+                )
+
+                GeneralSettingsSection(
+                    settings: viewModel.settings.general,
+                    updateLaunchAtLogin: { value in
+                        Task { await viewModel.updateGeneralSetting(launchAtLogin: value) }
+                    },
+                    updateCompactMode: { value in
+                        Task { await viewModel.updateGeneralSetting(compactMode: value) }
+                    },
+                    updateShowMenuBarAnimationAlways: { value in
+                        Task { await viewModel.updateGeneralSetting(showMenuBarAnimationAlways: value) }
                     }
                 )
 
@@ -111,6 +141,15 @@ struct MenuBarContentView: View {
                     },
                     updateReduceMotion: { value in
                         Task { await viewModel.updateAppearanceSetting(reduceMotion: value) }
+                    },
+                    updateHamsterSkin: { value in
+                        Task { await viewModel.updateAppearanceSetting(hamsterSkin: value) }
+                    },
+                    updateHat: { value in
+                        Task { await viewModel.updateAppearanceSetting(hat: value) }
+                    },
+                    updateDeskTheme: { value in
+                        Task { await viewModel.updateAppearanceSetting(deskTheme: value) }
                     }
                 )
 
@@ -118,6 +157,32 @@ struct MenuBarContentView: View {
                     settings: viewModel.settings.integrations,
                     updateItermEnabled: { value in
                         Task { await viewModel.updateIntegrationSetting(itermEnabled: value) }
+                    },
+                    updateTranscriptDirs: { value in
+                        Task {
+                            let dirs = value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                            await viewModel.updateIntegrationSetting(transcriptDirs: dirs)
+                        }
+                    },
+                    updateProviderAdapter: { key, value in
+                        Task {
+                            var adapters = viewModel.settings.integrations.providerAdapters
+                            adapters[key] = value
+                            await viewModel.updateIntegrationSetting(providerAdapters: adapters)
+                        }
+                    }
+                )
+
+                PrivacySettingsSection(
+                    settings: viewModel.settings.privacy,
+                    updateLocalOnlyMode: { value in
+                        Task { await viewModel.updatePrivacySetting(localOnlyMode: value) }
+                    },
+                    updateEventHistoryRetentionDays: { value in
+                        Task { await viewModel.updatePrivacySetting(eventHistoryRetentionDays: value) }
+                    },
+                    updateTranscriptExcerptStorage: { value in
+                        Task { await viewModel.updatePrivacySetting(transcriptExcerptStorage: value) }
                     }
                 )
 
@@ -337,6 +402,28 @@ private struct NotificationSettingsSection: View {
     }
 }
 
+private struct GeneralSettingsSection: View {
+    let settings: DaemonGeneralSettingsPayload
+    let updateLaunchAtLogin: (Bool) -> Void
+    let updateCompactMode: (Bool) -> Void
+    let updateShowMenuBarAnimationAlways: (Bool) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("General")
+                .font(.caption.weight(.semibold))
+
+            Toggle("Launch at Login", isOn: Binding(get: { settings.launchAtLogin }, set: updateLaunchAtLogin))
+            Toggle("Compact Mode", isOn: Binding(get: { settings.compactMode }, set: updateCompactMode))
+            Toggle(
+                "Always Animate Menu Bar",
+                isOn: Binding(get: { settings.showMenuBarAnimationAlways }, set: updateShowMenuBarAnimationAlways)
+            )
+        }
+        .toggleStyle(.checkbox)
+    }
+}
+
 private struct NotificationPermissionRow: View {
     let status: NotificationPermissionStatus
     let requestPermission: () -> Void
@@ -397,6 +484,9 @@ private struct AttachableSessionsSection: View {
 private struct IntegrationSettingsSection: View {
     let settings: DaemonIntegrationSettingsPayload
     let updateItermEnabled: (Bool) -> Void
+    let updateTranscriptDirs: (String) -> Void
+    let updateProviderAdapter: (String, Bool) -> Void
+    @State private var transcriptDirsDraft = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -410,6 +500,28 @@ private struct IntegrationSettingsSection: View {
                     set: updateItermEnabled
                 )
             )
+
+            TextField(
+                "Transcript directories (comma-separated)",
+                text: Binding(
+                    get: { transcriptDirsDraft.isEmpty ? settings.transcriptDirs.joined(separator: ", ") : transcriptDirsDraft },
+                    set: {
+                        transcriptDirsDraft = $0
+                        updateTranscriptDirs($0)
+                    }
+                )
+            )
+            .textFieldStyle(.roundedBorder)
+
+            ForEach(Array(settings.providerAdapters.keys.sorted()), id: \.self) { key in
+                Toggle(
+                    key,
+                    isOn: Binding(
+                        get: { settings.providerAdapters[key] ?? false },
+                        set: { updateProviderAdapter(key, $0) }
+                    )
+                )
+            }
         }
         .toggleStyle(.checkbox)
     }
@@ -440,6 +552,9 @@ private struct AppearanceSettingsSection: View {
     let updateTheme: (String) -> Void
     let updateAnimationSpeed: (Double) -> Void
     let updateReduceMotion: (Bool) -> Void
+    let updateHamsterSkin: (String) -> Void
+    let updateHat: (String) -> Void
+    let updateDeskTheme: (String) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -481,7 +596,65 @@ private struct AppearanceSettingsSection: View {
                     set: updateReduceMotion
                 )
             )
+
+            Picker("Skin", selection: Binding(get: { settings.hamsterSkin }, set: updateHamsterSkin)) {
+                Text("Default").tag("default")
+                Text("Night").tag("night")
+                Text("Golden").tag("golden")
+            }
+            .labelsHidden()
+
+            Picker("Hat", selection: Binding(get: { settings.hat }, set: updateHat)) {
+                Text("None").tag("none")
+                Text("Cap").tag("cap")
+                Text("Beanie").tag("beanie")
+            }
+            .labelsHidden()
+
+            Picker("Desk Theme", selection: Binding(get: { settings.deskTheme }, set: updateDeskTheme)) {
+                Text("Classic").tag("classic")
+                Text("Night").tag("night")
+                Text("Forest").tag("forest")
+            }
+            .labelsHidden()
         }
+    }
+}
+
+private struct PrivacySettingsSection: View {
+    let settings: DaemonPrivacySettingsPayload
+    let updateLocalOnlyMode: (Bool) -> Void
+    let updateEventHistoryRetentionDays: (Int) -> Void
+    let updateTranscriptExcerptStorage: (Bool) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Privacy")
+                .font(.caption.weight(.semibold))
+
+            Toggle("Local Only Mode", isOn: Binding(get: { settings.localOnlyMode }, set: updateLocalOnlyMode))
+            Toggle(
+                "Store Transcript Excerpts",
+                isOn: Binding(get: { settings.transcriptExcerptStorage }, set: updateTranscriptExcerptStorage)
+            )
+
+            HStack {
+                Text("History Retention")
+                Spacer()
+                Text("\(settings.eventHistoryRetentionDays)d")
+                    .foregroundStyle(.secondary)
+                Stepper(
+                    "",
+                    value: Binding(
+                        get: { settings.eventHistoryRetentionDays },
+                        set: updateEventHistoryRetentionDays
+                    ),
+                    in: 1...365
+                )
+                .labelsHidden()
+            }
+        }
+        .toggleStyle(.checkbox)
     }
 }
 
