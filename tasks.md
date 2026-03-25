@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **silence settings decode coverage baseline** 다.
+현재 활성 범위는 **observed reconnection event presentation baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -162,6 +162,8 @@
 - [x] long-silence notification baseline 추가
 - [x] silence notification setting baseline 추가
 - [x] silence settings decode coverage baseline 추가
+- [x] observed reconnection phrase inference baseline 추가
+- [x] observed reconnection event presentation baseline 추가
 
 ### Current Slice Checklist
 
@@ -176,6 +178,12 @@
 - [x] Swift payload decode 가 explicit silence=true 를 읽음
 - [x] Swift payload decode 가 missing silence field 를 false 로 backfill 함
 - [x] Swift tests로 silence settings decode coverage baseline 보호
+- [x] observed 로그의 explicit reconnected/back online/connection restored line 이 `idle` 로 추론됨
+- [x] disconnected phrase layer 와 reconnection phrase layer 가 분리됨
+- [x] Go tests로 observed reconnection phrase inference baseline 보호
+- [x] observed recovery text 기반 status_updated idle 이 `Idle` 대신 `Reconnected` 로 더 직접 표현됨
+- [x] daemon hint 와 Swift presenter 가 observed reconnection wording에 대해 정렬됨
+- [x] Go/Swift tests로 observed reconnection event presentation baseline 보호
 - [x] preview-text masking behavior 추가
 - [x] Swift tests로 settings-driven notification behavior 보호
 - [x] daemon-backed message target resolution 재사용

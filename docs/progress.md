@@ -1167,6 +1167,21 @@
 - 검증:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
 
+### 2026-03-25 (observed reconnection phrase inference baseline)
+- observed 로그의 explicit `reconnected` / `back online` / `connection restored` 류 문구가 generic idle/thinking fallback 전에 직접 `idle` 로 추론되게 정리했다.
+- 그래서 disconnected phrase layer 와 recovery phrase layer 가 더 선명하게 분리된다.
+- Go regression test 로 observed reconnection phrase inference baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (observed reconnection event presentation baseline)
+- observed recovery text 기반 `status_updated idle` 이 feed/event presentation 에서 generic `Idle` 대신 `Reconnected` 로 보이게 정리했다.
+- daemon event hint 와 Swift presenter/lifecycle metadata path 가 observed reconnection wording 에 대해 정렬되도록 맞췄다.
+- Go/Swift regression tests 로 observed reconnection event presentation baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime` ✅
+  - `swift test --filter EventPresentationTests --disable-sandbox` ✅
+
 ### 2026-03-25 (long-silence notification baseline)
 - active agent 가 silence threshold 를 막 넘길 때 `went quiet` notification candidate 를 1회 생성하도록 정리했다.
 - threshold 를 이미 넘긴 뒤에는 같은 상태에서 반복 candidate 를 만들지 않게 해서 notification spam 을 줄였다.
