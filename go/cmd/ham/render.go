@@ -143,6 +143,52 @@ func modeBreakdown(agents []core.Agent) (managedCount, attachedCount, observedCo
 	return managedCount, attachedCount, observedCount
 }
 
+func buildFilteredSnapshot(agents []core.Agent, generatedAt time.Time) core.RuntimeSnapshot {
+	errorCount, waitingCount, disconnectedCount := attentionBreakdown(agents)
+
+	return core.RuntimeSnapshot{
+		Agents:         agents,
+		GeneratedAt:    generatedAt,
+		AttentionCount: countAttentionAgents(agents),
+		AttentionBreakdown: core.AttentionBreakdown{
+			Error:        errorCount,
+			WaitingInput: waitingCount,
+			Disconnected: disconnectedCount,
+		},
+		AttentionOrder:     buildAttentionOrder(agents),
+		AttentionSubtitles: buildAttentionSubtitles(agents),
+	}
+}
+
+func buildAttentionOrder(agents []core.Agent) []string {
+	urgent := urgentAgents(agents)
+	ordered := make([]string, 0, len(urgent))
+	for _, agent := range urgent {
+		ordered = append(ordered, agent.ID)
+	}
+	return ordered
+}
+
+func buildAttentionSubtitles(agents []core.Agent) map[string]string {
+	subtitles := make(map[string]string)
+	for _, agent := range agents {
+		if !core.RequiresAttention(agent.Status) {
+			continue
+		}
+		subtitles[agent.ID] = buildAttentionSubtitle(agent)
+	}
+	return subtitles
+}
+
+func buildAttentionSubtitle(agent core.Agent) string {
+	status := formatAgentStatusLabel(agent)
+	confidence := strings.SplitN(formatConfidenceLabel(agent.StatusConfidence), " ", 2)[0]
+	if reason := strings.TrimSpace(agent.StatusReason); reason != "" {
+		return fmt.Sprintf("%s · %s confidence · %s", status, confidence, reason)
+	}
+	return fmt.Sprintf("%s · %s confidence", status, confidence)
+}
+
 func renderStatus(out io.Writer, snapshot core.RuntimeSnapshot, asJSON bool) error {
 	if asJSON {
 		return writeJSONTo(out, map[string]any{

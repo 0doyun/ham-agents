@@ -7,6 +7,8 @@ struct MenuBarContentView: View {
     @ObservedObject var viewModel: MenuBarViewModel
     @State private var selectedAgentID: Agent.ID?
     @State private var quickMessage = ""
+    @State private var selectedTeamID = ""
+    @State private var selectedWorkspace = ""
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
@@ -117,14 +119,38 @@ struct MenuBarContentView: View {
                     AttachableSessionsSection(sessions: viewModel.attachableSessions)
                 }
 
+                if !viewModel.teams.isEmpty || !viewModel.workspaceOptions.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        if !viewModel.teams.isEmpty {
+                            Picker("Team", selection: $selectedTeamID) {
+                                Text("All Teams").tag("")
+                                ForEach(viewModel.teams) { team in
+                                    Text(team.displayName).tag(team.id)
+                                }
+                            }
+                        }
+                        if !viewModel.workspaceOptions.isEmpty {
+                            Picker("Workspace", selection: $selectedWorkspace) {
+                                Text("All Workspaces").tag("")
+                                ForEach(viewModel.workspaceOptions, id: \.self) { workspace in
+                                    Text(workspace).tag(workspace)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Text("Agents")
                     .font(.subheadline.weight(.semibold))
 
-                if !viewModel.attentionAgents.isEmpty {
+                let filteredAttentionAgents = viewModel.filteredAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
+                let filteredNonAttentionAgents = viewModel.filteredNonAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
+
+                if !filteredAttentionAgents.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Needs Attention")
                             .font(.caption.weight(.semibold))
-                        ForEach(viewModel.attentionAgents) { agent in
+                        ForEach(filteredAttentionAgents) { agent in
                             AttentionAgentRow(
                                 name: agent.displayName,
                                 subtitle: viewModel.attentionSubtitle(for: agent)
@@ -133,12 +159,12 @@ struct MenuBarContentView: View {
                     }
                 }
 
-                if viewModel.agents.isEmpty {
+                if filteredAttentionAgents.isEmpty && filteredNonAttentionAgents.isEmpty {
                     Text("No tracked agents")
                         .foregroundStyle(.secondary)
                 } else {
                     List(selection: $selectedAgentID) {
-                        ForEach(viewModel.nonAttentionAgents) { agent in
+                        ForEach(filteredNonAttentionAgents) { agent in
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(agent.displayName)
                                     .font(.body.weight(.medium))

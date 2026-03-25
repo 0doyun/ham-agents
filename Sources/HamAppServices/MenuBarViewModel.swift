@@ -8,6 +8,7 @@ public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var summary: HamMenuBarSummary?
     @Published public private(set) var agents: [Agent] = []
     @Published public private(set) var attachableSessions: [DaemonAttachableSessionPayload] = []
+    @Published public private(set) var teams: [DaemonTeamPayload] = []
     @Published public private(set) var isRefreshing = false
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
@@ -396,13 +397,16 @@ public final class MenuBarViewModel: ObservableObject {
             let loadedAgentsValue = try await loadedAgents
             let loadedSettingsValue = try await loadedSettings
             let loadedAttachableSessionsValue = (try? await client.fetchAttachableSessions()) ?? []
+            let loadedTeamsValue = (try? await client.fetchTeams()) ?? []
             applyRefreshedState(
                 summary: summaryValue,
                 agents: loadedAgentsValue,
                 previousAgents: previousAgents,
-                settings: loadedSettingsValue
+                settings: loadedSettingsValue,
+                teams: loadedTeamsValue
             )
             attachableSessions = loadedAttachableSessionsValue
+            teams = loadedTeamsValue
             settings = loadedSettingsValue
             notificationPermissionStatus = await permissionStatus
             if roleDraft.isEmpty, let firstAgent = agents.first {
@@ -436,7 +440,8 @@ public final class MenuBarViewModel: ObservableObject {
                 summary: summaryValue,
                 agents: loadedAgentsValue,
                 previousAgents: previousAgents,
-                settings: settings
+                settings: settings,
+                teams: teams
             )
             errorMessage = nil
         } catch {
@@ -467,6 +472,8 @@ public final class MenuBarViewModel: ObservableObject {
                 guard settings.notifications.waitingInput else { return nil }
             case .silence:
                 guard settings.notifications.silence else { return nil }
+            case .teamDigest:
+                guard settings.notifications.error || settings.notifications.waitingInput else { return nil }
             }
 
             guard settings.notifications.previewText else {
@@ -485,7 +492,8 @@ public final class MenuBarViewModel: ObservableObject {
         summary: HamMenuBarSummary,
         agents: [Agent],
         previousAgents: [Agent],
-        settings: DaemonSettingsPayload
+        settings: DaemonSettingsPayload,
+        teams: [DaemonTeamPayload]
     ) {
         let candidates = filteredNotificationCandidates(
             notificationEngine.candidates(
@@ -495,13 +503,56 @@ public final class MenuBarViewModel: ObservableObject {
                 currentObservedAt: summary.generatedAt
             ),
             settings: settings
+        ) + filteredNotificationCandidates(
+            teamDigestCandidates(previousAgents: previousAgents, currentAgents: agents, teams: teams),
+            settings: settings
         )
 
         self.summary = summary
         self.agents = agents
+        self.teams = teams
 
         for candidate in candidates {
             notificationSink.send(candidate)
+        }
+    }
+
+    private func teamDigestCandidates(
+        previousAgents: [Agent],
+        currentAgents: [Agent],
+        teams: [DaemonTeamPayload]
+    ) -> [NotificationCandidate] {
+        let previousByID = Dictionary(uniqueKeysWithValues: previousAgents.map { ($0.id, $0) })
+
+        return teams.compactMap { team in
+            let currentMembers = currentAgents.filter { team.memberAgentIDs.contains($0.id) }
+            guard !currentMembers.isEmpty else { return nil }
+
+            let currentAttention = currentMembers.filter { attentionPriority(for: $0) != nil }
+            guard !currentAttention.isEmpty else { return nil }
+
+            let previousAttentionCount = team.memberAgentIDs.reduce(into: 0) { result, memberID in
+                if let previousAgent = previousByID[memberID], attentionPriority(for: previousAgent) != nil {
+                    result += 1
+                }
+            }
+            guard previousAttentionCount == 0 else { return nil }
+
+            let errorCount = currentAttention.filter { $0.status == .error }.count
+            let needsInputCount = currentAttention.filter { $0.status == .waitingInput }.count
+            let disconnectedCount = currentAttention.filter { $0.status == .disconnected }.count
+
+            var parts: [String] = []
+            if errorCount > 0 { parts.append("\(errorCount) error") }
+            if needsInputCount > 0 { parts.append("\(needsInputCount) needs input") }
+            if disconnectedCount > 0 { parts.append("\(disconnectedCount) disconnected") }
+            let body = parts.isEmpty ? "Team requires attention." : parts.joined(separator: ", ")
+
+            return NotificationCandidate(
+                event: .teamDigest(team.displayName),
+                title: "\(team.displayName) needs attention",
+                body: body
+            )
         }
     }
 
@@ -634,4 +685,33 @@ public final class MenuBarViewModel: ObservableObject {
         }
         return "\(status) · \(confidence) confidence"
     }
+
+
+    public var workspaceOptions: [String] {
+        Array(Set(agents.map(\.projectPath))).sorted()
+    }
+
+    public func teamName(for agent: Agent) -> String? {
+        teams.first(where: { $0.memberAgentIDs.contains(agent.id) })?.displayName
+    }
+
+    public func filteredAttentionAgents(teamID: String?, workspace: String?) -> [Agent] {
+        attentionAgents.filter { agentMatchesFilters($0, teamID: teamID, workspace: workspace) }
+    }
+
+    public func filteredNonAttentionAgents(teamID: String?, workspace: String?) -> [Agent] {
+        nonAttentionAgents.filter { agentMatchesFilters($0, teamID: teamID, workspace: workspace) }
+    }
+
+    private func agentMatchesFilters(_ agent: Agent, teamID: String?, workspace: String?) -> Bool {
+        if let workspace, !workspace.isEmpty, agent.projectPath != workspace {
+            return false
+        }
+        if let teamID, !teamID.isEmpty {
+            guard let team = teams.first(where: { $0.id == teamID }) else { return false }
+            return team.memberAgentIDs.contains(agent.id)
+        }
+        return true
+    }
+
 }

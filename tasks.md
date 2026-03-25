@@ -13,7 +13,7 @@
 ## Current Status
 - [x] Epic 1–8 완료 (상세 내역은 아래 Completed Epics 참조)
 - [x] Epic 9: Code Cleanup
-- [ ] Epic 10: Team and Workspace
+- [x] Epic 10: Team and Workspace
 - [ ] Epic 11: Managed Process Lifecycle
 - [ ] Epic 12: Pixel Office Experience
 - [ ] Epic 13: Notification Completeness
@@ -25,27 +25,25 @@
 
 ## Active Scope
 
-현재 활성 범위는 **Epic 10: Team and Workspace** 이다.
+현재 활성 범위는 **Epic 11: Managed Process Lifecycle** 이다.
 
-이 epic의 목표는 agent를 team/workspace 단위로 묶고, CLI/daemon/menu bar 모두에서 그 그룹 개념을 다룰 수 있게 만드는 것이다.
+이 epic의 목표는 `ham run`/`ham stop`이 실제 provider process lifecycle을 관리하게 만들어 managed mode를 진짜 실행/종료 경로로 승격하는 것이다.
 
 ### Current Slice Checklist
 
-- [ ] Team domain model 추가 (Go core) — team_id, display_name, member agent_ids
-- [ ] Workspace domain model 추가 — project_path 기반 자동 그룹핑
-- [ ] `ham team create <name>` / `ham team add <name> <agent>` CLI
-- [ ] daemon IPC에 team CRUD surface 추가
-- [ ] `ham ask <team> "..."` — team 대상 메시지 브로드캐스트
-- [ ] team 단위 focus — team의 agent들을 한 번에 열기 (§14 Should)
-- [ ] 팀 요약 알림 — team 전체 상태 요약 notification (§11)
-- [ ] menu bar popover에 workspace/team filter 추가
-- [ ] Go/Swift tests
+- [ ] `ham run`이 실제 child process를 spawn (provider별 command 결정)
+- [ ] process stdout/stderr를 structured event로 수집
+- [ ] structured launch events를 daemon event log로 연결 (§15)
+- [ ] process exit 감지 → done/error 상태 전이
+- [ ] `ham stop`이 실제 process signal/termination 수행
+- [ ] managed mode의 high-confidence 상태 추론 — structured events 기반 (§15)
+- [ ] Go tests
 
 #### Acceptance Criteria
-- [ ] agent를 team으로 묶을 수 있음
-- [ ] CLI와 menu bar에서 team/workspace 단위로 필터/조회 가능
-- [ ] team 없는 agent도 정상 동작
-- [ ] team 대상 메시지가 모든 멤버에게 전달됨
+- [ ] `ham run claude --project ... --role ...`로 실제 세션이 뜸
+- [ ] 세션 종료가 자동으로 agent 상태에 반영됨
+- [ ] `ham stop`이 진짜 세션을 멈춤
+- [ ] managed agent는 structured events 덕분에 highest confidence
 
 ---
 
@@ -238,8 +236,8 @@ spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
 7. ~~Epic 7: Attached and Observed Modes~~ ✅
 8. ~~Epic 8: Inference and Attention UX~~ ✅
 9. ~~Epic 9: Code Cleanup~~ ✅
-10. **Epic 10: Team and Workspace** ← 현재
-11. Epic 11: Managed Process Lifecycle
+10. ~~Epic 10: Team and Workspace~~ ✅
+11. **Epic 11: Managed Process Lifecycle** ← 현재
 12. Epic 12: Pixel Office Experience
 13. Epic 13: Notification Completeness
 14. Epic 14: Settings Completeness

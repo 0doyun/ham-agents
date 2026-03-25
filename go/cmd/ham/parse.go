@@ -377,3 +377,28 @@ func splitProvider(args []string) (string, []string) {
 	}
 	return args[0], args[1:]
 }
+
+type agentQueryOptions struct {
+	asJSON       bool
+	teamRef      string
+	workspaceRef string
+}
+
+func parseAgentQueryOptions(command string, args []string) (agentQueryOptions, error) {
+	flags := flag.NewFlagSet(command, flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	asJSON := flags.Bool("json", false, "emit JSON")
+	teamRef := flags.String("team", "", "filter by team id or name")
+	workspaceRef := flags.String("workspace", "", "filter by workspace path or name")
+	if err := flags.Parse(args); err != nil {
+		return agentQueryOptions{}, err
+	}
+	if len(flags.Args()) > 0 {
+		return agentQueryOptions{}, fmt.Errorf("unexpected argument %q", flags.Args()[0])
+	}
+	return agentQueryOptions{
+		asJSON:       *asJSON,
+		teamRef:      strings.TrimSpace(*teamRef),
+		workspaceRef: strings.TrimSpace(*workspaceRef),
+	}, nil
+}

@@ -172,6 +172,21 @@ func runAsk(ctx context.Context, client *ipc.Client, args []string) error {
 		return err
 	}
 
+	if team, teamErr := resolveTeam(ctx, client, agentID); teamErr == nil {
+		for _, memberAgentID := range team.MemberAgentIDs {
+			target, err := client.OpenTarget(ctx, memberAgentID)
+			if err != nil {
+				return err
+			}
+
+			if _, err := adapters.NewQuickMessageSender(nil).Send(target, message); err != nil {
+				return err
+			}
+		}
+		fmt.Printf("sent message to team %s (%d agents)\n", team.DisplayName, len(team.MemberAgentIDs))
+		return nil
+	}
+
 	target, err := client.OpenTarget(ctx, agentID)
 	if err != nil {
 		return err
@@ -184,6 +199,80 @@ func runAsk(ctx context.Context, client *ipc.Client, args []string) error {
 
 	fmt.Println(result)
 	return nil
+}
+
+func runTeam(ctx context.Context, client *ipc.Client, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("team subcommand is required")
+	}
+
+	switch args[0] {
+	case "create":
+		if len(args) < 2 {
+			return fmt.Errorf("team name is required")
+		}
+		asJSON := len(args) > 2 && args[2] == "--json"
+		team, err := client.CreateTeam(ctx, args[1])
+		if err != nil {
+			return err
+		}
+		if asJSON {
+			return writeJSON(team)
+		}
+		fmt.Printf("created team %s [%s]\n", team.DisplayName, team.ID)
+		return nil
+	case "add":
+		if len(args) < 3 {
+			return fmt.Errorf("team and agent id are required")
+		}
+		asJSON := len(args) > 3 && args[3] == "--json"
+		team, err := client.AddTeamMember(ctx, args[1], args[2])
+		if err != nil {
+			return err
+		}
+		if asJSON {
+			return writeJSON(team)
+		}
+		fmt.Printf("added %s to team %s\n", args[2], team.DisplayName)
+		return nil
+	case "list":
+		teams, err := client.ListTeams(ctx)
+		if err != nil {
+			return err
+		}
+		if len(args) > 1 && args[1] == "--json" {
+			return writeJSON(teams)
+		}
+		if len(teams) == 0 {
+			fmt.Println("no teams")
+			return nil
+		}
+		for _, team := range teams {
+			fmt.Printf("%s\t%s\t%d members\n", team.ID, team.DisplayName, len(team.MemberAgentIDs))
+		}
+		return nil
+	case "open":
+		if len(args) < 2 {
+			return fmt.Errorf("team is required")
+		}
+		team, err := resolveTeam(ctx, client, args[1])
+		if err != nil {
+			return err
+		}
+		for _, memberAgentID := range team.MemberAgentIDs {
+			target, err := client.OpenTarget(ctx, memberAgentID)
+			if err != nil {
+				return err
+			}
+			if err := openTarget(target); err != nil {
+				return err
+			}
+		}
+		fmt.Printf("opened %d agents for team %s\n", len(team.MemberAgentIDs), team.DisplayName)
+		return nil
+	default:
+		return fmt.Errorf("unsupported team subcommand %q", args[0])
+	}
 }
 
 func runStop(ctx context.Context, client *ipc.Client, args []string) error {
@@ -345,10 +434,8 @@ func runSettingsIntegrations(ctx context.Context, client *ipc.Client, args []str
 }
 
 func runList(ctx context.Context, client *ipc.Client, args []string) error {
-	flags := flag.NewFlagSet("list", flag.ContinueOnError)
-	flags.SetOutput(os.Stderr)
-	asJSON := flags.Bool("json", false, "emit JSON")
-	if err := flags.Parse(args); err != nil {
+	options, err := parseAgentQueryOptions("list", args)
+	if err != nil {
 		return err
 	}
 
@@ -357,14 +444,17 @@ func runList(ctx context.Context, client *ipc.Client, args []string) error {
 		return err
 	}
 
-	return renderAgents(os.Stdout, agents, *asJSON)
+	filtered, err := filterAgentsForQuery(ctx, client, agents, options.teamRef, options.workspaceRef)
+	if err != nil {
+		return err
+	}
+
+	return renderAgents(os.Stdout, filtered, options.asJSON)
 }
 
 func runStatus(ctx context.Context, client *ipc.Client, args []string) error {
-	flags := flag.NewFlagSet("status", flag.ContinueOnError)
-	flags.SetOutput(os.Stderr)
-	asJSON := flags.Bool("json", false, "emit JSON")
-	if err := flags.Parse(args); err != nil {
+	options, err := parseAgentQueryOptions("status", args)
+	if err != nil {
 		return err
 	}
 
@@ -373,7 +463,16 @@ func runStatus(ctx context.Context, client *ipc.Client, args []string) error {
 		return err
 	}
 
-	return renderStatus(os.Stdout, snapshot, *asJSON)
+	filteredAgents, err := filterAgentsForQuery(ctx, client, snapshot.Agents, options.teamRef, options.workspaceRef)
+	if err != nil {
+		return err
+	}
+
+	if options.teamRef != "" || options.workspaceRef != "" {
+		snapshot = buildFilteredSnapshot(filteredAgents, snapshot.GeneratedAt)
+	}
+
+	return renderStatus(os.Stdout, snapshot, options.asJSON)
 }
 
 func runEvents(ctx context.Context, client *ipc.Client, args []string) error {
@@ -459,4 +558,84 @@ func chooseAttachableSession(in io.Reader, out io.Writer, sessions []core.Attach
 	}
 
 	return sessions[selection-1], nil
+}
+
+func resolveTeam(ctx context.Context, client *ipc.Client, ref string) (core.Team, error) {
+	teams, err := client.ListTeams(ctx)
+	if err != nil {
+		return core.Team{}, err
+	}
+	for _, team := range teams {
+		if team.Matches(ref) {
+			return team, nil
+		}
+	}
+	return core.Team{}, fmt.Errorf("team %q not found", ref)
+}
+
+func filterAgentsForQuery(ctx context.Context, client *ipc.Client, agents []core.Agent, teamRef string, workspaceRef string) ([]core.Agent, error) {
+	filtered := append([]core.Agent(nil), agents...)
+
+	if teamRef != "" {
+		team, err := resolveTeam(ctx, client, teamRef)
+		if err != nil {
+			return nil, err
+		}
+		filtered = filterAgentsForTeam(filtered, team)
+	}
+
+	if workspaceRef != "" {
+		teams, err := client.ListTeams(ctx)
+		if err != nil {
+			return nil, err
+		}
+		workspace, ok := resolveWorkspace(filtered, teams, workspaceRef)
+		if !ok {
+			return nil, fmt.Errorf("workspace %q not found", workspaceRef)
+		}
+		filtered = filterAgentsForWorkspace(filtered, workspace)
+	}
+
+	return filtered, nil
+}
+
+func filterAgents(agents []core.Agent, keep func(core.Agent) bool) []core.Agent {
+	filtered := make([]core.Agent, 0, len(agents))
+	for _, agent := range agents {
+		if keep(agent) {
+			filtered = append(filtered, agent)
+		}
+	}
+	return filtered
+}
+
+func filterAgentsForTeam(agents []core.Agent, team core.Team) []core.Agent {
+	memberSet := make(map[string]struct{}, len(team.MemberAgentIDs))
+	for _, agentID := range team.MemberAgentIDs {
+		memberSet[agentID] = struct{}{}
+	}
+	return filterAgents(agents, func(agent core.Agent) bool {
+		_, ok := memberSet[agent.ID]
+		return ok
+	})
+}
+
+func resolveWorkspace(agents []core.Agent, teams []core.Team, ref string) (core.Workspace, bool) {
+	for _, workspace := range core.BuildWorkspaces(agents, teams) {
+		if workspace.Matches(ref) {
+			return workspace, true
+		}
+	}
+	return core.Workspace{}, false
+}
+
+func filterAgentsForWorkspace(agents []core.Agent, workspace core.Workspace) []core.Agent {
+	agentSet := make(map[string]struct{}, len(workspace.AgentIDs))
+	for _, agentID := range workspace.AgentIDs {
+		agentSet[agentID] = struct{}{}
+	}
+	return filterAgents(agents, func(agent core.Agent) bool {
+		_, ok := agentSet[agent.ID]
+		return ok
+	})
 }

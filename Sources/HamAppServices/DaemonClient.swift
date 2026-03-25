@@ -33,6 +33,7 @@ public protocol HamDaemonClientProtocol: Sendable {
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload
     func fetchAgents() async throws -> [Agent]
     func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload]
+    func fetchTeams() async throws -> [DaemonTeamPayload]
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload]
     func followEvents(afterEventID: String, limit: Int, waitMilliseconds: Int) async throws -> [AgentEventPayload]
     func fetchSettings() async throws -> DaemonSettingsPayload
@@ -40,6 +41,10 @@ public protocol HamDaemonClientProtocol: Sendable {
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent
     func updateRole(agentID: String, role: String) async throws -> Agent
     func removeAgent(agentID: String) async throws
+}
+
+public extension HamDaemonClientProtocol {
+    func fetchTeams() async throws -> [DaemonTeamPayload] { [] }
 }
 
 public struct HamMenuBarSummary: Equatable, Sendable {
@@ -111,6 +116,14 @@ public final class HamDaemonClient: HamDaemonClientProtocol, @unchecked Sendable
             throw HamDaemonClientError.server(error)
         }
         return response.attachableSessions ?? []
+    }
+
+    public func fetchTeams() async throws -> [DaemonTeamPayload] {
+        let response = try await transport.send(.init(command: .listTeams))
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
+        return response.teams ?? []
     }
 
     public func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {

@@ -51,6 +51,8 @@ func run(args []string) error {
 		return runDoctor(socketPath, args[1:])
 	case "ui":
 		return runUI(args[1:])
+	case "team":
+		return runTeam(ctx, client, args[1:])
 	case "settings":
 		return runSettings(ctx, client, args[1:])
 	case "list":
@@ -84,17 +86,21 @@ Usage:
   ham attach --list-iterm-sessions [--json]
   ham observe <source-ref> [name] [--project path] [--role role] [--provider provider]
   ham open <agent-id> [--json] [--print]
-  ham ask <agent-id> <message>
+  ham ask <agent-or-team> <message>
   ham stop <agent-id> [--json]
   ham logs <agent-id> [--json] [--limit N]
   ham doctor [--json]
   ham ui [--json] [--print]
+  ham team create <name> [--json]
+  ham team add <team> <agent-id> [--json]
+  ham team list [--json]
+  ham team open <team>
   ham settings [--json]
   ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--silence=true|false] [--quiet-hours=true|false] [--quiet-start-hour=0-23] [--quiet-end-hour=0-23] [--preview-text=true|false]
   ham settings appearance [--theme=auto|day|night]
   ham settings integrations [--iterm-enabled=true|false]
-  ham list [--json]
-  ham status [--json]
+  ham list [--json] [--team ref] [--workspace ref]
+  ham status [--json] [--team ref] [--workspace ref]
   ham events [--json] [--limit N] [--follow] [--after-id ID] [--wait-ms N]
 
 Daemon socket:

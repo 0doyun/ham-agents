@@ -6,6 +6,7 @@ public enum NotificationEvent: Equatable, Sendable {
     case waitingInput(Agent)
     case error(Agent)
     case silence(Agent)
+    case teamDigest(String)
 }
 
 public struct HamNotificationService {
@@ -15,6 +16,8 @@ public struct HamNotificationService {
         switch event {
         case .done(let agent), .waitingInput(let agent), .error(let agent), .silence(let agent):
             return agent.notificationPolicy != .muted
+        case .teamDigest:
+            return true
         }
     }
 }
@@ -112,6 +115,8 @@ public struct StatusChangeNotificationEngine {
             return "\(agent.displayName) hit an error"
         case .silence(let agent):
             return "\(agent.displayName) went quiet"
+        case .teamDigest(let name):
+            return "\(name) needs attention"
         }
     }
 
@@ -125,6 +130,8 @@ public struct StatusChangeNotificationEngine {
                 return "No activity for \(duration). Last seen: \(summary)"
             }
             return "No activity for \(duration) at \(agent.projectPath)"
+        case .teamDigest:
+            return "Team requires attention."
         }
     }
 

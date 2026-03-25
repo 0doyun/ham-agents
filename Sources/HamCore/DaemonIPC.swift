@@ -4,6 +4,9 @@ public enum DaemonCommand: String, Codable, Sendable {
     case runManaged = "run.managed"
     case attachSession = "attach.session"
     case observeSource = "observe.source"
+    case createTeam = "teams.create"
+    case addTeamMember = "teams.add_member"
+    case listTeams = "teams.list"
     case listItermSessions = "iterm.sessions"
     case listAgents = "agents.list"
     case status = "agents.status"
@@ -14,6 +17,24 @@ public enum DaemonCommand: String, Codable, Sendable {
     case removeAgent = "agents.remove"
     case getSettings = "settings.get"
     case updateSettings = "settings.update"
+}
+
+public struct DaemonTeamPayload: Codable, Equatable, Sendable, Identifiable {
+    public var id: String
+    public var displayName: String
+    public var memberAgentIDs: [String]
+
+    public init(id: String, displayName: String, memberAgentIDs: [String]) {
+        self.id = id
+        self.displayName = displayName
+        self.memberAgentIDs = memberAgentIDs
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case displayName = "display_name"
+        case memberAgentIDs = "member_agent_ids"
+    }
 }
 
 public struct DaemonAttachableSessionPayload: Codable, Equatable, Sendable, Identifiable {
@@ -44,6 +65,8 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
     public var displayName: String?
     public var projectPath: String?
     public var role: String?
+    public var teamRef: String?
+    public var memberAgentID: String?
     public var limit: Int?
     public var afterEventID: String?
     public var waitMillis: Int?
@@ -57,6 +80,8 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         displayName: String? = nil,
         projectPath: String? = nil,
         role: String? = nil,
+        teamRef: String? = nil,
+        memberAgentID: String? = nil,
         limit: Int? = nil,
         afterEventID: String? = nil,
         waitMillis: Int? = nil,
@@ -69,6 +94,8 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         self.displayName = displayName
         self.projectPath = projectPath
         self.role = role
+        self.teamRef = teamRef
+        self.memberAgentID = memberAgentID
         self.limit = limit
         self.afterEventID = afterEventID
         self.waitMillis = waitMillis
@@ -83,6 +110,8 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         case displayName = "display_name"
         case projectPath = "project_path"
         case role
+        case teamRef = "team_ref"
+        case memberAgentID = "member_agent_id"
         case limit
         case afterEventID = "after_event_id"
         case waitMillis = "wait_millis"
@@ -275,7 +304,9 @@ public struct DaemonAttentionBreakdownPayload: Codable, Equatable, Sendable {
 
 public struct DaemonResponse: Codable, Equatable, Sendable {
     public var agent: Agent?
+    public var team: DaemonTeamPayload?
     public var agents: [Agent]?
+    public var teams: [DaemonTeamPayload]?
     public var attachableSessions: [DaemonAttachableSessionPayload]?
     public var events: [AgentEventPayload]?
     public var snapshot: DaemonRuntimeSnapshotPayload?
@@ -284,7 +315,9 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
 
     public init(
         agent: Agent? = nil,
+        team: DaemonTeamPayload? = nil,
         agents: [Agent]? = nil,
+        teams: [DaemonTeamPayload]? = nil,
         attachableSessions: [DaemonAttachableSessionPayload]? = nil,
         events: [AgentEventPayload]? = nil,
         snapshot: DaemonRuntimeSnapshotPayload? = nil,
@@ -292,7 +325,9 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
         error: String? = nil
     ) {
         self.agent = agent
+        self.team = team
         self.agents = agents
+        self.teams = teams
         self.attachableSessions = attachableSessions
         self.events = events
         self.snapshot = snapshot
@@ -302,7 +337,9 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case agent
+        case team
         case agents
+        case teams
         case attachableSessions = "attachable_sessions"
         case events
         case snapshot

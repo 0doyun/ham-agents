@@ -38,6 +38,17 @@
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
 - `tasks.md` Active Scope advanced to Epic 10 per Progression policy.
 
+### 2026-03-25 (Epic 10 team/workspace complete)
+- Go backend now includes `Team` and derived `Workspace` domain support, file-backed team persistence, and `TeamService`.
+- IPC/daemon/CLI now support team creation/list/member-add, team-aware `ham ask`, and team-wide open/focus.
+- CLI filtering support now includes team/workspace-aware query helpers backed by derived workspace grouping.
+- Swift daemon contract now decodes team payloads and the menu bar popover now exposes team/workspace filtering.
+- Team-level digest notifications are now emitted when a team newly enters an attention state, with regression coverage in Swift tests.
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 11 per Progression policy.
+
 ### 2026-03-24
 - 문서 초기 세팅 완료
 - spec / roadmap / AGENTS / tasks / docs 뼈대 작성

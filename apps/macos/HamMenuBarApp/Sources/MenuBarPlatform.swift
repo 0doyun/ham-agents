@@ -44,6 +44,10 @@ struct PreviewDaemonClient: HamDaemonClientProtocol {
         ]
     }
 
+    func fetchTeams() async throws -> [DaemonTeamPayload] {
+        [DaemonTeamPayload(id: "preview-team-1", displayName: "preview-squad", memberAgentIDs: ["preview-1"])]
+    }
+
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] {
         [
             AgentEventPayload(
