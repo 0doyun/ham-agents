@@ -20,3 +20,55 @@ func TestRemovalPresentationSummaryHumanizesWaitingInput(t *testing.T) {
 		t.Fatalf("unexpected removal presentation summary %q", summary)
 	}
 }
+
+func TestEventPresentationHintMapsRunningToolStatus(t *testing.T) {
+	t.Parallel()
+
+	label, emphasis, summary := eventPresentationHint(core.Event{
+		Type:    core.EventTypeAgentStatusUpdated,
+		Summary: "Status changed to running_tool. Observed tool-like activity.",
+	})
+
+	if label != "Running Tool" || emphasis != "info" || summary != "Observed tool-like activity." {
+		t.Fatalf("unexpected presentation hint %q %q %q", label, emphasis, summary)
+	}
+}
+
+func TestEventPresentationHintMapsReadingStatus(t *testing.T) {
+	t.Parallel()
+
+	label, emphasis, summary := eventPresentationHint(core.Event{
+		Type:    core.EventTypeAgentStatusUpdated,
+		Summary: "Status changed to reading. Observed reading-like activity.",
+	})
+
+	if label != "Reading" || emphasis != "info" || summary != "Observed reading-like activity." {
+		t.Fatalf("unexpected presentation hint %q %q %q", label, emphasis, summary)
+	}
+}
+
+func TestEventPresentationHintMapsThinkingStatus(t *testing.T) {
+	t.Parallel()
+
+	label, emphasis, summary := eventPresentationHint(core.Event{
+		Type:    core.EventTypeAgentStatusUpdated,
+		Summary: "Status changed to thinking. Observed recent output.",
+	})
+
+	if label != "Thinking" || emphasis != "info" || summary != "Observed recent output." {
+		t.Fatalf("unexpected presentation hint %q %q %q", label, emphasis, summary)
+	}
+}
+
+func TestEventPresentationHintMapsSleepingStatus(t *testing.T) {
+	t.Parallel()
+
+	label, emphasis, summary := eventPresentationHint(core.Event{
+		Type:    core.EventTypeAgentStatusUpdated,
+		Summary: "Status changed to sleeping. Observed source idle for 10m.",
+	})
+
+	if label != "Sleeping" || emphasis != "neutral" || summary != "Observed source idle for 10m." {
+		t.Fatalf("unexpected presentation hint %q %q %q", label, emphasis, summary)
+	}
+}

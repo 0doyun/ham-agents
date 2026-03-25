@@ -68,6 +68,70 @@ final class EventPresentationTests: XCTestCase {
         XCTAssertFalse(presentation.showsTechnicalType)
     }
 
+    func testStatusUpdatedRunningToolGetsInfoPresentation() {
+        let event = AgentEventPayload(
+            id: "event-4c",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to running_tool. Observed tool-like activity.",
+            occurredAt: Date(timeIntervalSince1970: 4)
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Running Tool")
+        XCTAssertEqual(presentation.emphasis, .info)
+        XCTAssertFalse(presentation.showsTechnicalType)
+    }
+
+    func testStatusUpdatedReadingGetsInfoPresentation() {
+        let event = AgentEventPayload(
+            id: "event-4d",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to reading. Observed reading-like activity.",
+            occurredAt: Date(timeIntervalSince1970: 4)
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Reading")
+        XCTAssertEqual(presentation.emphasis, .info)
+        XCTAssertFalse(presentation.showsTechnicalType)
+    }
+
+    func testStatusUpdatedThinkingGetsInfoPresentation() {
+        let event = AgentEventPayload(
+            id: "event-4e",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to thinking. Observed recent output.",
+            occurredAt: Date(timeIntervalSince1970: 4)
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Thinking")
+        XCTAssertEqual(presentation.emphasis, .info)
+        XCTAssertFalse(presentation.showsTechnicalType)
+    }
+
+    func testStatusUpdatedSleepingGetsNeutralPresentation() {
+        let event = AgentEventPayload(
+            id: "event-4f",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to sleeping. Observed source idle for 10m.",
+            occurredAt: Date(timeIntervalSince1970: 4)
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Sleeping")
+        XCTAssertEqual(presentation.emphasis, .neutral)
+        XCTAssertFalse(presentation.showsTechnicalType)
+    }
+
     func testLowConfidenceLifecyclePresentationGetsLikelyPrefix() {
         let event = AgentEventPayload(
             id: "event-4b",
@@ -184,6 +248,70 @@ final class EventPresentationTests: XCTestCase {
 
         XCTAssertEqual(presentation.label, "Error")
         XCTAssertEqual(presentation.emphasis, .warning)
+    }
+
+    func testLifecycleMetadataMapsRunningToolPresentation() {
+        let event = AgentEventPayload(
+            id: "event-9b",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to idle. Observed recent output.",
+            occurredAt: Date(timeIntervalSince1970: 9),
+            lifecycleStatus: "running_tool"
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Running Tool")
+        XCTAssertEqual(presentation.emphasis, .info)
+    }
+
+    func testLifecycleMetadataMapsReadingPresentation() {
+        let event = AgentEventPayload(
+            id: "event-9c",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to idle. Observed recent output.",
+            occurredAt: Date(timeIntervalSince1970: 9),
+            lifecycleStatus: "reading"
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Reading")
+        XCTAssertEqual(presentation.emphasis, .info)
+    }
+
+    func testLifecycleMetadataMapsThinkingPresentation() {
+        let event = AgentEventPayload(
+            id: "event-9d",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to idle. Observed recent output.",
+            occurredAt: Date(timeIntervalSince1970: 9),
+            lifecycleStatus: "thinking"
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Thinking")
+        XCTAssertEqual(presentation.emphasis, .info)
+    }
+
+    func testLifecycleMetadataMapsSleepingPresentation() {
+        let event = AgentEventPayload(
+            id: "event-9e",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to idle. Observed recent output.",
+            occurredAt: Date(timeIntervalSince1970: 9),
+            lifecycleStatus: "sleeping"
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Sleeping")
+        XCTAssertEqual(presentation.emphasis, .neutral)
     }
 
     func testDisplaySummaryFallsBackToRawSummary() {

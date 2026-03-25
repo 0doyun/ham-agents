@@ -181,6 +181,14 @@ public enum AgentEventPresenter {
             return AgentEventPresentation(label: "Error", emphasis: .warning)
         case summary.contains("status changed to waiting_input"):
             return AgentEventPresentation(label: "Needs Input", emphasis: .warning)
+        case summary.contains("status changed to running_tool"):
+            return AgentEventPresentation(label: "Running Tool", emphasis: .info)
+        case summary.contains("status changed to reading"):
+            return AgentEventPresentation(label: "Reading", emphasis: .info)
+        case summary.contains("status changed to thinking"):
+            return AgentEventPresentation(label: "Thinking", emphasis: .info)
+        case summary.contains("status changed to sleeping"):
+            return AgentEventPresentation(label: "Sleeping", emphasis: .neutral)
         case summary.contains("status changed to done"):
             return AgentEventPresentation(label: "Done", emphasis: .positive)
         case summary.contains("status changed to disconnected"):
@@ -241,6 +249,14 @@ public enum AgentEventPresenter {
                 return AgentEventPresentation(label: "Error", emphasis: .warning)
             case "waiting_input":
                 return AgentEventPresentation(label: "Needs Input", emphasis: .warning)
+            case "running_tool":
+                return AgentEventPresentation(label: "Running Tool", emphasis: .info)
+            case "reading":
+                return AgentEventPresentation(label: "Reading", emphasis: .info)
+            case "thinking":
+                return AgentEventPresentation(label: "Thinking", emphasis: .info)
+            case "sleeping":
+                return AgentEventPresentation(label: "Sleeping", emphasis: .neutral)
             case "done":
                 return AgentEventPresentation(label: "Done", emphasis: .positive)
             case "disconnected":
