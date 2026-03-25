@@ -18,6 +18,7 @@ public final class MenuBarViewModel: ObservableObject {
             done: true,
             error: true,
             waitingInput: true,
+            silence: false,
             quietHoursEnabled: false,
             quietHoursStartHour: 22,
             quietHoursEndHour: 8,
@@ -269,6 +270,7 @@ public final class MenuBarViewModel: ObservableObject {
         done: Bool? = nil,
         error: Bool? = nil,
         waitingInput: Bool? = nil,
+        silence: Bool? = nil,
         quietHoursEnabled: Bool? = nil,
         quietHoursStartHour: Int? = nil,
         quietHoursEndHour: Int? = nil,
@@ -278,6 +280,7 @@ public final class MenuBarViewModel: ObservableObject {
         if let done { updated.notifications.done = done }
         if let error { updated.notifications.error = error }
         if let waitingInput { updated.notifications.waitingInput = waitingInput }
+        if let silence { updated.notifications.silence = silence }
         if let quietHoursEnabled { updated.notifications.quietHoursEnabled = quietHoursEnabled }
         if let quietHoursStartHour { updated.notifications.quietHoursStartHour = quietHoursStartHour }
         if let quietHoursEndHour { updated.notifications.quietHoursEndHour = quietHoursEndHour }
@@ -473,6 +476,8 @@ public final class MenuBarViewModel: ObservableObject {
                 guard settings.notifications.error else { return nil }
             case .waitingInput:
                 guard settings.notifications.waitingInput else { return nil }
+            case .silence:
+                guard settings.notifications.silence else { return nil }
             }
 
             guard settings.notifications.previewText else {
@@ -494,7 +499,12 @@ public final class MenuBarViewModel: ObservableObject {
         settings: DaemonSettingsPayload
     ) {
         let candidates = filteredNotificationCandidates(
-            notificationEngine.candidates(previous: previousAgents, current: agents),
+            notificationEngine.candidates(
+                previous: previousAgents,
+                current: agents,
+                previousObservedAt: self.summary?.generatedAt,
+                currentObservedAt: summary.generatedAt
+            ),
             settings: settings
         )
 

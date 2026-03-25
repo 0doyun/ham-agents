@@ -123,6 +123,8 @@ public final class UserNotificationSink: NotificationSink, NotificationPermissio
             return "\(agent.id).waiting_input"
         case .error(let agent):
             return "\(agent.id).error"
+        case .silence(let agent):
+            return "\(agent.id).silence"
         }
     }
 }

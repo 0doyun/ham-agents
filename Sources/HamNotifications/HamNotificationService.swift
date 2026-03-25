@@ -5,6 +5,7 @@ public enum NotificationEvent: Equatable, Sendable {
     case done(Agent)
     case waitingInput(Agent)
     case error(Agent)
+    case silence(Agent)
 }
 
 public struct HamNotificationService {
@@ -12,7 +13,7 @@ public struct HamNotificationService {
 
     public func shouldNotify(for event: NotificationEvent) -> Bool {
         switch event {
-        case .done(let agent), .waitingInput(let agent), .error(let agent):
+        case .done(let agent), .waitingInput(let agent), .error(let agent), .silence(let agent):
             return agent.notificationPolicy != .muted
         }
     }
@@ -43,28 +44,49 @@ public struct NoopNotificationSink: NotificationSink {
 
 public struct StatusChangeNotificationEngine {
     private let service: HamNotificationService
+    private let now: @Sendable () -> Date
+    private let silenceThreshold: TimeInterval
 
-    public init(service: HamNotificationService = HamNotificationService()) {
+    public init(
+        service: HamNotificationService = HamNotificationService(),
+        now: @escaping @Sendable () -> Date = { Date() },
+        silenceThreshold: TimeInterval = 10 * 60
+    ) {
         self.service = service
+        self.now = now
+        self.silenceThreshold = silenceThreshold
     }
 
-    public func candidates(previous: [Agent], current: [Agent]) -> [NotificationCandidate] {
+    public func candidates(
+        previous: [Agent],
+        current: [Agent],
+        previousObservedAt: Date? = nil,
+        currentObservedAt: Date? = nil
+    ) -> [NotificationCandidate] {
         let previousByID = Dictionary(uniqueKeysWithValues: previous.map { ($0.id, $0) })
+        let currentTime = currentObservedAt ?? now()
+        let previousTime = previousObservedAt ?? currentTime
 
         return current.compactMap { agent in
-            guard let oldAgent = previousByID[agent.id], oldAgent.status != agent.status else {
+            guard let oldAgent = previousByID[agent.id] else {
                 return nil
             }
 
             let event: NotificationEvent?
-            switch agent.status {
-            case .done:
-                event = .done(agent)
-            case .waitingInput:
-                event = .waitingInput(agent)
-            case .error:
-                event = .error(agent)
-            default:
+            if oldAgent.status != agent.status {
+                switch agent.status {
+                case .done:
+                    event = .done(agent)
+                case .waitingInput:
+                    event = .waitingInput(agent)
+                case .error:
+                    event = .error(agent)
+                default:
+                    event = nil
+                }
+            } else if shouldEmitSilenceCandidate(previous: oldAgent, current: agent, previousObservedAt: previousTime, currentObservedAt: currentTime) {
+                event = .silence(agent)
+            } else {
                 event = nil
             }
 
@@ -75,7 +97,7 @@ public struct StatusChangeNotificationEngine {
             return NotificationCandidate(
                 event: event,
                 title: title(for: event),
-                body: body(for: event)
+                body: body(for: event, observedAt: currentTime)
             )
         }
     }
@@ -88,13 +110,17 @@ public struct StatusChangeNotificationEngine {
             return "\(agent.displayName) needs input"
         case .error(let agent):
             return "\(agent.displayName) hit an error"
+        case .silence(let agent):
+            return "\(agent.displayName) went quiet"
         }
     }
 
-    private func body(for event: NotificationEvent) -> String {
+    private func body(for event: NotificationEvent, observedAt: Date) -> String {
         switch event {
         case .done(let agent), .waitingInput(let agent), .error(let agent):
             return agent.lastUserVisibleSummary ?? "\(humanizedStatusLabel(agent.status)) at \(agent.projectPath)"
+        case .silence(let agent):
+            return "No activity for \(humanizedSilenceInterval(agent.lastEventAt, now: observedAt)) at \(agent.projectPath)"
         }
     }
 
@@ -107,5 +133,40 @@ public struct StatusChangeNotificationEngine {
         default:
             return status.rawValue.replacingOccurrences(of: "_", with: " ")
         }
+    }
+
+    private func shouldEmitSilenceCandidate(
+        previous: Agent,
+        current: Agent,
+        previousObservedAt: Date,
+        currentObservedAt: Date
+    ) -> Bool {
+        guard isSilenceTrackable(previous.status), isSilenceTrackable(current.status) else {
+            return false
+        }
+        let previousAge = previousObservedAt.timeIntervalSince(previous.lastEventAt)
+        let currentAge = currentObservedAt.timeIntervalSince(current.lastEventAt)
+        return previousAge < silenceThreshold && currentAge >= silenceThreshold
+    }
+
+    private func isSilenceTrackable(_ status: AgentStatus) -> Bool {
+        switch status {
+        case .booting, .thinking, .reading, .runningTool:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private func humanizedSilenceInterval(_ date: Date, now: Date) -> String {
+        let seconds = max(0, Int(now.timeIntervalSince(date)))
+        let minutes = seconds / 60
+        if minutes >= 60 {
+            return "\(minutes / 60)h"
+        }
+        if minutes > 0 {
+            return "\(minutes)m"
+        }
+        return "\(seconds)s"
     }
 }
