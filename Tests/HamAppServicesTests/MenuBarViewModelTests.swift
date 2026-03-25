@@ -133,6 +133,44 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.filteredOfficeOccupants(teamID: "team-1", workspace: nil).map(\.zone), [.desk])
     }
 
+    func testRefreshRecordsNotificationHistory() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .error,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2),
+            lastUserVisibleSummary: "Build failed."
+        )
+        let historyStore = InMemoryNotificationHistoryStore()
+        let viewModel = MenuBarViewModel(
+            client: TransitioningClient(initialAgents: [previous], nextAgents: [current]),
+            notificationSink: RecordingNotificationSink(),
+            notificationHistoryStore: historyStore
+        )
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.notificationHistory.last?.title, "builder hit an error")
+        XCTAssertEqual(historyStore.load().last?.title, "builder hit an error")
+    }
+
     func testRefreshSurfacesDisconnectedAttachedAgent() async {
         let agent = Agent(
             id: "agent-1",
@@ -306,7 +344,12 @@ final class MenuBarViewModelTests: XCTestCase {
             lastEventAt: Date(timeIntervalSince1970: 2),
             lastUserVisibleSummary: "Build completed."
         )
-        let client = TransitioningClient(initialAgents: [previous], nextAgents: [current])
+        let client = TransitioningClient(
+            initialAgents: [previous],
+            nextAgents: [current],
+            initialGeneratedAt: Date(timeIntervalSince1970: 10),
+            nextGeneratedAt: Date(timeIntervalSince1970: 360)
+        )
         let sink = RecordingNotificationSink()
         let viewModel = MenuBarViewModel(client: client, notificationSink: sink)
 
@@ -353,6 +396,51 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.refresh()
 
         XCTAssertTrue(sink.candidates.contains(where: { $0.title == "alpha needs attention" && $0.body.contains("needs input") }))
+    }
+
+    func testRefreshSuppressesRepeatedAttentionNotificationWithinWindow() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2),
+            lastUserVisibleSummary: "Need approval."
+        )
+        let recentEntry = NotificationHistoryEntry(
+            key: "agent:agent-1:attention",
+            title: "builder needs input",
+            body: "Need approval.",
+            createdAt: Date(timeIntervalSince1970: 30)
+        )
+        let historyStore = InMemoryNotificationHistoryStore(entries: [recentEntry])
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(
+            client: TransitioningClient(initialAgents: [previous], nextAgents: [current]),
+            notificationSink: sink,
+            notificationHistoryStore: historyStore,
+            now: { Date(timeIntervalSince1970: 60) }
+        )
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertTrue(sink.candidates.isEmpty)
     }
 
     func testRecentEventsFiltersBySelectedAgent() async {
@@ -1562,6 +1650,43 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertTrue(sink.candidates.isEmpty)
     }
 
+    func testDoneNotificationRequiresLongRunningTask() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 100)
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .done,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 101),
+            lastUserVisibleSummary: "Build completed."
+        )
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(
+            client: TransitioningClient(initialAgents: [previous], nextAgents: [current]),
+            notificationSink: sink,
+            now: { Date(timeIntervalSince1970: 160) }
+        )
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertTrue(sink.candidates.isEmpty)
+    }
+
     func testNotificationSettingsCanMaskPreviewText() async {
         let previous = Agent(
             id: "agent-1",
@@ -1749,6 +1874,7 @@ final class MenuBarViewModelTests: XCTestCase {
         let viewModel = MenuBarViewModel(
             client: client,
             notificationSink: sink,
+            notificationHistoryStore: InMemoryNotificationHistoryStore(),
             now: { Date(timeIntervalSince1970: 14 * 60 * 60) },
             calendar: calendar
         )
