@@ -52,6 +52,22 @@ final class EventPresentationTests: XCTestCase {
         XCTAssertFalse(presentation.showsTechnicalType)
     }
 
+    func testStatusUpdatedObservedReconnectionGetsPositivePresentation() {
+        let event = AgentEventPayload(
+            id: "event-3b",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to idle. Observed connection restored.",
+            occurredAt: Date(timeIntervalSince1970: 3)
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Reconnected")
+        XCTAssertEqual(presentation.emphasis, .positive)
+        XCTAssertFalse(presentation.showsTechnicalType)
+    }
+
     func testStatusUpdatedWaitingInputGetsWarningPresentation() {
         let event = AgentEventPayload(
             id: "event-4",
@@ -328,6 +344,23 @@ final class EventPresentationTests: XCTestCase {
 
         XCTAssertEqual(presentation.label, "Thinking")
         XCTAssertEqual(presentation.emphasis, .info)
+    }
+
+    func testLifecycleMetadataMapsObservedReconnectionPresentation() {
+        let event = AgentEventPayload(
+            id: "event-9g",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to idle. Observed recent output.",
+            occurredAt: Date(timeIntervalSince1970: 9),
+            lifecycleStatus: "idle",
+            lifecycleReason: "Reconnected-like output detected."
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Reconnected")
+        XCTAssertEqual(presentation.emphasis, .positive)
     }
 
     func testLifecycleMetadataMapsSleepingPresentation() {

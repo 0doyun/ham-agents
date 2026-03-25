@@ -881,6 +881,9 @@ func eventPresentationHint(event core.Event) (label string, emphasis string, pre
 		return "Stopped", "neutral", removalPresentationSummary(event)
 	case core.EventTypeAgentStatusUpdated:
 		switch {
+		case strings.Contains(lowerSummary, "status changed to idle") &&
+			(strings.Contains(lowerSummary, "connection restored") || strings.Contains(lowerSummary, "back online") || strings.Contains(lowerSummary, "connected again") || strings.Contains(lowerSummary, "reconnected")):
+			return "Reconnected", "positive", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to error"):
 			return "Error", "warning", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to waiting_input"):

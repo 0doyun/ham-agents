@@ -60,6 +60,19 @@ func TestEventPresentationHintMapsBootingStatus(t *testing.T) {
 	}
 }
 
+func TestEventPresentationHintMapsObservedReconnectionStatus(t *testing.T) {
+	t.Parallel()
+
+	label, emphasis, summary := eventPresentationHint(core.Event{
+		Type:    core.EventTypeAgentStatusUpdated,
+		Summary: "Status changed to idle. Observed connection restored.",
+	})
+
+	if label != "Reconnected" || emphasis != "positive" || summary != "Observed connection restored." {
+		t.Fatalf("unexpected presentation hint %q %q %q", label, emphasis, summary)
+	}
+}
+
 func TestEventPresentationHintMapsThinkingStatus(t *testing.T) {
 	t.Parallel()
 

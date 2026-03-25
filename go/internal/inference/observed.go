@@ -50,6 +50,7 @@ func RefreshObservedAgent(agent core.Agent, now time.Time) core.Agent {
 	genericErrorNegations := []string{"no error", "without error", "0 failed", "zero failed", "not failed"}
 	explicitDisconnectedSignals := []string{"disconnected", "connection lost", "offline", "session lost", "session vanished"}
 	explicitDisconnectedNegations := []string{"not disconnected", "reconnected", "connection restored", "back online"}
+	explicitReconnectedSignals := []string{"reconnected", "connection restored", "back online", "connected again"}
 
 	explicitDoneSignals := []string{"all tests passed", "finished successfully", "completed successfully", "task complete"}
 	genericDoneSignals := []string{"done", "completed"}
@@ -65,7 +66,7 @@ func RefreshObservedAgent(agent core.Agent, now time.Time) core.Agent {
 	explicitSleepingSignals := []string{"sleeping", "paused", "waiting for changes"}
 	explicitBootingSignals := []string{"starting up", "initializing", "booting", "launching", "warming up"}
 
-	kind, signalText := classifyObservedSignal(latestLine, content, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDisconnectedSignals, explicitDisconnectedNegations, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations, explicitToolSignals, explicitReadingSignals, explicitThinkingSignals, explicitIdleSignals, explicitSleepingSignals, explicitBootingSignals)
+	kind, signalText := classifyObservedSignal(latestLine, content, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDisconnectedSignals, explicitDisconnectedNegations, explicitReconnectedSignals, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations, explicitToolSignals, explicitReadingSignals, explicitThinkingSignals, explicitIdleSignals, explicitSleepingSignals, explicitBootingSignals)
 	continuationLine := latestLine != "" && indicatesObservedContinuation(latestLine)
 
 	switch kind {
@@ -79,6 +80,11 @@ func RefreshObservedAgent(agent core.Agent, now time.Time) core.Agent {
 		agent.StatusConfidence = 0.4
 		agent.StatusReason = "Disconnected-like output detected."
 		agent.LastUserVisibleSummary = "Observed disconnected-like output."
+	case "reconnected":
+		agent.Status = core.AgentStatusIdle
+		agent.StatusConfidence = 0.42
+		agent.StatusReason = "Reconnected-like output detected."
+		agent.LastUserVisibleSummary = "Observed connection restored."
 	case "error":
 		agent.Status = core.AgentStatusError
 		agent.StatusConfidence = observedSignalConfidence(signalText, 0.65, 0.55, explicitErrorSignals...)
@@ -180,6 +186,7 @@ func classifyObservedSignal(
 	genericErrorNegations []string,
 	explicitDisconnectedSignals []string,
 	explicitDisconnectedNegations []string,
+	explicitReconnectedSignals []string,
 	explicitDoneSignals []string,
 	genericDoneSignals []string,
 	genericDoneNegations []string,
@@ -193,14 +200,14 @@ func classifyObservedSignal(
 	explicitBootingSignals []string,
 ) (kind string, signalText string) {
 	if latestLine != "" {
-		if kind := classifyObservedText(latestLine, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDisconnectedSignals, explicitDisconnectedNegations, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations, explicitToolSignals, explicitReadingSignals, explicitThinkingSignals, explicitIdleSignals, explicitSleepingSignals, explicitBootingSignals); kind != "" {
+		if kind := classifyObservedText(latestLine, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDisconnectedSignals, explicitDisconnectedNegations, explicitReconnectedSignals, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations, explicitToolSignals, explicitReadingSignals, explicitThinkingSignals, explicitIdleSignals, explicitSleepingSignals, explicitBootingSignals); kind != "" {
 			return kind, latestLine
 		}
 		if indicatesObservedContinuation(latestLine) {
 			return "", latestLine
 		}
 	}
-	return classifyObservedText(fullContent, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDisconnectedSignals, explicitDisconnectedNegations, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations, explicitToolSignals, explicitReadingSignals, explicitThinkingSignals, explicitIdleSignals, explicitSleepingSignals, explicitBootingSignals), fullContent
+	return classifyObservedText(fullContent, explicitErrorSignals, genericErrorSignals, genericErrorNegations, explicitDisconnectedSignals, explicitDisconnectedNegations, explicitReconnectedSignals, explicitDoneSignals, genericDoneSignals, genericDoneNegations, explicitInputSignals, genericInputNegations, explicitToolSignals, explicitReadingSignals, explicitThinkingSignals, explicitIdleSignals, explicitSleepingSignals, explicitBootingSignals), fullContent
 }
 
 func classifyObservedText(
@@ -210,6 +217,7 @@ func classifyObservedText(
 	genericErrorNegations []string,
 	explicitDisconnectedSignals []string,
 	explicitDisconnectedNegations []string,
+	explicitReconnectedSignals []string,
 	explicitDoneSignals []string,
 	genericDoneSignals []string,
 	genericDoneNegations []string,
@@ -225,6 +233,8 @@ func classifyObservedText(
 	switch {
 	case containsAny(text, explicitBootingSignals...):
 		return "booting"
+	case containsAny(text, explicitReconnectedSignals...):
+		return "reconnected"
 	case containsSignal(text, explicitDisconnectedSignals, explicitDisconnectedNegations):
 		return "disconnected"
 	case containsSignal(text, explicitErrorSignals, nil) || containsSignal(text, genericErrorSignals, genericErrorNegations):

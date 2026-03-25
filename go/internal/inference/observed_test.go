@@ -554,6 +554,37 @@ func TestRefreshObservedAgentDetectsDisconnectedLikeOutput(t *testing.T) {
 	}
 }
 
+func TestRefreshObservedAgentDetectsReconnectedLikeOutput(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "Connection restored and back online after retry\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusDisconnected,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusIdle {
+		t.Fatalf("expected idle status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Reconnected-like output detected." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+	if updated.LastUserVisibleSummary != "Observed connection restored." {
+		t.Fatalf("unexpected summary %q", updated.LastUserVisibleSummary)
+	}
+}
+
 func TestRefreshObservedAgentDetectsTimeoutLikeOutputAsError(t *testing.T) {
 	t.Parallel()
 

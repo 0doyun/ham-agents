@@ -177,6 +177,9 @@ public enum AgentEventPresenter {
     private static func presentStatusUpdatedEvent(_ event: AgentEventPayload) -> AgentEventPresentation {
         let summary = event.summary.lowercased()
         switch true {
+        case summary.contains("status changed to idle") &&
+            (summary.contains("connection restored") || summary.contains("back online") || summary.contains("connected again") || summary.contains("reconnected")):
+            return AgentEventPresentation(label: "Reconnected", emphasis: .positive)
         case summary.contains("status changed to error"):
             return AgentEventPresentation(label: "Error", emphasis: .warning)
         case summary.contains("status changed to waiting_input"):
@@ -251,6 +254,8 @@ public enum AgentEventPresenter {
                 return AgentEventPresentation(label: "Error", emphasis: .warning)
             case "waiting_input":
                 return AgentEventPresentation(label: "Needs Input", emphasis: .warning)
+            case "idle" where event.lifecycleReason == "Reconnected-like output detected.":
+                return AgentEventPresentation(label: "Reconnected", emphasis: .positive)
             case "running_tool":
                 return AgentEventPresentation(label: "Running Tool", emphasis: .info)
             case "reading":
