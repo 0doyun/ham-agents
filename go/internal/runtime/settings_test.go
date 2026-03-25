@@ -68,3 +68,19 @@ func TestSettingsServiceRejectsInvalidTheme(t *testing.T) {
 		t.Fatal("expected invalid theme to be rejected")
 	}
 }
+
+func TestSettingsServiceRejectsInvalidAnimationSpeed(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	service := runtime.NewSettingsService(
+		store.NewFileSettingsStore(filepath.Join(t.TempDir(), "settings.json")),
+	)
+
+	settings := core.DefaultSettings()
+	settings.Appearance.AnimationSpeedMultiplier = 5
+
+	if _, err := service.Update(ctx, settings); err == nil {
+		t.Fatal("expected invalid animation speed to be rejected")
+	}
+}

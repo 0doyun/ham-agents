@@ -130,6 +130,7 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.workspaceOptions, ["/tmp/app", "/tmp/other"])
         XCTAssertEqual(viewModel.filteredNonAttentionAgents(teamID: "team-1", workspace: nil).map(\.id), ["agent-1"])
         XCTAssertEqual(viewModel.filteredNonAttentionAgents(teamID: nil, workspace: "/tmp/other").map(\.id), ["agent-2"])
+        XCTAssertEqual(viewModel.filteredOfficeOccupants(teamID: "team-1", workspace: nil).map(\.zone), [.desk])
     }
 
     func testRefreshSurfacesDisconnectedAttachedAgent() async {
@@ -897,6 +898,37 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.updateAppearanceSetting(theme: "night")
 
         XCTAssertEqual(viewModel.settings.appearance.theme, "night")
+    }
+
+    func testUpdateAppearanceSettingsChangesAnimationControls() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateAppearanceSetting(animationSpeedMultiplier: 1.5)
+        await viewModel.updateAppearanceSetting(reduceMotion: true)
+
+        XCTAssertEqual(viewModel.settings.appearance.animationSpeedMultiplier, 1.5)
+        XCTAssertTrue(viewModel.settings.appearance.reduceMotion)
     }
 
     func testUpdateIntegrationSettingsChangesPublishedValue() async {

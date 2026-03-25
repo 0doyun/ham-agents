@@ -13,6 +13,7 @@ public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
     @Published public private(set) var quickMessageFeedback: String?
+    @Published public private(set) var notificationHistory: [NotificationHistoryEntry] = []
     @Published public var roleDraft = ""
     @Published public private(set) var settings = DaemonSettingsPayload(
         notifications: DaemonNotificationSettingsPayload(
@@ -32,6 +33,7 @@ public final class MenuBarViewModel: ObservableObject {
     private let notificationEngine: StatusChangeNotificationEngine
     private let notificationSink: NotificationSink
     private let notificationPermissionController: NotificationPermissionControlling
+    private let notificationHistoryStore: NotificationHistoryStoring
     private let projectOpener: ProjectOpening
     private let sessionOpener: SessionOpening
     private let quickMessageSender: QuickMessageSending
@@ -49,6 +51,7 @@ public final class MenuBarViewModel: ObservableObject {
         notificationEngine: StatusChangeNotificationEngine = StatusChangeNotificationEngine(),
         notificationSink: NotificationSink = NoopNotificationSink(),
         notificationPermissionController: NotificationPermissionControlling = NoopNotificationPermissionController(),
+        notificationHistoryStore: NotificationHistoryStoring = InMemoryNotificationHistoryStore(),
         projectOpener: ProjectOpening = NoopProjectOpener(),
         sessionOpener: SessionOpening = NoopSessionOpener(),
         quickMessageSender: QuickMessageSending = NoopQuickMessageSender(),
@@ -65,6 +68,8 @@ public final class MenuBarViewModel: ObservableObject {
         self.notificationEngine = notificationEngine
         self.notificationSink = notificationSink
         self.notificationPermissionController = notificationPermissionController
+        self.notificationHistoryStore = notificationHistoryStore
+        self.notificationHistory = notificationHistoryStore.load()
         self.projectOpener = projectOpener
         self.sessionOpener = sessionOpener
         self.quickMessageSender = quickMessageSender
@@ -82,6 +87,10 @@ public final class MenuBarViewModel: ObservableObject {
         let base = "ham \(summary.runningAgents)▶ \(summary.waitingAgents)? \(summary.doneAgents)✓"
         guard let indicator = latestEventIndicator else { return base }
         return "\(indicator) \(base)"
+    }
+
+    public var menuBarHamsterState: MenuBarHamsterState {
+        PixelOfficeMapper.menuBarState(summary: summary, agents: agents)
     }
 
     public var latestEventPresentation: AgentEventPresentation? {
@@ -296,6 +305,22 @@ public final class MenuBarViewModel: ObservableObject {
         }
     }
 
+    public func updateAppearanceSetting(
+        animationSpeedMultiplier: Double? = nil,
+        reduceMotion: Bool? = nil
+    ) async {
+        var updated = settings
+        if let animationSpeedMultiplier { updated.appearance.animationSpeedMultiplier = animationSpeedMultiplier }
+        if let reduceMotion { updated.appearance.reduceMotion = reduceMotion }
+
+        do {
+            settings = try await client.updateSettings(updated)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     public func updateIntegrationSetting(itermEnabled: Bool) async {
         var updated = settings
         updated.integrations.itermEnabled = itermEnabled
@@ -476,6 +501,10 @@ public final class MenuBarViewModel: ObservableObject {
                 guard settings.notifications.error || settings.notifications.waitingInput else { return nil }
             }
 
+            if shouldSuppressNotification(candidate, at: now()) {
+                return nil
+            }
+
             guard settings.notifications.previewText else {
                 return NotificationCandidate(
                     event: candidate.event,
@@ -514,6 +543,48 @@ public final class MenuBarViewModel: ObservableObject {
 
         for candidate in candidates {
             notificationSink.send(candidate)
+            let entry = NotificationHistoryEntry(
+                key: notificationKey(for: candidate),
+                title: candidate.title,
+                body: candidate.body,
+                createdAt: now()
+            )
+            notificationHistoryStore.append(entry)
+            notificationHistory.append(entry)
+            notificationHistory = Array(notificationHistory.suffix(200))
+        }
+    }
+
+    private func shouldSuppressNotification(_ candidate: NotificationCandidate, at date: Date) -> Bool {
+        let key = notificationKey(for: candidate)
+        let recentWindow: TimeInterval = 60
+        if let recent = notificationHistory.last(where: { $0.key == key }) {
+            return date.timeIntervalSince(recent.createdAt) < recentWindow
+        }
+        switch candidate.event {
+        case .waitingInput(let agent), .error(let agent):
+            let flapKey = "agent:\(agent.id):attention"
+            if let recent = notificationHistory.last(where: { $0.key == flapKey }) {
+                return date.timeIntervalSince(recent.createdAt) < recentWindow
+            }
+        case .done(let agent):
+            let longRunningThreshold: TimeInterval = 5 * 60
+            if let previousAgent = agents.first(where: { $0.id == agent.id }) {
+                return date.timeIntervalSince(previousAgent.lastEventAt) < longRunningThreshold
+            }
+        default:
+            break
+        }
+        return false
+    }
+
+    private func notificationKey(for candidate: NotificationCandidate) -> String {
+        switch candidate.event {
+        case .done(let agent): return "agent:\(agent.id):done"
+        case .waitingInput(let agent): return "agent:\(agent.id):attention"
+        case .error(let agent): return "agent:\(agent.id):attention"
+        case .silence(let agent): return "agent:\(agent.id):silence"
+        case .teamDigest(let name): return "team:\(name):digest"
         }
     }
 
@@ -701,6 +772,12 @@ public final class MenuBarViewModel: ObservableObject {
 
     public func filteredNonAttentionAgents(teamID: String?, workspace: String?) -> [Agent] {
         nonAttentionAgents.filter { agentMatchesFilters($0, teamID: teamID, workspace: workspace) }
+    }
+
+    public func filteredOfficeOccupants(teamID: String?, workspace: String?) -> [PixelOfficeOccupant] {
+        agents
+            .filter { agentMatchesFilters($0, teamID: teamID, workspace: workspace) }
+            .map(PixelOfficeMapper.occupant(for:))
     }
 
     private func agentMatchesFilters(_ agent: Agent, teamID: String?, workspace: String?) -> Bool {

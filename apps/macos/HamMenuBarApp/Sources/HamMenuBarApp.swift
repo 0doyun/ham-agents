@@ -15,7 +15,14 @@ struct HamMenuBarApp: App {
                     await viewModel.refresh()
                 }
         } label: {
-            Text(viewModel.statusLine)
+            HStack(spacing: 4) {
+                MenuBarHamsterGlyph(
+                    state: viewModel.menuBarHamsterState,
+                    animationSpeed: viewModel.settings.appearance.animationSpeedMultiplier,
+                    reduceMotion: viewModel.settings.appearance.reduceMotion
+                )
+                Text(viewModel.statusLine)
+            }
         }
         .menuBarExtraStyle(.window)
     }

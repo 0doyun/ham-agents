@@ -397,6 +397,18 @@ func runSettingsAppearance(ctx context.Context, client *ipc.Client, args []strin
 		switch {
 		case strings.HasPrefix(argument, "--theme="):
 			settings.Appearance.Theme = strings.TrimSpace(strings.TrimPrefix(argument, "--theme="))
+		case strings.HasPrefix(argument, "--animation-speed="):
+			value, err := strconv.ParseFloat(strings.TrimSpace(strings.TrimPrefix(argument, "--animation-speed=")), 64)
+			if err != nil {
+				return fmt.Errorf("invalid animation speed %q", strings.TrimPrefix(argument, "--animation-speed="))
+			}
+			settings.Appearance.AnimationSpeedMultiplier = value
+		case strings.HasPrefix(argument, "--reduce-motion="):
+			value, err := parseBoolFlag(argument, "--reduce-motion=")
+			if err != nil {
+				return err
+			}
+			settings.Appearance.ReduceMotion = value
 		default:
 			return fmt.Errorf("unsupported appearance flag %q", argument)
 		}
