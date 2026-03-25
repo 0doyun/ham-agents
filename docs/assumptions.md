@@ -96,6 +96,11 @@
 - 2026-03-25: daemon-backed event presentation hint baseline adds optional per-event presentation hints, but Swift still keeps summary-string inference as a compatibility fallback for older or partially populated event payloads.
 - 2026-03-25: CLI event presentation hint contract baseline keeps event presentation hints additive on JSON event/log output only; human event rows still rely on the existing tab-separated summary format.
 - 2026-03-25: daemon-backed lifecycle summary baseline adds optional per-event `presentation_summary`, but Swift still falls back to raw `summary` when older payloads or unknown events omit that field.
+- 2026-03-25: daemon-backed lifecycle metadata baseline adds optional `lifecycle_status` / `lifecycle_mode`, but Swift still keeps summary-string inference as the final compatibility fallback when those metadata fields are missing.
+- 2026-03-25: daemon-backed lifecycle reason baseline adds optional `lifecycle_reason`, but existing UI still treats it as structured metadata/future context rather than replacing current summary rendering on every event row.
+- 2026-03-25: CLI event lifecycle metadata contract baseline keeps `lifecycle_status` / `lifecycle_mode` additive on JSON event/log output only; human CLI event rows still use the existing tab-separated format.
+- 2026-03-25: CLI event lifecycle reason contract baseline keeps `lifecycle_reason` additive on JSON event/log output only; human CLI event rows still rely on the existing tab-separated summary format.
+- 2026-03-25: CLI event lifecycle confidence contract baseline keeps `lifecycle_confidence` additive on JSON event/log output only; human CLI event rows still rely on the existing tab-separated summary format.
 - 2026-03-25: CLI event presentation summary contract baseline keeps `presentation_summary` additive on JSON event/log output only; human CLI event rows continue to use the existing tab-separated raw summary output.
 - 2026-03-25: CLI status attention subtitle contract baseline keeps urgent subtitle data additive on the JSON path only; human `ham status` output stays compact and does not print the subtitle map inline.
 - 2026-03-25: CLI status attention contract baseline keeps the richer attention data additive on the JSON path only; human `ham status` output stays terse and presentation-oriented.

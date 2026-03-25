@@ -810,6 +810,55 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle metadata, CLI/UI polish follow-up
 
+### 2026-03-25 (daemon-backed lifecycle metadata baseline)
+- daemon event payload 에 optional `lifecycle_status` / `lifecycle_mode` 필드를 추가해, known registration / status-transition events 가 summary-string parsing 없이도 lifecycle context 를 함께 전달하게 만들었다.
+- runtime event append path 는 managed/attached/observed registration 과 status/disconnect/reconnect events 에 이 metadata 를 채우고, Swift presenter 는 daemon hint 가 없더라도 이 lifecycle metadata 를 summary-string inference 보다 먼저 사용하도록 정리했다.
+- older/partial payload 는 기존 summary-string inference fallback 을 유지하므로 contract 는 additive 로 유지된다.
+- Go/Swift tests 로 stored event lifecycle metadata, payload decoding, metadata-over-summary behavior 를 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle detail, CLI/UI polish follow-up
+
+### 2026-03-25 (daemon-backed lifecycle reason baseline)
+- daemon event payload 에 optional `lifecycle_reason` 필드를 추가해, known status/disconnect/reconnect/register events 가 lifecycle context 뿐 아니라 concise reason string 도 함께 전달하게 만들었다.
+- runtime event append path 는 agent `StatusReason` 를 lifecycle-bearing events 에 함께 싣고, Swift payload decoding 도 이 structured reason 을 보존하도록 정리했다.
+- older/partial payload 는 reason field 가 비어 있어도 기존 summary/presentation fallback 이 유지되므로 contract 는 additive 로 유지된다.
+- Go/Swift tests 로 stored event lifecycle reason 과 payload decoding preservation 을 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: daemon-backed lifecycle detail, richer lifecycle coverage, CLI/UI polish follow-up
+
+### 2026-03-25 (CLI event lifecycle reason contract baseline)
+- `ham events --json` / `ham logs --json` 경로가 daemon-backed `lifecycle_reason` 필드를 그대로 유지하도록 tests 를 보강해, CLI automation path 도 structured lifecycle reason contract 를 읽을 수 있게 고정했다.
+- filtering/tail limiting helper 가 lifecycle reason 을 떨어뜨리지 않는지, newline-delimited event JSON line output 이 lifecycle reason 을 계속 포함하는지 Go tests 로 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: daemon-backed lifecycle detail, richer lifecycle coverage, CLI/UI polish follow-up
+
+### 2026-03-25 (CLI event lifecycle confidence contract baseline)
+- `ham events --json` / `ham logs --json` 경로가 daemon-backed `lifecycle_confidence` 필드를 그대로 유지하도록 tests 를 보강해, CLI automation path 도 structured lifecycle confidence contract 를 읽을 수 있게 고정했다.
+- filtering/tail limiting helper 가 lifecycle confidence 를 떨어뜨리지 않는지, newline-delimited event JSON line output 이 lifecycle confidence 를 계속 포함하는지 Go tests 로 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: daemon-backed lifecycle detail, richer lifecycle coverage, CLI/UI polish follow-up
+
+### 2026-03-25 (CLI event lifecycle metadata contract baseline)
+- `ham events --json` / `ham logs --json` 경로가 daemon-backed `lifecycle_status` / `lifecycle_mode` 필드를 그대로 유지하도록 tests 를 보강해, CLI automation path 도 event lifecycle metadata contract 를 읽을 수 있게 고정했다.
+- filtering/tail limiting helper 가 lifecycle metadata 를 떨어뜨리지 않는지, newline-delimited event JSON line output 이 lifecycle metadata 를 계속 포함하는지 Go tests 로 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle detail, CLI/UI polish follow-up
+
 ### 2026-03-25 (CLI event presentation summary contract baseline)
 - `ham events --json` / `ham logs --json` 경로가 daemon-backed `presentation_summary` 필드를 그대로 유지하도록 tests를 보강해, CLI automation path 도 concise lifecycle summary hint 를 읽을 수 있게 고정했다.
 - filtering/tail limiting helper 가 `presentation_summary` 를 떨어뜨리지 않는지, newline-delimited event JSON line output 이 summary hint 필드를 계속 포함하는지 Go tests 로 보호했다.

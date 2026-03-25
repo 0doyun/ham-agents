@@ -94,6 +94,10 @@ type Event struct {
 	PresentationLabel    string    `json:"presentation_label,omitempty"`
 	PresentationEmphasis string    `json:"presentation_emphasis,omitempty"`
 	PresentationSummary  string    `json:"presentation_summary,omitempty"`
+	LifecycleStatus      string    `json:"lifecycle_status,omitempty"`
+	LifecycleMode        string    `json:"lifecycle_mode,omitempty"`
+	LifecycleReason      string    `json:"lifecycle_reason,omitempty"`
+	LifecycleConfidence  float64   `json:"lifecycle_confidence,omitempty"`
 }
 
 type OpenTargetKind string

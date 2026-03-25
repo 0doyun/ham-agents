@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **CLI event presentation summary contract baseline** 다.
+현재 활성 범위는 **CLI event lifecycle confidence contract baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -125,7 +125,13 @@
 - [x] daemon-backed event presentation hint baseline 추가
 - [x] CLI event presentation hint contract baseline 추가
 - [x] daemon-backed lifecycle summary baseline 추가
-- [ ] CLI event presentation summary contract baseline 추가
+- [x] CLI event presentation summary contract baseline 추가
+- [x] daemon-backed lifecycle metadata baseline 추가
+- [x] CLI event lifecycle metadata contract baseline 추가
+- [x] daemon-backed lifecycle reason baseline 추가
+- [x] CLI event lifecycle reason contract baseline 추가
+- [x] daemon-backed lifecycle confidence baseline 추가
+- [x] CLI event lifecycle confidence contract baseline 추가
 
 ### Current Slice Checklist
 
@@ -257,9 +263,34 @@
 - [x] daemon event payload 에 presentation summary 필드 추가
 - [x] Swift recent event row 가 daemon summary hint 를 우선 사용
 - [x] Go/Swift tests로 daemon-backed lifecycle summary baseline 보호
-- [ ] `ham events --json` 이 presentation_summary 필드를 유지
-- [ ] `ham logs --json` 도 same presentation_summary contract 를 유지
-- [ ] Go tests로 CLI event presentation summary contract baseline 보호
+- [x] daemon event payload 에 lifecycle metadata 필드 추가
+- [x] Swift presenter 가 summary-string inference 대신 daemon lifecycle metadata 를 우선 사용
+- [x] Go/Swift tests로 daemon-backed lifecycle metadata baseline 보호
+- [x] `ham events --json` 이 lifecycle metadata 필드를 유지
+- [x] `ham logs --json` 도 same lifecycle metadata contract 를 유지
+- [x] Go tests로 CLI event lifecycle metadata contract baseline 보호
+- [x] daemon event payload 에 lifecycle reason 필드 추가
+- [x] Swift payload decoding 에 lifecycle reason 연결
+- [x] Go/Swift tests로 daemon-backed lifecycle reason baseline 보호
+- [x] daemon event payload 에 lifecycle confidence 필드 추가
+- [x] Swift payload decoding 에 lifecycle confidence 연결
+- [x] Go/Swift tests로 daemon-backed lifecycle confidence baseline 보호
+- [x] `ham events --json` 이 lifecycle_confidence 필드를 유지
+- [x] `ham logs --json` 도 same lifecycle_confidence contract 를 유지
+- [x] Go tests로 CLI event lifecycle confidence contract baseline 보호
+- [x] Go/Swift tests로 daemon-backed lifecycle confidence baseline 보호
+- [ ] `ham events --json` 이 lifecycle_confidence 필드를 유지
+- [ ] `ham logs --json` 도 same lifecycle_confidence contract 를 유지
+- [ ] Go tests로 CLI event lifecycle confidence contract baseline 보호
+- [x] `ham events --json` 이 lifecycle_reason 필드를 유지
+- [x] `ham logs --json` 도 same lifecycle_reason contract 를 유지
+- [x] Go tests로 CLI event lifecycle reason contract baseline 보호
+- [x] `ham events --json` 이 presentation_summary 필드를 유지
+- [x] `ham logs --json` 도 same presentation_summary contract 를 유지
+- [x] Go tests로 CLI event presentation summary contract baseline 보호
+- [x] daemon event payload 에 lifecycle metadata 필드 추가
+- [x] Swift presenter 가 summary-string inference 대신 daemon lifecycle metadata 를 우선 사용
+- [x] Go/Swift tests로 daemon-backed lifecycle metadata baseline 보호
 - [x] latest-event / feed visuals 추가 polish
 - [x] low-noise visual hierarchy refinement
 - [x] Go/Swift tests로 visual polish baseline 보호

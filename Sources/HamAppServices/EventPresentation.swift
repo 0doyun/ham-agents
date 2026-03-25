@@ -38,6 +38,9 @@ public enum AgentEventPresenter {
         if let hinted = hintedPresentation(for: event) {
             return hinted
         }
+        if let metadata = metadataPresentation(for: event) {
+            return metadata
+        }
         switch event.type {
         case "agent.registered":
             return presentRegisteredEvent(event)
@@ -194,5 +197,38 @@ public enum AgentEventPresenter {
         }
 
         return AgentEventPresentation(label: label, emphasis: emphasis)
+    }
+
+    private static func metadataPresentation(for event: AgentEventPayload) -> AgentEventPresentation? {
+        switch event.type {
+        case "agent.registered":
+            switch event.lifecycleMode {
+            case "attached":
+                return AgentEventPresentation(label: "Attached", emphasis: .info)
+            case "observed":
+                return AgentEventPresentation(label: "Observed", emphasis: .info)
+            case "managed":
+                return AgentEventPresentation(label: "Managed", emphasis: .info)
+            default:
+                return nil
+            }
+        case "agent.status_updated", "agent.disconnected", "agent.reconnected":
+            switch event.lifecycleStatus {
+            case "error":
+                return AgentEventPresentation(label: "Error", emphasis: .warning)
+            case "waiting_input":
+                return AgentEventPresentation(label: "Needs Input", emphasis: .warning)
+            case "done":
+                return AgentEventPresentation(label: "Done", emphasis: .positive)
+            case "disconnected":
+                return AgentEventPresentation(label: "Disconnected", emphasis: .warning)
+            case "idle":
+                return AgentEventPresentation(label: "Idle", emphasis: .info)
+            default:
+                return nil
+            }
+        default:
+            return nil
+        }
     }
 }
