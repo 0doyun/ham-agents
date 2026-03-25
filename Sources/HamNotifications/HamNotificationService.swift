@@ -94,7 +94,18 @@ public struct StatusChangeNotificationEngine {
     private func body(for event: NotificationEvent) -> String {
         switch event {
         case .done(let agent), .waitingInput(let agent), .error(let agent):
-            return agent.lastUserVisibleSummary ?? "\(agent.status.rawValue) at \(agent.projectPath)"
+            return agent.lastUserVisibleSummary ?? "\(humanizedStatusLabel(agent.status)) at \(agent.projectPath)"
+        }
+    }
+
+    private func humanizedStatusLabel(_ status: AgentStatus) -> String {
+        switch status {
+        case .waitingInput:
+            return "needs input"
+        case .runningTool:
+            return "running tool"
+        default:
+            return status.rawValue.replacingOccurrences(of: "_", with: " ")
         }
     }
 }

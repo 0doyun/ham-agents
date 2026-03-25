@@ -1191,10 +1191,22 @@ func formatAgentListLine(agent core.Agent) string {
 }
 
 func formatAgentStatusLabel(agent core.Agent) string {
+	label := humanizeAgentStatus(agent.Status)
 	if agent.StatusConfidence < 0.5 {
-		return "likely " + string(agent.Status)
+		return "likely " + label
 	}
-	return string(agent.Status)
+	return label
+}
+
+func humanizeAgentStatus(status core.AgentStatus) string {
+	switch status {
+	case core.AgentStatusWaitingInput:
+		return "needs input"
+	case core.AgentStatusRunningTool:
+		return "running tool"
+	default:
+		return strings.ReplaceAll(string(status), "_", " ")
+	}
 }
 
 func formatConfidenceLabel(confidence float64) string {
@@ -1279,7 +1291,7 @@ func renderStatus(out io.Writer, snapshot core.RuntimeSnapshot, asJSON bool) err
 		errorCount, waitingCount, disconnectedCount := attentionBreakdown(snapshot.Agents)
 		if _, err := fmt.Fprintf(
 			out,
-			"attention_breakdown error=%d waiting_input=%d disconnected=%d\n",
+			"attention_breakdown error=%d needs_input=%d disconnected=%d\n",
 			errorCount,
 			waitingCount,
 			disconnectedCount,

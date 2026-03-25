@@ -25,7 +25,7 @@ final class MenuBarViewModelTests: XCTestCase {
                 attentionCount: 1,
                 attentionBreakdown: .init(error: 0, waitingInput: 1, disconnected: 0),
                 attentionOrder: ["agent-1"],
-                attentionSubtitles: ["agent-1": "waiting_input · high confidence · Needs confirmation."]
+                attentionSubtitles: ["agent-1": "needs input · high confidence · Needs confirmation."]
             ),
             events: [],
             agents: [agent]
@@ -40,10 +40,10 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.summary?.attentionBreakdown.waitingInput, 1)
         XCTAssertEqual(viewModel.summary?.attentionBreakdown.error, 0)
         XCTAssertEqual(viewModel.summary?.attentionOrder, ["agent-1"])
-        XCTAssertEqual(viewModel.summary?.attentionSubtitles["agent-1"], "waiting_input · high confidence · Needs confirmation.")
+        XCTAssertEqual(viewModel.summary?.attentionSubtitles["agent-1"], "needs input · high confidence · Needs confirmation.")
         XCTAssertEqual(viewModel.topSummaryAttentionBreakdownChips.map(\.label), ["Needs Input"])
         XCTAssertEqual(viewModel.topSummaryAttentionBreakdownChips.map(\.count), [1])
-        XCTAssertEqual(viewModel.attentionSubtitle(for: agent), "waiting_input · high confidence · Needs confirmation.")
+        XCTAssertEqual(viewModel.attentionSubtitle(for: agent), "needs input · high confidence · Needs confirmation.")
         XCTAssertEqual(viewModel.agents.count, 1)
         XCTAssertEqual(viewModel.statusLine, "ham 1▶ 0? 0✓")
         XCTAssertNil(viewModel.errorMessage)
@@ -498,8 +498,25 @@ final class MenuBarViewModelTests: XCTestCase {
         let viewModel = MenuBarViewModel(client: FailingClient())
 
         XCTAssertEqual(viewModel.confidenceLevelText(for: agent), "Low")
-        XCTAssertEqual(viewModel.statusDisplayText(for: agent), "likely waiting_input")
+        XCTAssertEqual(viewModel.statusDisplayText(for: agent), "likely needs input")
         XCTAssertEqual(viewModel.confidenceSummaryText(for: agent), "low confidence (45%)")
+    }
+
+    func testRunningToolStatusDisplayUsesHumanizedLabel() {
+        let agent = Agent(
+            id: "agent-rt",
+            displayName: "builder",
+            provider: "codex",
+            host: "localhost",
+            mode: .observed,
+            projectPath: "/tmp/app",
+            status: .runningTool,
+            statusConfidence: 0.8,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(client: FailingClient())
+
+        XCTAssertEqual(viewModel.statusDisplayText(for: agent), "running tool")
     }
 
     func testAttentionAgentsArePrioritizedByStatus() async {
@@ -554,7 +571,7 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.attentionAgents.map(\.id), ["agent-1", "agent-2"])
         XCTAssertEqual(viewModel.nonAttentionAgents.map(\.id), ["agent-3"])
         XCTAssertEqual(viewModel.attentionSubtitle(for: errorAgent), "error · high confidence · Build failed.")
-        XCTAssertEqual(viewModel.attentionSubtitle(for: waitingAgent), "waiting_input · high confidence · Needs confirmation.")
+        XCTAssertEqual(viewModel.attentionSubtitle(for: waitingAgent), "needs input · high confidence · Needs confirmation.")
     }
 
     func testOpenProjectUsesInjectedOpener() async {
@@ -895,8 +912,8 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.summary?.attentionBreakdown.waitingInput, 1)
         XCTAssertEqual(viewModel.summary?.attentionOrder, ["agent-1"])
         XCTAssertEqual(viewModel.attentionAgents.map(\.id), ["agent-1"])
-        XCTAssertEqual(viewModel.summary?.attentionSubtitles["agent-1"], "waiting_input · high confidence · Needs confirmation.")
-        XCTAssertEqual(viewModel.attentionSubtitle(for: followedAgent), "waiting_input · high confidence · Needs confirmation.")
+        XCTAssertEqual(viewModel.summary?.attentionSubtitles["agent-1"], "needs input · high confidence · Needs confirmation.")
+        XCTAssertEqual(viewModel.attentionSubtitle(for: followedAgent), "needs input · high confidence · Needs confirmation.")
         XCTAssertEqual(viewModel.topSummaryAttentionBreakdownChips.map(\.label), ["Needs Input"])
     }
 

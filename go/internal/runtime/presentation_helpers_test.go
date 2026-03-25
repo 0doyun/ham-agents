@@ -47,6 +47,19 @@ func TestEventPresentationHintMapsReadingStatus(t *testing.T) {
 	}
 }
 
+func TestEventPresentationHintMapsBootingStatus(t *testing.T) {
+	t.Parallel()
+
+	label, emphasis, summary := eventPresentationHint(core.Event{
+		Type:    core.EventTypeAgentStatusUpdated,
+		Summary: "Status changed to booting. Observed booting-like activity.",
+	})
+
+	if label != "Booting" || emphasis != "info" || summary != "Observed booting-like activity." {
+		t.Fatalf("unexpected presentation hint %q %q %q", label, emphasis, summary)
+	}
+}
+
 func TestEventPresentationHintMapsThinkingStatus(t *testing.T) {
 	t.Parallel()
 
@@ -70,5 +83,19 @@ func TestEventPresentationHintMapsSleepingStatus(t *testing.T) {
 
 	if label != "Sleeping" || emphasis != "neutral" || summary != "Observed source idle for 10m." {
 		t.Fatalf("unexpected presentation hint %q %q %q", label, emphasis, summary)
+	}
+}
+
+func TestAttentionSubtitleHumanizesWaitingInputStatus(t *testing.T) {
+	t.Parallel()
+
+	subtitle := attentionSubtitle(core.Agent{
+		Status:           core.AgentStatusWaitingInput,
+		StatusConfidence: 0.85,
+		StatusReason:     "Needs confirmation.",
+	})
+
+	if subtitle != "needs input · high confidence · Needs confirmation." {
+		t.Fatalf("unexpected attention subtitle %q", subtitle)
 	}
 }

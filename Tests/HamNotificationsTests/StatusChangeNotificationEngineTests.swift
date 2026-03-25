@@ -31,6 +31,17 @@ final class StatusChangeNotificationEngineTests: XCTestCase {
         XCTAssertTrue(engine.candidates(previous: previous, current: current).isEmpty)
     }
 
+    func testWaitingInputFallbackBodyUsesHumanizedStatus() {
+        let previous = [makeAgent(status: .thinking)]
+        let current = [makeAgent(status: .waitingInput, summary: nil)]
+        let engine = StatusChangeNotificationEngine()
+
+        let candidates = engine.candidates(previous: previous, current: current)
+
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertEqual(candidates[0].body, "needs input at /tmp/app")
+    }
+
     private func makeAgent(
         status: AgentStatus,
         summary: String? = nil,

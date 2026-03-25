@@ -398,3 +398,158 @@ func TestRefreshObservedAgentDetectsReadingLikeOutput(t *testing.T) {
 		t.Fatalf("unexpected status reason %q", updated.StatusReason)
 	}
 }
+
+func TestRefreshObservedAgentDetectsThinkingLikeOutput(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "Planning the next patch before editing\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusIdle,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusThinking {
+		t.Fatalf("expected thinking status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Thinking-like output detected." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+	if updated.LastUserVisibleSummary != "Observed thinking-like activity." {
+		t.Fatalf("unexpected summary %q", updated.LastUserVisibleSummary)
+	}
+}
+
+func TestRefreshObservedAgentDetectsSleepingLikeOutput(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "Paused and waiting for changes until the next task\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusIdle,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusSleeping {
+		t.Fatalf("expected sleeping status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Sleeping-like output detected." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+	if updated.LastUserVisibleSummary != "Observed sleeping-like activity." {
+		t.Fatalf("unexpected summary %q", updated.LastUserVisibleSummary)
+	}
+}
+
+func TestRefreshObservedAgentDetectsBootingLikeOutput(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "Initializing workspace bootstrap before first step\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusIdle,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusBooting {
+		t.Fatalf("expected booting status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Booting-like output detected." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+	if updated.LastUserVisibleSummary != "Observed booting-like activity." {
+		t.Fatalf("unexpected summary %q", updated.LastUserVisibleSummary)
+	}
+}
+
+func TestRefreshObservedAgentDetectsIdleLikeOutput(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "Ready and standing by for the next task\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusThinking,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusIdle {
+		t.Fatalf("expected idle status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Idle-like output detected." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+	if updated.LastUserVisibleSummary != "Observed idle-like activity." {
+		t.Fatalf("unexpected summary %q", updated.LastUserVisibleSummary)
+	}
+}
+
+func TestRefreshObservedAgentDetectsDisconnectedLikeOutput(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "Session vanished and is now disconnected from the terminal\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusThinking,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusDisconnected {
+		t.Fatalf("expected disconnected status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Disconnected-like output detected." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+	if updated.LastUserVisibleSummary != "Observed disconnected-like output." {
+		t.Fatalf("unexpected summary %q", updated.LastUserVisibleSummary)
+	}
+}

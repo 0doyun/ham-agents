@@ -100,6 +100,22 @@ final class EventPresentationTests: XCTestCase {
         XCTAssertFalse(presentation.showsTechnicalType)
     }
 
+    func testStatusUpdatedBootingGetsInfoPresentation() {
+        let event = AgentEventPayload(
+            id: "event-4g",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to booting. Observed booting-like activity.",
+            occurredAt: Date(timeIntervalSince1970: 4)
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Booting")
+        XCTAssertEqual(presentation.emphasis, .info)
+        XCTAssertFalse(presentation.showsTechnicalType)
+    }
+
     func testStatusUpdatedThinkingGetsInfoPresentation() {
         let event = AgentEventPayload(
             id: "event-4e",
@@ -279,6 +295,22 @@ final class EventPresentationTests: XCTestCase {
         let presentation = AgentEventPresenter.present(event)
 
         XCTAssertEqual(presentation.label, "Reading")
+        XCTAssertEqual(presentation.emphasis, .info)
+    }
+
+    func testLifecycleMetadataMapsBootingPresentation() {
+        let event = AgentEventPayload(
+            id: "event-9f",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to idle. Observed recent output.",
+            occurredAt: Date(timeIntervalSince1970: 9),
+            lifecycleStatus: "booting"
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Booting")
         XCTAssertEqual(presentation.emphasis, .info)
     }
 
