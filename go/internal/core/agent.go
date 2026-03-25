@@ -51,6 +51,8 @@ type Agent struct {
 	SessionTitle            string             `json:"session_title,omitempty"`
 	SessionIsActive         bool               `json:"session_is_active,omitempty"`
 	SessionTTY              string             `json:"session_tty,omitempty"`
+	SessionWindowIndex      int                `json:"session_window_index,omitempty"`
+	SessionTabIndex         int                `json:"session_tab_index,omitempty"`
 	SessionWorkingDirectory string             `json:"session_working_directory,omitempty"`
 	SessionActivity         string             `json:"session_activity,omitempty"`
 	SessionProcessID        int                `json:"session_process_id,omitempty"`
@@ -86,6 +88,7 @@ const (
 	EventTypeAgentProcessStarted            EventType = "agent.process_started"
 	EventTypeAgentProcessOutput             EventType = "agent.process_output"
 	EventTypeAgentProcessExited             EventType = "agent.process_exited"
+	EventTypeAgentLayoutChanged             EventType = "agent.layout_changed"
 )
 
 type Event struct {
@@ -124,6 +127,8 @@ type AttachableSession struct {
 	SessionRef       string `json:"session_ref"`
 	IsActive         bool   `json:"is_active"`
 	TTY              string `json:"tty,omitempty"`
+	WindowIndex      int    `json:"window_index,omitempty"`
+	TabIndex         int    `json:"tab_index,omitempty"`
 	WorkingDirectory string `json:"working_directory,omitempty"`
 	Activity         string `json:"activity,omitempty"`
 	ProcessID        int    `json:"process_id,omitempty"`

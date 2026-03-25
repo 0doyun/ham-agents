@@ -87,6 +87,8 @@ func eventPresentationHint(event core.Event) (label string, emphasis string, pre
 		return "Role", "info", event.Summary
 	case core.EventTypeAgentNotificationPolicyUpdated:
 		return "Notifications", "info", event.Summary
+	case core.EventTypeAgentLayoutChanged:
+		return "Layout", "info", event.Summary
 	case core.EventTypeAgentDisconnected:
 		return "Disconnected", "warning", trimLifecyclePresentationSummary(event.Summary)
 	case core.EventTypeAgentReconnected:

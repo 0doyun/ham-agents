@@ -112,6 +112,17 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 				refreshed[index].SessionTTY = session.TTY
 				changed = true
 			}
+			layoutChanged := false
+			if refreshed[index].SessionWindowIndex != session.WindowIndex {
+				refreshed[index].SessionWindowIndex = session.WindowIndex
+				layoutChanged = true
+				changed = true
+			}
+			if refreshed[index].SessionTabIndex != session.TabIndex {
+				refreshed[index].SessionTabIndex = session.TabIndex
+				layoutChanged = true
+				changed = true
+			}
 			if refreshed[index].SessionWorkingDirectory != session.WorkingDirectory {
 				refreshed[index].SessionWorkingDirectory = session.WorkingDirectory
 				changed = true
@@ -127,6 +138,19 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 			if refreshed[index].SessionCommand != session.Command {
 				refreshed[index].SessionCommand = session.Command
 				changed = true
+			}
+			if layoutChanged {
+				refreshed[index].LastEventAt = now
+				refreshed[index].LastUserVisibleSummary = "Attached session layout changed."
+				events = append(events, core.Event{
+					AgentID:             agent.ID,
+					Type:                core.EventTypeAgentLayoutChanged,
+					Summary:             "Attached session layout changed.",
+					LifecycleStatus:     string(refreshed[index].Status),
+					LifecycleMode:       string(refreshed[index].Mode),
+					LifecycleReason:     refreshed[index].StatusReason,
+					LifecycleConfidence: refreshed[index].StatusConfidence,
+				})
 			}
 		}
 
@@ -200,6 +224,8 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 
 func clearAttachedShellState(agent *core.Agent) {
 	agent.SessionTTY = ""
+	agent.SessionWindowIndex = 0
+	agent.SessionTabIndex = 0
 	agent.SessionWorkingDirectory = ""
 	agent.SessionActivity = ""
 	agent.SessionProcessID = 0

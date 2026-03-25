@@ -282,12 +282,21 @@ func runStop(ctx context.Context, client *ipc.Client, args []string) error {
 	}
 
 	if err := client.StopManaged(ctx, agentID); err != nil {
-		if removeErr := client.RemoveAgent(ctx, agentID); removeErr != nil {
-			return err
-		}
+		return err
 	}
 
 	return renderStopResult(os.Stdout, agentID, asJSON)
+}
+
+func runDetach(ctx context.Context, client *ipc.Client, args []string) error {
+	agentID, asJSON, err := parseStopInput(args)
+	if err != nil {
+		return err
+	}
+	if err := client.RemoveAgent(ctx, agentID); err != nil {
+		return err
+	}
+	return renderDetachResult(os.Stdout, agentID, asJSON)
 }
 
 func runLogs(ctx context.Context, client *ipc.Client, args []string) error {

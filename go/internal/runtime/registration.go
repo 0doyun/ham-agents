@@ -102,6 +102,23 @@ func (r *Registry) RegisterAttached(ctx context.Context, input RegisterAttachedI
 		return core.Agent{}, err
 	}
 
+	if existing, ok := existingObservedOrAttachedAgent(agents, core.AgentModeAttached, registration.sessionRef); ok {
+		return r.mutateAgent(ctx, existing.ID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+			agent.DisplayName = registration.displayName
+			agent.Provider = registration.provider
+			agent.ProjectPath = registration.projectPath
+			agent.Role = registration.role
+			agent.LastEventAt = now
+			agent.LastUserVisibleSummary = "Attached session re-associated."
+			return &core.Event{
+				AgentID:       agent.ID,
+				Type:          core.EventTypeAgentReconnected,
+				Summary:       "Attached session re-associated.",
+				LifecycleMode: string(agent.Mode),
+			}, nil
+		})
+	}
+
 	return r.registerAgent(ctx, agents, core.Agent{
 		ID:                     r.idProvider(registration.now),
 		DisplayName:            registration.displayName,
@@ -141,6 +158,23 @@ func (r *Registry) RegisterObserved(ctx context.Context, input RegisterObservedI
 		return core.Agent{}, err
 	}
 
+	if existing, ok := existingObservedOrAttachedAgent(agents, core.AgentModeObserved, registration.sessionRef); ok {
+		return r.mutateAgent(ctx, existing.ID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+			agent.DisplayName = registration.displayName
+			agent.Provider = registration.provider
+			agent.ProjectPath = registration.projectPath
+			agent.Role = registration.role
+			agent.LastEventAt = now
+			agent.LastUserVisibleSummary = "Observed source re-associated."
+			return &core.Event{
+				AgentID:       agent.ID,
+				Type:          core.EventTypeAgentReconnected,
+				Summary:       "Observed source re-associated.",
+				LifecycleMode: string(agent.Mode),
+			}, nil
+		})
+	}
+
 	return r.registerAgent(ctx, agents, core.Agent{
 		ID:                     r.idProvider(registration.now),
 		DisplayName:            registration.displayName,
@@ -158,6 +192,15 @@ func (r *Registry) RegisterObserved(ctx context.Context, input RegisterObservedI
 		SessionRef:             registration.sessionRef,
 		AvatarVariant:          "default",
 	})
+}
+
+func existingObservedOrAttachedAgent(agents []core.Agent, mode core.AgentMode, sessionRef string) (core.Agent, bool) {
+	for _, agent := range agents {
+		if agent.Mode == mode && strings.TrimSpace(agent.SessionRef) == sessionRef {
+			return agent, true
+		}
+	}
+	return core.Agent{}, false
 }
 
 func (r *Registry) resolveRegistrationContext(

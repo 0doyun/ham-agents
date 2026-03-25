@@ -73,6 +73,19 @@ func TestEventPresentationHintMapsObservedReconnectionStatus(t *testing.T) {
 	}
 }
 
+func TestEventPresentationHintMapsLayoutChangedEvent(t *testing.T) {
+	t.Parallel()
+
+	label, emphasis, summary := eventPresentationHint(core.Event{
+		Type:    core.EventTypeAgentLayoutChanged,
+		Summary: "Attached session layout changed.",
+	})
+
+	if label != "Layout" || emphasis != "info" || summary != "Attached session layout changed." {
+		t.Fatalf("unexpected presentation hint %q %q %q", label, emphasis, summary)
+	}
+}
+
 func TestEventPresentationHintMapsThinkingStatus(t *testing.T) {
 	t.Parallel()
 

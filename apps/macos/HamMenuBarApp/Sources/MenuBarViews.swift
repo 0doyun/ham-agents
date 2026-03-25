@@ -222,7 +222,10 @@ struct MenuBarContentView: View {
                 PixelOfficeView(
                     occupants: filteredOfficeOccupants,
                     animationSpeedMultiplier: viewModel.settings.appearance.animationSpeedMultiplier,
-                    reduceMotion: viewModel.settings.appearance.reduceMotion
+                    reduceMotion: viewModel.settings.appearance.reduceMotion,
+                    hamsterSkin: viewModel.settings.appearance.hamsterSkin,
+                    hat: viewModel.settings.appearance.hat,
+                    deskTheme: viewModel.settings.appearance.deskTheme
                 )
 
                 if !filteredAttentionAgents.isEmpty {

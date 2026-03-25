@@ -12,7 +12,7 @@ func TestIterm2AdapterListsSessions(t *testing.T) {
 
 	adapter := NewIterm2Adapter(recordingOutputRunner{
 		outputs: map[string][]byte{
-			"osascript":                    []byte("abc\ttrue\tClaude Review\tttys001\nxyz\tfalse\tShell\t\n"),
+			"osascript":                    []byte("abc\ttrue\tClaude Review\tttys001\t1\t2\nxyz\tfalse\tShell\t\t2\t1\n"),
 			"ps|-ax|-o|tty=,pid=,command=": []byte("ttys001 12345 /usr/local/bin/claude\n"),
 			"lsof|-a|-d|cwd|-p|12345|-Fn":  []byte("p12345\nn/Users/User/projects/demo\n"),
 		},
@@ -42,6 +42,9 @@ func TestIterm2AdapterListsSessions(t *testing.T) {
 	}
 	if sessions[0].WorkingDirectory != "/Users/User/projects/demo" {
 		t.Fatalf("unexpected working directory %q", sessions[0].WorkingDirectory)
+	}
+	if sessions[0].WindowIndex != 1 || sessions[0].TabIndex != 2 {
+		t.Fatalf("expected layout indices 1/2, got %d/%d", sessions[0].WindowIndex, sessions[0].TabIndex)
 	}
 }
 
