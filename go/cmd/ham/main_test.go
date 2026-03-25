@@ -474,6 +474,56 @@ func TestPrintEventsWritesJSONLinesWhenRequested(t *testing.T) {
 	}
 }
 
+func TestPrintEventsHumanReadableUsesPresentationSummaryWhenAvailable(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	events := []core.Event{
+		{
+			ID:                  "event-1",
+			AgentID:             "agent-1",
+			Type:                core.EventTypeAgentStatusUpdated,
+			Summary:             "Status changed to waiting_input. Needs confirmation.",
+			OccurredAt:          time.Unix(1, 0).UTC(),
+			PresentationSummary: "Needs confirmation.",
+		},
+	}
+
+	if err := printEvents(&output, events, false); err != nil {
+		t.Fatalf("print events human: %v", err)
+	}
+	if !strings.Contains(output.String(), "Needs confirmation.") {
+		t.Fatalf("expected presentation summary in human output, got %q", output.String())
+	}
+	if strings.Contains(output.String(), "Status changed to waiting_input") {
+		t.Fatalf("expected raw summary to be replaced in human output, got %q", output.String())
+	}
+}
+
+func TestPrintEventsHumanReadableUsesLowConfidenceLifecycleReasonFallback(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	events := []core.Event{
+		{
+			ID:                  "event-2",
+			AgentID:             "agent-1",
+			Type:                core.EventTypeAgentStatusUpdated,
+			Summary:             "Status changed to waiting_input. Needs confirmation.",
+			OccurredAt:          time.Unix(1, 0).UTC(),
+			LifecycleReason:     "Needs confirmation.",
+			LifecycleConfidence: 0.45,
+		},
+	}
+
+	if err := printEvents(&output, events, false); err != nil {
+		t.Fatalf("print events human: %v", err)
+	}
+	if !strings.Contains(output.String(), "Needs confirmation. (low confidence)") {
+		t.Fatalf("expected lifecycle reason fallback in human output, got %q", output.String())
+	}
+}
+
 func TestPrintEventsWritesEmptyJSONArrayToProvidedWriter(t *testing.T) {
 	t.Parallel()
 

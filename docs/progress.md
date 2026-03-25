@@ -832,6 +832,67 @@
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: daemon-backed lifecycle detail, richer lifecycle coverage, CLI/UI polish follow-up
 
+### 2026-03-25 (latest-event lifecycle detail baseline)
+- top latest-event banner 도 raw recent event summary 대신 shared `AgentEventPresenter.displaySummary(...)` 경로를 사용하도록 정리해, detail list 와 같은 lifecycle reason/summary fallback 을 따라가게 만들었다.
+- lifecycle reason 만 있는 event 에서는 low-confidence wording `(low confidence)` 까지 banner 에 그대로 반영되도록 맞췄다.
+- Swift tests 로 latest event banner summary 가 daemon-backed lifecycle detail fallback 을 사용하는지 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: daemon-backed lifecycle detail follow-up, richer lifecycle coverage, CLI/UI polish follow-up
+
+### 2026-03-25 (daemon-backed lifecycle detail baseline)
+- Swift event detail summary 가 daemon-provided `presentation_summary` 가 없을 때도 `lifecycle_reason` 을 우선 사용하도록 정리해, status-transition row 가 raw `Status changed to ...` 문장보다 더 직접적인 이유를 보여주게 만들었다.
+- lifecycle confidence 가 낮은 경우에는 detail summary 에 `(low confidence)` 를 붙여, daemon이 준 lifecycle reason 이라도 과한 확신처럼 읽히지 않게 만들었다.
+- unknown/older payload 는 기존 raw `summary` fallback 을 그대로 유지한다.
+- Swift tests 로 lifecycle reason 기반 summary fallback 과 low-confidence wording 을 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: daemon-backed lifecycle detail follow-up, richer lifecycle coverage, CLI/UI polish follow-up
+
+### 2026-03-25 (latest-event lifecycle detail baseline)
+- top latest-event banner 도 raw recent event summary 대신 `AgentEventPresenter.displaySummary(...)` 를 사용하도록 정리해, banner 가 generic `Status changed to ...` 문장보다 더 직접적인 lifecycle reason/summary 를 보여주게 만들었다.
+- lifecycle reason only event 에서는 low-confidence wording까지 banner 에 그대로 반영되도록 맞췄다.
+- Swift tests 로 latest event banner summary 가 daemon-backed lifecycle detail fallback 을 사용하는지 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: daemon-backed lifecycle detail follow-up, richer lifecycle coverage, CLI/UI polish follow-up
+
+### 2026-03-25 (daemon-backed lifecycle detail follow-up)
+- event detail summary fallback chain 을 한 단계 더 정리해, `presentation_summary` 가 없을 때 `lifecycle_reason` 를 우선 쓰고, low-confidence lifecycle case 에만 `(low confidence)` 를 붙이도록 만들었다.
+- 이 fallback 은 detail rows 뿐 아니라 shared `displaySummary` 를 쓰는 다른 surfaces 와도 같은 wording 을 공유한다.
+- Swift tests 로 lifecycle reason-first summary fallback 과 low-confidence wording 을 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle detail metadata, CLI/UI polish follow-up
+
+### 2026-03-25 (low-confidence lifecycle event presentation baseline)
+- lifecycle-aware event presentation 이 low-confidence lifecycle metadata/hint 를 받을 때 `Likely ...` label 을 붙이도록 정리해, warning/info/positive event 도 과한 확정처럼 읽히지 않게 만들었다.
+- 이 완화는 daemon-provided presentation hint 와 lifecycle metadata path 모두에 적용되고, detail summary fallback 의 `(low confidence)` wording 과 함께 동작한다.
+- Swift tests 로 low-confidence lifecycle presentation label softening 을 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle detail follow-up, CLI/UI polish follow-up
+
+### 2026-03-25 (CLI human event detail baseline)
+- human `ham events` / `ham logs` 출력도 raw `Status changed to ...` summary 대신 `presentation_summary` → `lifecycle_reason` → raw `summary` fallback chain 을 따르도록 정리했다.
+- low-confidence lifecycle event 는 human event row 에서도 `(low confidence)` 를 붙여, CLI event feed 와 Swift event detail 이 같은 caution tone 을 공유하게 만들었다.
+- Go tests 로 human event row 가 `presentation_summary` 와 low-confidence lifecycle reason fallback 을 우선 사용하는지 고정했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: richer lifecycle coverage, daemon-backed lifecycle detail follow-up, CLI/UI polish follow-up
+
 ### 2026-03-25 (CLI event lifecycle reason contract baseline)
 - `ham events --json` / `ham logs --json` 경로가 daemon-backed `lifecycle_reason` 필드를 그대로 유지하도록 tests 를 보강해, CLI automation path 도 structured lifecycle reason contract 를 읽을 수 있게 고정했다.
 - filtering/tail limiting helper 가 lifecycle reason 을 떨어뜨리지 않는지, newline-delimited event JSON line output 이 lifecycle reason 을 계속 포함하는지 Go tests 로 보호했다.

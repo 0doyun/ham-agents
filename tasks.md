@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **CLI event lifecycle confidence contract baseline** 다.
+현재 활성 범위는 **CLI human event detail baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -132,6 +132,11 @@
 - [x] CLI event lifecycle reason contract baseline 추가
 - [x] daemon-backed lifecycle confidence baseline 추가
 - [x] CLI event lifecycle confidence contract baseline 추가
+- [x] latest-event lifecycle detail baseline 추가
+- [x] daemon-backed lifecycle detail follow-up 추가
+- [x] daemon-backed lifecycle detail baseline 추가
+- [x] low-confidence lifecycle event presentation baseline 추가
+- [ ] CLI human event detail baseline 추가
 
 ### Current Slice Checklist
 
@@ -275,13 +280,22 @@
 - [x] daemon event payload 에 lifecycle confidence 필드 추가
 - [x] Swift payload decoding 에 lifecycle confidence 연결
 - [x] Go/Swift tests로 daemon-backed lifecycle confidence baseline 보호
+- [x] latestEventSummary 가 daemon-backed lifecycle detail fallback 을 사용
+- [x] latest event banner 가 raw status-change 문장 대신 concise detail 을 보여줌
+- [x] Swift tests로 latest-event lifecycle detail baseline 보호
+- [x] event detail 이 lifecycle reason/confidence 를 더 직접 활용
+- [x] lifecycle detail wording follow-up 보호
+- [x] low-confidence lifecycle event label/emphasis 완화
+- [x] Swift tests로 low-confidence lifecycle event presentation baseline 보호
+- [ ] human `ham events` / `ham logs` 가 concise lifecycle detail 을 우선 사용
+- [ ] low-confidence lifecycle detail wording 이 human event rows 에도 반영
+- [ ] Go tests로 CLI human event detail baseline 보호
 - [x] `ham events --json` 이 lifecycle_confidence 필드를 유지
 - [x] `ham logs --json` 도 same lifecycle_confidence contract 를 유지
 - [x] Go tests로 CLI event lifecycle confidence contract baseline 보호
-- [x] Go/Swift tests로 daemon-backed lifecycle confidence baseline 보호
-- [ ] `ham events --json` 이 lifecycle_confidence 필드를 유지
-- [ ] `ham logs --json` 도 same lifecycle_confidence contract 를 유지
-- [ ] Go tests로 CLI event lifecycle confidence contract baseline 보호
+- [x] Swift event detail 이 lifecycle reason/confidence fallback 을 직접 활용
+- [x] low-confidence lifecycle detail wording 추가
+- [x] Go/Swift tests로 daemon-backed lifecycle detail baseline 보호
 - [x] `ham events --json` 이 lifecycle_reason 필드를 유지
 - [x] `ham logs --json` 도 same lifecycle_reason contract 를 유지
 - [x] Go tests로 CLI event lifecycle reason contract baseline 보호

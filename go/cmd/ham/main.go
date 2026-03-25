@@ -1398,11 +1398,24 @@ func printEvents(out io.Writer, events []core.Event, asJSON bool) error {
 		return err
 	}
 	for _, event := range events {
-		if _, err := fmt.Fprintf(out, "%s\t%s\t%s\t%s\n", event.OccurredAt.Format(time.RFC3339), event.Type, event.AgentID, event.Summary); err != nil {
+		if _, err := fmt.Fprintf(out, "%s\t%s\t%s\t%s\n", event.OccurredAt.Format(time.RFC3339), event.Type, event.AgentID, eventDisplaySummary(event)); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func eventDisplaySummary(event core.Event) string {
+	if summary := strings.TrimSpace(event.PresentationSummary); summary != "" {
+		return summary
+	}
+	if reason := strings.TrimSpace(event.LifecycleReason); reason != "" {
+		if event.LifecycleConfidence > 0 && event.LifecycleConfidence < 0.5 {
+			return reason + " (low confidence)"
+		}
+		return reason
+	}
+	return event.Summary
 }
 
 func eventsForAgent(events []core.Event, agentID string, limit int) []core.Event {

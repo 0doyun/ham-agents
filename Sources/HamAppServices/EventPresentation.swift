@@ -36,28 +36,28 @@ public struct AgentEventSummaryChip: Equatable, Sendable, Identifiable {
 public enum AgentEventPresenter {
     public static func present(_ event: AgentEventPayload) -> AgentEventPresentation {
         if let hinted = hintedPresentation(for: event) {
-            return hinted
+            return softenedIfLowConfidence(hinted, event: event)
         }
         if let metadata = metadataPresentation(for: event) {
-            return metadata
+            return softenedIfLowConfidence(metadata, event: event)
         }
         switch event.type {
         case "agent.registered":
-            return presentRegisteredEvent(event)
+            return softenedIfLowConfidence(presentRegisteredEvent(event), event: event)
         case "agent.role_updated":
-            return AgentEventPresentation(label: "Role", emphasis: .info)
+            return softenedIfLowConfidence(AgentEventPresentation(label: "Role", emphasis: .info), event: event)
         case "agent.notification_policy_updated":
-            return AgentEventPresentation(label: "Notifications", emphasis: .info)
+            return softenedIfLowConfidence(AgentEventPresentation(label: "Notifications", emphasis: .info), event: event)
         case "agent.status_updated":
-            return presentStatusUpdatedEvent(event)
+            return softenedIfLowConfidence(presentStatusUpdatedEvent(event), event: event)
         case "agent.disconnected":
-            return AgentEventPresentation(label: "Disconnected", emphasis: .warning)
+            return softenedIfLowConfidence(AgentEventPresentation(label: "Disconnected", emphasis: .warning), event: event)
         case "agent.reconnected":
-            return AgentEventPresentation(label: "Reconnected", emphasis: .positive)
+            return softenedIfLowConfidence(AgentEventPresentation(label: "Reconnected", emphasis: .positive), event: event)
         case "agent.removed":
-            return AgentEventPresentation(label: "Stopped", emphasis: .neutral)
+            return softenedIfLowConfidence(AgentEventPresentation(label: "Stopped", emphasis: .neutral), event: event)
         default:
-            return AgentEventPresentation(label: event.type, emphasis: .neutral, showsTechnicalType: true)
+            return softenedIfLowConfidence(AgentEventPresentation(label: event.type, emphasis: .neutral, showsTechnicalType: true), event: event)
         }
     }
 
@@ -128,6 +128,12 @@ public enum AgentEventPresenter {
         if let summary = event.presentationSummary?.trimmingCharacters(in: .whitespacesAndNewlines), !summary.isEmpty {
             return summary
         }
+        if let reason = event.lifecycleReason?.trimmingCharacters(in: .whitespacesAndNewlines), !reason.isEmpty {
+            if let confidence = event.lifecycleConfidence, confidence < 0.5 {
+                return "\(reason) (low confidence)"
+            }
+            return reason
+        }
         return event.summary
     }
 
@@ -197,6 +203,23 @@ public enum AgentEventPresenter {
         }
 
         return AgentEventPresentation(label: label, emphasis: emphasis)
+    }
+
+    private static func softenedIfLowConfidence(
+        _ presentation: AgentEventPresentation,
+        event: AgentEventPayload
+    ) -> AgentEventPresentation {
+        guard let confidence = event.lifecycleConfidence, confidence < 0.5 else {
+            return presentation
+        }
+        guard presentation.label.hasPrefix("Likely ") == false else {
+            return presentation
+        }
+        return AgentEventPresentation(
+            label: "Likely \(presentation.label)",
+            emphasis: presentation.emphasis,
+            showsTechnicalType: presentation.showsTechnicalType
+        )
     }
 
     private static func metadataPresentation(for event: AgentEventPayload) -> AgentEventPresentation? {

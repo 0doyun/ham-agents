@@ -88,7 +88,8 @@ public final class MenuBarViewModel: ObservableObject {
     }
 
     public var latestEventSummary: String? {
-        summary?.recentEvents.last?.summary
+        guard let event = summary?.recentEvents.last else { return nil }
+        return AgentEventPresenter.displaySummary(for: event)
     }
 
     public func agent(withID id: Agent.ID?) -> Agent? {
