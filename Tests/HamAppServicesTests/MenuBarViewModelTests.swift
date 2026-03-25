@@ -1019,6 +1019,62 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.settings.appearance.reduceMotion)
     }
 
+    func testUpdateAppearanceSettingsChangesDecorationChoices() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(agents: [agent], generatedAt: Date(timeIntervalSince1970: 10)),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateAppearanceSetting(hamsterSkin: "golden", hat: "cap", deskTheme: "night-shift")
+
+        XCTAssertEqual(viewModel.settings.appearance.hamsterSkin, "golden")
+        XCTAssertEqual(viewModel.settings.appearance.hat, "cap")
+        XCTAssertEqual(viewModel.settings.appearance.deskTheme, "night-shift")
+    }
+
+    func testUpdateGeneralSettingsChangesPublishedValues() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(agents: [agent], generatedAt: Date(timeIntervalSince1970: 10)),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateGeneralSetting(launchAtLogin: true, compactMode: true, showMenuBarAnimationAlways: true)
+
+        XCTAssertTrue(viewModel.settings.general.launchAtLogin)
+        XCTAssertTrue(viewModel.settings.general.compactMode)
+        XCTAssertTrue(viewModel.settings.general.showMenuBarAnimationAlways)
+    }
+
     func testUpdateIntegrationSettingsChangesPublishedValue() async {
         let agent = Agent(
             id: "agent-1",
@@ -1046,6 +1102,133 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.updateIntegrationSetting(itermEnabled: false)
 
         XCTAssertFalse(viewModel.settings.integrations.itermEnabled)
+    }
+
+    func testUpdatePrivacySettingsChangesPublishedValues() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(agents: [agent], generatedAt: Date(timeIntervalSince1970: 10)),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updatePrivacySetting(localOnlyMode: false, eventHistoryRetentionDays: 14, transcriptExcerptStorage: false)
+
+        XCTAssertFalse(viewModel.settings.privacy.localOnlyMode)
+        XCTAssertEqual(viewModel.settings.privacy.eventHistoryRetentionDays, 14)
+        XCTAssertFalse(viewModel.settings.privacy.transcriptExcerptStorage)
+    }
+
+    func testUpdateIntegrationSettingsChangesTranscriptDirsAndProviderAdapters() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateIntegrationSetting(
+            transcriptDirs: ["/tmp/a", "/tmp/b"],
+            providerAdapters: ["claude": true, "transcript": false]
+        )
+
+        XCTAssertEqual(viewModel.settings.integrations.transcriptDirs, ["/tmp/a", "/tmp/b"])
+        XCTAssertEqual(viewModel.settings.integrations.providerAdapters["transcript"], false)
+    }
+
+    func testUpdateGeneralAndPrivacySettingsChangePublishedValues() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateGeneralSetting(launchAtLogin: true, compactMode: true, showMenuBarAnimationAlways: true)
+        await viewModel.updatePrivacySetting(localOnlyMode: false, eventHistoryRetentionDays: 14, transcriptExcerptStorage: false)
+
+        XCTAssertTrue(viewModel.settings.general.launchAtLogin)
+        XCTAssertTrue(viewModel.settings.general.compactMode)
+        XCTAssertTrue(viewModel.settings.general.showMenuBarAnimationAlways)
+        XCTAssertFalse(viewModel.settings.privacy.localOnlyMode)
+        XCTAssertEqual(viewModel.settings.privacy.eventHistoryRetentionDays, 14)
+        XCTAssertFalse(viewModel.settings.privacy.transcriptExcerptStorage)
+    }
+
+    func testUpdateAppearanceSettingsChangesCustomizationFields() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateAppearanceSetting(hamsterSkin: "night", hat: "cap", deskTheme: "forest")
+
+        XCTAssertEqual(viewModel.settings.appearance.hamsterSkin, "night")
+        XCTAssertEqual(viewModel.settings.appearance.hat, "cap")
+        XCTAssertEqual(viewModel.settings.appearance.deskTheme, "forest")
     }
 
     func testFollowLatestEventsRefreshesSummaryWhenNewEventsArrive() async {

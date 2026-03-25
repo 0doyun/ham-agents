@@ -25,10 +25,21 @@ func TestFileSettingsStoreRoundTrip(t *testing.T) {
 	settings.Notifications.Silence = true
 	settings.Notifications.QuietHoursStartHour = 21
 	settings.Notifications.QuietHoursEndHour = 7
+	settings.General.LaunchAtLogin = true
+	settings.General.CompactMode = true
+	settings.General.ShowMenuBarAnimationAlways = true
 	settings.Appearance.Theme = "night"
 	settings.Appearance.AnimationSpeedMultiplier = 1.5
 	settings.Appearance.ReduceMotion = true
+	settings.Appearance.HamsterSkin = "golden"
+	settings.Appearance.Hat = "cap"
+	settings.Appearance.DeskTheme = "night-shift"
 	settings.Integrations.ItermEnabled = false
+	settings.Integrations.TranscriptDirs = []string{"/tmp/logs", "/tmp/more"}
+	settings.Integrations.ProviderAdapters = map[string]bool{"claude": true, "transcript": false}
+	settings.Privacy.LocalOnlyMode = false
+	settings.Privacy.EventHistoryRetentionDays = 14
+	settings.Privacy.TranscriptExcerptStorage = false
 
 	if err := settingsStore.Save(ctx, settings); err != nil {
 		t.Fatalf("save settings: %v", err)
@@ -50,6 +61,9 @@ func TestFileSettingsStoreRoundTrip(t *testing.T) {
 	if reloaded.Notifications.QuietHoursEndHour != 7 {
 		t.Fatalf("expected quiet end hour 7, got %d", reloaded.Notifications.QuietHoursEndHour)
 	}
+	if !reloaded.General.LaunchAtLogin || !reloaded.General.CompactMode || !reloaded.General.ShowMenuBarAnimationAlways {
+		t.Fatalf("expected general settings to persist, got %#v", reloaded.General)
+	}
 	if reloaded.Appearance.Theme != "night" {
 		t.Fatalf("expected theme night, got %q", reloaded.Appearance.Theme)
 	}
@@ -59,8 +73,20 @@ func TestFileSettingsStoreRoundTrip(t *testing.T) {
 	if !reloaded.Appearance.ReduceMotion {
 		t.Fatal("expected reduce motion to persist")
 	}
+	if reloaded.Appearance.HamsterSkin != "golden" || reloaded.Appearance.Hat != "cap" || reloaded.Appearance.DeskTheme != "night-shift" {
+		t.Fatalf("expected appearance extras to persist, got %#v", reloaded.Appearance)
+	}
 	if reloaded.Integrations.ItermEnabled {
 		t.Fatal("expected iTerm integration to persist as disabled")
+	}
+	if len(reloaded.Integrations.TranscriptDirs) != 2 || reloaded.Integrations.TranscriptDirs[0] != "/tmp/logs" {
+		t.Fatalf("expected transcript dirs to persist, got %#v", reloaded.Integrations.TranscriptDirs)
+	}
+	if reloaded.Integrations.ProviderAdapters["transcript"] {
+		t.Fatalf("expected provider adapter override to persist, got %#v", reloaded.Integrations.ProviderAdapters)
+	}
+	if reloaded.Privacy.LocalOnlyMode || reloaded.Privacy.EventHistoryRetentionDays != 14 || reloaded.Privacy.TranscriptExcerptStorage {
+		t.Fatalf("expected privacy settings to persist, got %#v", reloaded.Privacy)
 	}
 }
 
@@ -108,7 +134,16 @@ func TestFileSettingsStoreBackfillsQuietHoursDefaultsForLegacyFiles(t *testing.T
 	if settings.Appearance.ReduceMotion {
 		t.Fatal("expected reduce motion to default to disabled")
 	}
+	if settings.Appearance.HamsterSkin != "default" || settings.Appearance.Hat != "none" || settings.Appearance.DeskTheme != "classic" {
+		t.Fatalf("expected default appearance extras, got %#v", settings.Appearance)
+	}
 	if !settings.Integrations.ItermEnabled {
 		t.Fatal("expected iTerm integration default to be enabled")
+	}
+	if len(settings.Integrations.TranscriptDirs) != 0 {
+		t.Fatalf("expected default transcript dirs to be empty, got %#v", settings.Integrations.TranscriptDirs)
+	}
+	if !settings.Privacy.LocalOnlyMode || settings.Privacy.EventHistoryRetentionDays != 30 || !settings.Privacy.TranscriptExcerptStorage {
+		t.Fatalf("unexpected default privacy %#v", settings.Privacy)
 	}
 }
