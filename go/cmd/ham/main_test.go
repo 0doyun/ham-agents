@@ -500,6 +500,34 @@ func TestPrintEventsHumanReadableUsesPresentationSummaryWhenAvailable(t *testing
 	}
 }
 
+func TestPrintEventsHumanReadableUsesLifecycleAwareRemovedSummary(t *testing.T) {
+	t.Parallel()
+
+	var output bytes.Buffer
+	events := []core.Event{
+		{
+			ID:                   "event-removed-1",
+			AgentID:              "agent-1",
+			Type:                 core.EventTypeAgentRemoved,
+			Summary:              "Tracking stopped.",
+			OccurredAt:           time.Unix(2, 0).UTC(),
+			PresentationLabel:    "Stopped",
+			PresentationEmphasis: "neutral",
+			PresentationSummary:  "Stopped tracking while booting. Managed launch requested.",
+		},
+	}
+
+	if err := printEvents(&output, events, false); err != nil {
+		t.Fatalf("print removed event human: %v", err)
+	}
+	if !strings.Contains(output.String(), "Stopped tracking while booting. Managed launch requested.") {
+		t.Fatalf("expected lifecycle-aware removed summary in human output, got %q", output.String())
+	}
+	if strings.Contains(output.String(), "Tracking stopped.\t") || strings.HasSuffix(strings.TrimSpace(output.String()), "Tracking stopped.") {
+		t.Fatalf("expected generic removal summary to be replaced in human output, got %q", output.String())
+	}
+}
+
 func TestPrintEventsHumanReadableUsesLowConfidenceLifecycleReasonFallback(t *testing.T) {
 	t.Parallel()
 

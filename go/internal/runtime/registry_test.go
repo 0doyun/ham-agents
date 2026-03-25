@@ -1181,4 +1181,7 @@ func TestRemoveDeletesAgentFromRegistry(t *testing.T) {
 	if events[len(events)-1].LifecycleReason != "Managed launch requested." || events[len(events)-1].LifecycleConfidence != 1 {
 		t.Fatalf("expected removed event to retain lifecycle detail %#v", events[len(events)-1])
 	}
+	if events[len(events)-1].PresentationSummary != "Stopped tracking while booting. Managed launch requested." {
+		t.Fatalf("expected removed event to expose lifecycle-aware presentation summary %#v", events[len(events)-1])
+	}
 }
