@@ -361,9 +361,10 @@ func (r *Registry) UpdateNotificationPolicy(ctx context.Context, agentID string,
 		agent.NotificationPolicy = policy
 		agent.LastEventAt = now
 		return &core.Event{
-			AgentID: agent.ID,
-			Type:    core.EventTypeAgentNotificationPolicyUpdated,
-			Summary: fmt.Sprintf("Notification policy set to %s.", policy),
+			AgentID:       agent.ID,
+			Type:          core.EventTypeAgentNotificationPolicyUpdated,
+			Summary:       fmt.Sprintf("Notification policy set to %s.", policy),
+			LifecycleMode: string(agent.Mode),
 		}, nil
 	})
 }
@@ -381,9 +382,10 @@ func (r *Registry) UpdateRole(ctx context.Context, agentID string, role string) 
 			summary = fmt.Sprintf("Role updated to %s.", trimmedRole)
 		}
 		return &core.Event{
-			AgentID: agent.ID,
-			Type:    core.EventTypeAgentRoleUpdated,
-			Summary: summary,
+			AgentID:       agent.ID,
+			Type:          core.EventTypeAgentRoleUpdated,
+			Summary:       summary,
+			LifecycleMode: string(agent.Mode),
 		}, nil
 	})
 }
@@ -594,9 +596,13 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 			refreshed[index].LastEventAt = now
 			refreshed[index].LastUserVisibleSummary = "Attached session disappeared from iTerm."
 			events = append(events, core.Event{
-				AgentID: agent.ID,
-				Type:    core.EventTypeAgentDisconnected,
-				Summary: statusTransitionSummary(refreshed[index]),
+				AgentID:             agent.ID,
+				Type:                core.EventTypeAgentDisconnected,
+				Summary:             statusTransitionSummary(refreshed[index]),
+				LifecycleStatus:     string(refreshed[index].Status),
+				LifecycleMode:       string(refreshed[index].Mode),
+				LifecycleReason:     refreshed[index].StatusReason,
+				LifecycleConfidence: refreshed[index].StatusConfidence,
 			})
 			changed = true
 		case attached && agent.Status == core.AgentStatusDisconnected:
@@ -606,9 +612,13 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 			refreshed[index].LastEventAt = now
 			refreshed[index].LastUserVisibleSummary = "Attached session became reachable again."
 			events = append(events, core.Event{
-				AgentID: agent.ID,
-				Type:    core.EventTypeAgentReconnected,
-				Summary: statusTransitionSummary(refreshed[index]),
+				AgentID:             agent.ID,
+				Type:                core.EventTypeAgentReconnected,
+				Summary:             statusTransitionSummary(refreshed[index]),
+				LifecycleStatus:     string(refreshed[index].Status),
+				LifecycleMode:       string(refreshed[index].Mode),
+				LifecycleReason:     refreshed[index].StatusReason,
+				LifecycleConfidence: refreshed[index].StatusConfidence,
 			})
 			changed = true
 		}
@@ -690,9 +700,13 @@ func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agen
 		if updated != agent {
 			if updated.Status != agent.Status {
 				events = append(events, core.Event{
-					AgentID: agent.ID,
-					Type:    core.EventTypeAgentStatusUpdated,
-					Summary: statusTransitionSummary(updated),
+					AgentID:             agent.ID,
+					Type:                core.EventTypeAgentStatusUpdated,
+					Summary:             statusTransitionSummary(updated),
+					LifecycleStatus:     string(updated.Status),
+					LifecycleMode:       string(updated.Mode),
+					LifecycleReason:     updated.StatusReason,
+					LifecycleConfidence: updated.StatusConfidence,
 				})
 			}
 			refreshed[index] = updated
@@ -756,9 +770,13 @@ func (r *Registry) mutateAgent(
 func (r *Registry) registerAgent(ctx context.Context, agents []core.Agent, agent core.Agent) (core.Agent, error) {
 	updatedAgents := append(append([]core.Agent(nil), agents...), agent)
 	if err := r.saveAgentsAndEvents(ctx, updatedAgents, []core.Event{{
-		AgentID: agent.ID,
-		Type:    core.EventTypeAgentRegistered,
-		Summary: agent.LastUserVisibleSummary,
+		AgentID:             agent.ID,
+		Type:                core.EventTypeAgentRegistered,
+		Summary:             agent.LastUserVisibleSummary,
+		LifecycleStatus:     string(agent.Status),
+		LifecycleMode:       string(agent.Mode),
+		LifecycleReason:     agent.StatusReason,
+		LifecycleConfidence: agent.StatusConfidence,
 	}}); err != nil {
 		return core.Agent{}, err
 	}

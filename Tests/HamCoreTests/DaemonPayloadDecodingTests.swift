@@ -122,7 +122,11 @@ final class DaemonPayloadDecodingTests: XCTestCase {
             "occurred_at": "2026-03-24T14:02:18.002914Z",
             "presentation_label": "Managed",
             "presentation_emphasis": "info",
-            "presentation_summary": "Managed session registered."
+            "presentation_summary": "Managed session registered.",
+            "lifecycle_status": "booting",
+            "lifecycle_mode": "managed",
+            "lifecycle_reason": "Managed launch requested.",
+            "lifecycle_confidence": 1
           }
         ]
         """
@@ -135,5 +139,9 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         XCTAssertEqual(events[0].presentationLabel, "Managed")
         XCTAssertEqual(events[0].presentationEmphasis, "info")
         XCTAssertEqual(events[0].presentationSummary, "Managed session registered.")
+        XCTAssertEqual(events[0].lifecycleStatus, "booting")
+        XCTAssertEqual(events[0].lifecycleMode, "managed")
+        XCTAssertEqual(events[0].lifecycleReason, "Managed launch requested.")
+        XCTAssertEqual(events[0].lifecycleConfidence, 1)
     }
 }

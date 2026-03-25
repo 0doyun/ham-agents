@@ -375,10 +375,10 @@ func TestEventsForAgentFiltersAndLimitsToMostRecentMatches(t *testing.T) {
 	t.Parallel()
 
 	filtered := eventsForAgent([]core.Event{
-		{ID: "event-1", AgentID: "agent-1", PresentationLabel: "Managed", PresentationEmphasis: "info", PresentationSummary: "Managed session registered."},
+		{ID: "event-1", AgentID: "agent-1", PresentationLabel: "Managed", PresentationEmphasis: "info", PresentationSummary: "Managed session registered.", LifecycleStatus: "booting", LifecycleMode: "managed", LifecycleReason: "Managed launch requested."},
 		{ID: "event-2", AgentID: "agent-2"},
-		{ID: "event-3", AgentID: "agent-1", PresentationLabel: "Needs Input", PresentationEmphasis: "warning", PresentationSummary: "Needs confirmation."},
-		{ID: "event-4", AgentID: "agent-1", PresentationLabel: "Done", PresentationEmphasis: "positive", PresentationSummary: "Completed successfully."},
+		{ID: "event-3", AgentID: "agent-1", PresentationLabel: "Needs Input", PresentationEmphasis: "warning", PresentationSummary: "Needs confirmation.", LifecycleStatus: "waiting_input", LifecycleMode: "observed", LifecycleReason: "Question-like output detected.", LifecycleConfidence: 0.45},
+		{ID: "event-4", AgentID: "agent-1", PresentationLabel: "Done", PresentationEmphasis: "positive", PresentationSummary: "Completed successfully.", LifecycleStatus: "done", LifecycleMode: "managed", LifecycleReason: "Completion-like output detected.", LifecycleConfidence: 0.9},
 	}, "agent-1", 2)
 
 	if len(filtered) != 2 {
@@ -393,11 +393,29 @@ func TestEventsForAgentFiltersAndLimitsToMostRecentMatches(t *testing.T) {
 	if filtered[0].PresentationSummary != "Needs confirmation." {
 		t.Fatalf("expected filtered event 0 to retain presentation summary %#v", filtered[0])
 	}
+	if filtered[0].LifecycleStatus != "waiting_input" || filtered[0].LifecycleMode != "observed" {
+		t.Fatalf("expected filtered event 0 to retain lifecycle metadata %#v", filtered[0])
+	}
+	if filtered[0].LifecycleReason != "Question-like output detected." {
+		t.Fatalf("expected filtered event 0 to retain lifecycle reason %#v", filtered[0])
+	}
+	if filtered[0].LifecycleConfidence != 0.45 {
+		t.Fatalf("expected filtered event 0 to retain lifecycle confidence %#v", filtered[0])
+	}
 	if filtered[1].PresentationLabel != "Done" || filtered[1].PresentationEmphasis != "positive" {
 		t.Fatalf("expected filtered event 1 to retain presentation hints %#v", filtered[1])
 	}
 	if filtered[1].PresentationSummary != "Completed successfully." {
 		t.Fatalf("expected filtered event 1 to retain presentation summary %#v", filtered[1])
+	}
+	if filtered[1].LifecycleStatus != "done" || filtered[1].LifecycleMode != "managed" {
+		t.Fatalf("expected filtered event 1 to retain lifecycle metadata %#v", filtered[1])
+	}
+	if filtered[1].LifecycleReason != "Completion-like output detected." {
+		t.Fatalf("expected filtered event 1 to retain lifecycle reason %#v", filtered[1])
+	}
+	if filtered[1].LifecycleConfidence != 0.9 {
+		t.Fatalf("expected filtered event 1 to retain lifecycle confidence %#v", filtered[1])
 	}
 }
 
@@ -426,6 +444,10 @@ func TestPrintEventsWritesJSONLinesWhenRequested(t *testing.T) {
 			PresentationLabel:    "Managed",
 			PresentationEmphasis: "info",
 			PresentationSummary:  "Managed session registered.",
+			LifecycleStatus:      "booting",
+			LifecycleMode:        "managed",
+			LifecycleReason:      "Managed launch requested.",
+			LifecycleConfidence:  1,
 		},
 	}
 
@@ -440,6 +462,15 @@ func TestPrintEventsWritesJSONLinesWhenRequested(t *testing.T) {
 	}
 	if !strings.Contains(output.String(), `"presentation_summary":"Managed session registered."`) {
 		t.Fatalf("expected presentation summary in json line output, got %q", output.String())
+	}
+	if !strings.Contains(output.String(), `"lifecycle_status":"booting"`) || !strings.Contains(output.String(), `"lifecycle_mode":"managed"`) {
+		t.Fatalf("expected lifecycle metadata in json line output, got %q", output.String())
+	}
+	if !strings.Contains(output.String(), `"lifecycle_reason":"Managed launch requested."`) {
+		t.Fatalf("expected lifecycle reason in json line output, got %q", output.String())
+	}
+	if !strings.Contains(output.String(), `"lifecycle_confidence":1`) {
+		t.Fatalf("expected lifecycle confidence in json line output, got %q", output.String())
 	}
 }
 

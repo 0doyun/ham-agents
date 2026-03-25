@@ -25,6 +25,10 @@ public struct AgentEventPayload: Codable, Equatable, Sendable, Identifiable {
     public var presentationLabel: String?
     public var presentationEmphasis: String?
     public var presentationSummary: String?
+    public var lifecycleStatus: String?
+    public var lifecycleMode: String?
+    public var lifecycleReason: String?
+    public var lifecycleConfidence: Double?
 
     public init(
         id: String,
@@ -34,7 +38,11 @@ public struct AgentEventPayload: Codable, Equatable, Sendable, Identifiable {
         occurredAt: Date,
         presentationLabel: String? = nil,
         presentationEmphasis: String? = nil,
-        presentationSummary: String? = nil
+        presentationSummary: String? = nil,
+        lifecycleStatus: String? = nil,
+        lifecycleMode: String? = nil,
+        lifecycleReason: String? = nil,
+        lifecycleConfidence: Double? = nil
     ) {
         self.id = id
         self.agentID = agentID
@@ -44,6 +52,10 @@ public struct AgentEventPayload: Codable, Equatable, Sendable, Identifiable {
         self.presentationLabel = presentationLabel
         self.presentationEmphasis = presentationEmphasis
         self.presentationSummary = presentationSummary
+        self.lifecycleStatus = lifecycleStatus
+        self.lifecycleMode = lifecycleMode
+        self.lifecycleReason = lifecycleReason
+        self.lifecycleConfidence = lifecycleConfidence
     }
 
     enum CodingKeys: String, CodingKey {
@@ -55,6 +67,10 @@ public struct AgentEventPayload: Codable, Equatable, Sendable, Identifiable {
         case presentationLabel = "presentation_label"
         case presentationEmphasis = "presentation_emphasis"
         case presentationSummary = "presentation_summary"
+        case lifecycleStatus = "lifecycle_status"
+        case lifecycleMode = "lifecycle_mode"
+        case lifecycleReason = "lifecycle_reason"
+        case lifecycleConfidence = "lifecycle_confidence"
     }
 }
 

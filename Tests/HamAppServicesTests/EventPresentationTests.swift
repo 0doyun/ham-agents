@@ -135,6 +135,22 @@ final class EventPresentationTests: XCTestCase {
         XCTAssertEqual(AgentEventPresenter.displaySummary(for: event), "Observed source registered.")
     }
 
+    func testLifecycleMetadataOverridesSummaryInference() {
+        let event = AgentEventPayload(
+            id: "event-9",
+            agentID: "agent-1",
+            type: "agent.status_updated",
+            summary: "Status changed to idle. Observed recent output.",
+            occurredAt: Date(timeIntervalSince1970: 9),
+            lifecycleStatus: "error"
+        )
+
+        let presentation = AgentEventPresenter.present(event)
+
+        XCTAssertEqual(presentation.label, "Error")
+        XCTAssertEqual(presentation.emphasis, .warning)
+    }
+
     func testDisplaySummaryFallsBackToRawSummary() {
         let event = AgentEventPayload(
             id: "event-8",

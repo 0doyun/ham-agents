@@ -79,6 +79,15 @@ func TestRegisterManagedPersistsAndBuildsSnapshot(t *testing.T) {
 	if events[0].PresentationSummary != "Managed session registered." {
 		t.Fatalf("unexpected event presentation summary %#v", events[0])
 	}
+	if events[0].LifecycleStatus != "booting" || events[0].LifecycleMode != "managed" {
+		t.Fatalf("unexpected event lifecycle metadata %#v", events[0])
+	}
+	if events[0].LifecycleReason != "Managed launch requested." {
+		t.Fatalf("unexpected event lifecycle reason %#v", events[0])
+	}
+	if events[0].LifecycleConfidence != 1 {
+		t.Fatalf("unexpected event lifecycle confidence %#v", events[0])
+	}
 }
 
 func TestSnapshotBuildsAttentionSummary(t *testing.T) {
@@ -217,6 +226,50 @@ func TestSnapshotAttentionSubtitleUsesConfidenceAndReason(t *testing.T) {
 
 	if got := snapshot.AttentionSubtitles["agent-1"]; got != "likely waiting_input · low confidence · Needs approval." {
 		t.Fatalf("unexpected subtitle %q", got)
+	}
+}
+
+func TestStatusUpdatedEventCarriesLifecycleReason(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	statePath := filepath.Join(root, "managed-agents.json")
+	eventPath := filepath.Join(root, "events.jsonl")
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(statePath),
+		store.NewFileEventStore(eventPath),
+	)
+
+	if _, err := registry.RegisterObserved(ctx, runtime.RegisterObservedInput{
+		Provider:    "log",
+		DisplayName: "watcher",
+		ProjectPath: "/tmp/project",
+		SessionRef:  filepath.Join(root, "watcher.log"),
+	}); err != nil {
+		t.Fatalf("register observed: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "watcher.log"), []byte("Need help?\n"), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	if err := registry.RefreshObserved(ctx); err != nil {
+		t.Fatalf("refresh observed: %v", err)
+	}
+
+	events, err := store.NewFileEventStore(eventPath).Load(ctx)
+	if err != nil {
+		t.Fatalf("load events: %v", err)
+	}
+	last := events[len(events)-1]
+	if last.Type != core.EventTypeAgentStatusUpdated {
+		t.Fatalf("expected status updated event, got %q", last.Type)
+	}
+	if last.LifecycleReason != "Question-like output detected." {
+		t.Fatalf("unexpected lifecycle reason %q", last.LifecycleReason)
+	}
+	if last.LifecycleConfidence != 0.45 {
+		t.Fatalf("unexpected lifecycle confidence %v", last.LifecycleConfidence)
 	}
 }
 
