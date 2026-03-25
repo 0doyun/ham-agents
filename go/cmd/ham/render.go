@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -334,15 +335,15 @@ func printEvents(out io.Writer, events []core.Event, asJSON bool) error {
 
 func eventDisplaySummary(event core.Event) string {
 	if summary := strings.TrimSpace(event.PresentationSummary); summary != "" {
-		return summary
+		return sanitizeSensitiveText(summary)
 	}
 	if reason := strings.TrimSpace(event.LifecycleReason); reason != "" {
 		if event.LifecycleConfidence > 0 && event.LifecycleConfidence < 0.5 {
-			return reason + " (low confidence)"
+			return sanitizeSensitiveText(reason) + " (low confidence)"
 		}
-		return reason
+		return sanitizeSensitiveText(reason)
 	}
-	return event.Summary
+	return sanitizeSensitiveText(event.Summary)
 }
 
 func eventsForAgent(events []core.Event, agentID string, limit int) []core.Event {
@@ -361,4 +362,13 @@ func eventsForAgent(events []core.Event, agentID string, limit int) []core.Event
 
 func eventsAfterIDForDisplay(events []core.Event, afterEventID string, limit int) []core.Event {
 	return core.EventsAfterID(events, afterEventID, limit)
+}
+
+var secretAssignmentPattern = regexp.MustCompile(`(?i)\b([A-Z0-9_]*(token|secret|password|api[_-]?key)[A-Z0-9_]*)=([^\s]+)`)
+var homePathPattern = regexp.MustCompile(`/Users/[^/\s]+`)
+
+func sanitizeSensitiveText(value string) string {
+	sanitized := secretAssignmentPattern.ReplaceAllString(value, `$1=***`)
+	sanitized = homePathPattern.ReplaceAllString(sanitized, `/Users/***`)
+	return sanitized
 }

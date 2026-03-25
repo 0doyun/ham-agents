@@ -87,6 +87,14 @@
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
 - `tasks.md` Active Scope advanced to Epic 15 per Progression policy.
 
+### 2026-03-26 (Epic 15 provider adapter layer complete)
+- Added transcript adapter discovery for configured transcript directories and daemon-side auto-observe wiring for transcript sources.
+- Added provider-specific managed-output hints for Claude-style structured output to feed higher-confidence managed status updates.
+- Kept adapter enablement under the expanded settings schema (`provider_adapters`, `transcript_dirs`).
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- `tasks.md` Active Scope advanced to Epic 16 per Progression policy.
+
 ### 2026-03-24
 - 문서 초기 세팅 완료
 - spec / roadmap / AGENTS / tasks / docs 뼈대 작성

@@ -51,6 +51,7 @@ func run(args []string) error {
 	settingsService := runtime.NewSettingsService(store.NewFileSettingsStore(settingsPath))
 	teamService := runtime.NewTeamService(store.NewFileTeamStore(teamPath))
 	itermAdapter := adapters.NewIterm2Adapter(nil)
+	transcriptAdapter := adapters.NewTranscriptAdapter()
 
 	command := "serve"
 	if len(args) > 0 {
@@ -76,7 +77,7 @@ func run(args []string) error {
 		}
 
 		server := ipc.NewServer(ipcConfig.SocketPath, registry, managedService, settingsService, teamService, itermAdapter)
-		go pollRuntimeState(ctx, registry, itermAdapter, 2*time.Second)
+		go pollRuntimeState(ctx, registry, settingsService, itermAdapter, transcriptAdapter, 2*time.Second)
 		fmt.Printf("hamd serving on %s\n", ipcConfig.SocketPath)
 		return server.Serve(ctx)
 	case "snapshot":
@@ -95,7 +96,7 @@ func run(args []string) error {
 	}
 }
 
-func pollRuntimeState(ctx context.Context, registry *runtime.Registry, itermAdapter adapters.Iterm2Adapter, interval time.Duration) {
+func pollRuntimeState(ctx context.Context, registry *runtime.Registry, settings *runtime.SettingsService, itermAdapter adapters.Iterm2Adapter, transcriptAdapter adapters.TranscriptAdapter, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -105,10 +106,43 @@ func pollRuntimeState(ctx context.Context, registry *runtime.Registry, itermAdap
 			return
 		case <-ticker.C:
 			_ = registry.RefreshObserved(ctx)
+			if settingsSnapshot, err := settings.Get(ctx); err == nil && settingsSnapshot.Integrations.ProviderAdapters["transcript"] {
+				_ = ensureObservedTranscripts(ctx, registry, transcriptAdapter, settingsSnapshot.Integrations.TranscriptDirs)
+			}
 			sessions, err := itermAdapter.ListSessions()
 			if err == nil {
 				_ = registry.RefreshAttached(ctx, sessions)
 			}
 		}
 	}
+}
+
+func ensureObservedTranscripts(ctx context.Context, registry *runtime.Registry, adapter adapters.TranscriptAdapter, dirs []string) error {
+	sources, err := adapter.Discover(dirs)
+	if err != nil {
+		return err
+	}
+	agents, err := registry.List(ctx)
+	if err != nil {
+		return err
+	}
+	existing := map[string]struct{}{}
+	for _, agent := range agents {
+		if agent.Mode == "observed" {
+			existing[agent.SessionRef] = struct{}{}
+		}
+	}
+	for _, source := range sources {
+		if _, ok := existing[source.Path]; ok {
+			continue
+		}
+		if _, err := registry.RegisterObserved(ctx, runtime.RegisterObservedInput{
+			Provider:    "transcript",
+			DisplayName: source.DisplayName,
+			SessionRef:  source.Path,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

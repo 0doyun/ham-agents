@@ -291,7 +291,7 @@ func runStop(ctx context.Context, client *ipc.Client, args []string) error {
 }
 
 func runLogs(ctx context.Context, client *ipc.Client, args []string) error {
-	agentID, limit, asJSON, err := parseLogsInput(args)
+	agentID, limit, asJSON, exportPath, err := parseLogsInput(args)
 	if err != nil {
 		return err
 	}
@@ -300,8 +300,20 @@ func runLogs(ctx context.Context, client *ipc.Client, args []string) error {
 	if err != nil {
 		return err
 	}
-
-	return printEvents(os.Stdout, eventsForAgent(events, agentID, limit), asJSON)
+	filtered := eventsForAgent(events, agentID, limit)
+	if exportPath == "" {
+		return printEvents(os.Stdout, filtered, asJSON)
+	}
+	file, err := os.Create(exportPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if err := printEvents(file, filtered, asJSON); err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(os.Stdout, "exported logs to %s\n", exportPath)
+	return err
 }
 
 func runDoctor(socketPath string, args []string) error {

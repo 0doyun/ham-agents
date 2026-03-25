@@ -68,10 +68,10 @@ func TestParseStopInputRejectsMissingAgentID(t *testing.T) {
 	}
 }
 
-func TestParseLogsInputAcceptsAgentIDLimitAndJSON(t *testing.T) {
+func TestParseLogsInputAcceptsAgentIDLimitJSONAndExport(t *testing.T) {
 	t.Parallel()
 
-	agentID, limit, asJSON, err := parseLogsInput([]string{"--json", "--limit", "7", "agent-1"})
+	agentID, limit, asJSON, exportPath, err := parseLogsInput([]string{"--json", "--limit", "7", "--export", "/tmp/out.jsonl", "agent-1"})
 	if err != nil {
 		t.Fatalf("parse logs input: %v", err)
 	}
@@ -84,12 +84,15 @@ func TestParseLogsInputAcceptsAgentIDLimitAndJSON(t *testing.T) {
 	if !asJSON {
 		t.Fatalf("expected json flag to be true")
 	}
+	if exportPath != "/tmp/out.jsonl" {
+		t.Fatalf("expected export path, got %q", exportPath)
+	}
 }
 
 func TestParseLogsInputRejectsMissingAgentID(t *testing.T) {
 	t.Parallel()
 
-	if _, _, _, err := parseLogsInput([]string{"--limit", "5"}); err == nil {
+	if _, _, _, _, err := parseLogsInput([]string{"--limit", "5"}); err == nil {
 		t.Fatalf("expected missing agent id to fail")
 	}
 }
@@ -97,7 +100,7 @@ func TestParseLogsInputRejectsMissingAgentID(t *testing.T) {
 func TestParseLogsInputRejectsNonPositiveLimit(t *testing.T) {
 	t.Parallel()
 
-	if _, _, _, err := parseLogsInput([]string{"--limit", "0", "agent-1"}); err == nil {
+	if _, _, _, _, err := parseLogsInput([]string{"--limit", "0", "agent-1"}); err == nil {
 		t.Fatalf("expected zero limit to fail")
 	}
 }
@@ -625,6 +628,20 @@ func TestPrintEventsHumanReadableUsesLowConfidenceLifecycleReasonFallback(t *tes
 	}
 	if !strings.Contains(output.String(), "Needs confirmation. (low confidence)") {
 		t.Fatalf("expected lifecycle reason fallback in human output, got %q", output.String())
+	}
+}
+
+func TestEventDisplaySummaryMasksSensitiveAssignmentsAndHomePaths(t *testing.T) {
+	t.Parallel()
+
+	summary := eventDisplaySummary(core.Event{
+		Summary: "API_KEY=abc123 path=/Users/example/project",
+	})
+	if strings.Contains(summary, "abc123") || strings.Contains(summary, "/Users/example") {
+		t.Fatalf("expected summary to be masked, got %q", summary)
+	}
+	if !strings.Contains(summary, "API_KEY=***") || !strings.Contains(summary, "/Users/***") {
+		t.Fatalf("expected masked markers, got %q", summary)
 	}
 }
 

@@ -18,28 +18,33 @@
 - [x] Epic 12: Pixel Office Experience
 - [x] Epic 13: Notification Completeness
 - [x] Epic 14: Settings Completeness
-- [ ] Epic 15: Provider Adapter Layer
+- [x] Epic 15: Provider Adapter Layer
 - [ ] Epic 16: Final Polish and Performance
 
 ---
 
 ## Active Scope
 
-현재 활성 범위는 **Epic 15: Provider Adapter Layer** 이다.
+현재 활성 범위는 **Epic 16: Final Polish and Performance** 이다.
 
-이 epic의 목표는 transcript / generic process / provider-specific adapter 계층을 실제로 분리해 higher-confidence inference와 broader ingestion을 가능하게 만드는 것이다.
+이 epic의 목표는 export/log masking/performance/UX 마무리를 통해 v1 flow를 end-to-end로 다듬는 것이다.
 
 ### Current Slice Checklist
 
-- [ ] transcript adapter — transcript/log 디렉터리 감시, 파일 변경 기반 event 생성 (§13, §15)
-- [ ] generic process adapter — process exit/signal 감지 (§13)
-- [ ] provider-specific adapter 힌트 — Claude CLI 등 known provider의 structured output 파싱 (§15)
-- [ ] adapter on/off를 settings에서 제어 (§17 Integrations)
-- [ ] Go tests
+- [ ] exportable logs — `ham logs --export` 또는 파일 내보내기 (§20 v1.0)
+- [ ] detach/reattach UX 개선 (§20 v1.0)
+- [ ] 알림 flap bundling 고도화 (§11)
+- [ ] observed inference heuristic 고도화 (§15)
+- [ ] 민감 경로/환경변수 마스킹 (§16)
+- [ ] 성능 목표 검증 및 최적화 (§19) — idle CPU <2%/<1%, 메모리 <150MB/<100MB, 팝오버 <200ms
+- [ ] 디자인 polish / sprite variation
+- [ ] iTerm2 레이아웃 변경 감지 (§14, Won't v1 이지만 best-effort)
+- [ ] Go/Swift tests + 성능 벤치마크
 
 #### Acceptance Criteria
-- [ ] transcript 디렉터리를 watch하면 observed agent 상태가 자동 갱신됨
-- [ ] known provider의 structured output이 higher-confidence 추론에 반영됨
+- [ ] spec §19 성능 목표 달성
+- [ ] 민감 정보가 마스킹됨
+- [ ] 전체 UX 플로우(§18)가 end-to-end로 동작
 
 ---
 
@@ -237,8 +242,8 @@ spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
 12. ~~Epic 12: Pixel Office Experience~~ ✅
 13. ~~Epic 13: Notification Completeness~~ ✅
 14. ~~Epic 14: Settings Completeness~~ ✅
-15. **Epic 15: Provider Adapter Layer** ← 현재
-16. Epic 16: Final Polish and Performance
+15. ~~Epic 15: Provider Adapter Layer~~ ✅
+16. **Epic 16: Final Polish and Performance** ← 현재
 
 ---
 
