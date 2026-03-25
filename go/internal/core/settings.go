@@ -26,14 +26,31 @@ type NotificationSettings struct {
 	PreviewText         bool `json:"preview_text"`
 }
 
+type GeneralSettings struct {
+	LaunchAtLogin              bool `json:"launch_at_login"`
+	CompactMode                bool `json:"compact_mode"`
+	ShowMenuBarAnimationAlways bool `json:"show_menu_bar_animation_always"`
+}
+
 type AppearanceSettings struct {
 	Theme                    string  `json:"theme"`
 	AnimationSpeedMultiplier float64 `json:"animation_speed_multiplier"`
 	ReduceMotion             bool    `json:"reduce_motion"`
+	HamsterSkin              string  `json:"hamster_skin"`
+	Hat                      string  `json:"hat"`
+	DeskTheme                string  `json:"desk_theme"`
 }
 
 type IntegrationSettings struct {
-	ItermEnabled bool `json:"iterm_enabled"`
+	ItermEnabled     bool            `json:"iterm_enabled"`
+	TranscriptDirs   []string        `json:"transcript_dirs"`
+	ProviderAdapters map[string]bool `json:"provider_adapters"`
+}
+
+type PrivacySettings struct {
+	LocalOnlyMode             bool `json:"local_only_mode"`
+	EventHistoryRetentionDays int  `json:"event_history_retention_days"`
+	TranscriptExcerptStorage  bool `json:"transcript_excerpt_storage"`
 }
 
 func (a *AppearanceSettings) UnmarshalJSON(data []byte) error {
@@ -41,6 +58,9 @@ func (a *AppearanceSettings) UnmarshalJSON(data []byte) error {
 		Theme                    *string  `json:"theme"`
 		AnimationSpeedMultiplier *float64 `json:"animation_speed_multiplier"`
 		ReduceMotion             *bool    `json:"reduce_motion"`
+		HamsterSkin              *string  `json:"hamster_skin"`
+		Hat                      *string  `json:"hat"`
+		DeskTheme                *string  `json:"desk_theme"`
 	}
 
 	var raw rawAppearanceSettings
@@ -60,6 +80,15 @@ func (a *AppearanceSettings) UnmarshalJSON(data []byte) error {
 	if raw.ReduceMotion != nil {
 		a.ReduceMotion = *raw.ReduceMotion
 	}
+	if raw.HamsterSkin != nil {
+		a.HamsterSkin = strings.TrimSpace(*raw.HamsterSkin)
+	}
+	if raw.Hat != nil {
+		a.Hat = strings.TrimSpace(*raw.Hat)
+	}
+	if raw.DeskTheme != nil {
+		a.DeskTheme = strings.TrimSpace(*raw.DeskTheme)
+	}
 
 	return nil
 }
@@ -78,7 +107,9 @@ func (a AppearanceSettings) Validate() error {
 
 func (i *IntegrationSettings) UnmarshalJSON(data []byte) error {
 	type rawIntegrationSettings struct {
-		ItermEnabled *bool `json:"iterm_enabled"`
+		ItermEnabled     *bool            `json:"iterm_enabled"`
+		TranscriptDirs   *[]string        `json:"transcript_dirs"`
+		ProviderAdapters *map[string]bool `json:"provider_adapters"`
 	}
 
 	var raw rawIntegrationSettings
@@ -91,6 +122,15 @@ func (i *IntegrationSettings) UnmarshalJSON(data []byte) error {
 
 	if raw.ItermEnabled != nil {
 		i.ItermEnabled = *raw.ItermEnabled
+	}
+	if raw.TranscriptDirs != nil {
+		i.TranscriptDirs = append([]string(nil), (*raw.TranscriptDirs)...)
+	}
+	if raw.ProviderAdapters != nil {
+		i.ProviderAdapters = map[string]bool{}
+		for key, value := range *raw.ProviderAdapters {
+			i.ProviderAdapters[strings.TrimSpace(key)] = value
+		}
 	}
 
 	return nil
@@ -155,16 +195,20 @@ func (n NotificationSettings) Validate() error {
 }
 
 type Settings struct {
+	General       GeneralSettings      `json:"general"`
 	Notifications NotificationSettings `json:"notifications"`
 	Appearance    AppearanceSettings   `json:"appearance"`
 	Integrations  IntegrationSettings  `json:"integrations"`
+	Privacy       PrivacySettings      `json:"privacy"`
 }
 
 func (s *Settings) UnmarshalJSON(data []byte) error {
 	type rawSettings struct {
+		General       json.RawMessage `json:"general"`
 		Notifications json.RawMessage `json:"notifications"`
 		Appearance    json.RawMessage `json:"appearance"`
 		Integrations  json.RawMessage `json:"integrations"`
+		Privacy       json.RawMessage `json:"privacy"`
 	}
 
 	var raw rawSettings
@@ -175,6 +219,11 @@ func (s *Settings) UnmarshalJSON(data []byte) error {
 	defaults := DefaultSettings()
 	*s = defaults
 
+	if len(raw.General) > 0 {
+		if err := json.Unmarshal(raw.General, &s.General); err != nil {
+			return err
+		}
+	}
 	if len(raw.Notifications) > 0 {
 		if err := json.Unmarshal(raw.Notifications, &s.Notifications); err != nil {
 			return err
@@ -187,6 +236,11 @@ func (s *Settings) UnmarshalJSON(data []byte) error {
 	}
 	if len(raw.Integrations) > 0 {
 		if err := json.Unmarshal(raw.Integrations, &s.Integrations); err != nil {
+			return err
+		}
+	}
+	if len(raw.Privacy) > 0 {
+		if err := json.Unmarshal(raw.Privacy, &s.Privacy); err != nil {
 			return err
 		}
 	}
@@ -203,6 +257,7 @@ func (s Settings) Validate() error {
 
 func DefaultSettings() Settings {
 	return Settings{
+		General: GeneralSettings{},
 		Notifications: NotificationSettings{
 			Done:                true,
 			Error:               true,
@@ -217,9 +272,19 @@ func DefaultSettings() Settings {
 			Theme:                    DefaultTheme,
 			AnimationSpeedMultiplier: DefaultAnimationSpeed,
 			ReduceMotion:             false,
+			HamsterSkin:              "default",
+			Hat:                      "none",
+			DeskTheme:                "classic",
 		},
 		Integrations: IntegrationSettings{
-			ItermEnabled: true,
+			ItermEnabled:     true,
+			TranscriptDirs:   []string{},
+			ProviderAdapters: map[string]bool{"claude": true, "generic_process": true, "transcript": true},
+		},
+		Privacy: PrivacySettings{
+			LocalOnlyMode:             true,
+			EventHistoryRetentionDays: 30,
+			TranscriptExcerptStorage:  true,
 		},
 	}
 }

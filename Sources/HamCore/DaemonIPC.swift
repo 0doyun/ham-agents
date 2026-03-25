@@ -174,22 +174,47 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
     }
 }
 
+public struct DaemonGeneralSettingsPayload: Codable, Equatable, Sendable {
+    public var launchAtLogin: Bool
+    public var compactMode: Bool
+    public var showMenuBarAnimationAlways: Bool
+
+    public init(launchAtLogin: Bool = false, compactMode: Bool = false, showMenuBarAnimationAlways: Bool = false) {
+        self.launchAtLogin = launchAtLogin
+        self.compactMode = compactMode
+        self.showMenuBarAnimationAlways = showMenuBarAnimationAlways
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case launchAtLogin = "launch_at_login"
+        case compactMode = "compact_mode"
+        case showMenuBarAnimationAlways = "show_menu_bar_animation_always"
+    }
+}
+
 public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
+    public var general: DaemonGeneralSettingsPayload
     public var notifications: DaemonNotificationSettingsPayload
     public var appearance: DaemonAppearanceSettingsPayload
     public var integrations: DaemonIntegrationSettingsPayload
+    public var privacy: DaemonPrivacySettingsPayload
 
     public init(
+        general: DaemonGeneralSettingsPayload = .init(),
         notifications: DaemonNotificationSettingsPayload,
         appearance: DaemonAppearanceSettingsPayload = .default,
-        integrations: DaemonIntegrationSettingsPayload = .default
+        integrations: DaemonIntegrationSettingsPayload = .default,
+        privacy: DaemonPrivacySettingsPayload = .default
     ) {
+        self.general = general
         self.notifications = notifications
         self.appearance = appearance
         self.integrations = integrations
+        self.privacy = privacy
     }
 
     public static let `default` = DaemonSettingsPayload(
+        general: .init(),
         notifications: DaemonNotificationSettingsPayload(
             done: true,
             error: true,
@@ -201,27 +226,55 @@ public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
             previewText: false
         ),
         appearance: .default,
-        integrations: .default
+        integrations: .default,
+        privacy: .default
     )
+
+    enum CodingKeys: String, CodingKey {
+        case general
+        case notifications
+        case appearance
+        case integrations
+        case privacy
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let defaults = DaemonSettingsPayload.default
+        general = try container.decodeIfPresent(DaemonGeneralSettingsPayload.self, forKey: .general) ?? defaults.general
+        notifications = try container.decodeIfPresent(DaemonNotificationSettingsPayload.self, forKey: .notifications) ?? defaults.notifications
+        appearance = try container.decodeIfPresent(DaemonAppearanceSettingsPayload.self, forKey: .appearance) ?? defaults.appearance
+        integrations = try container.decodeIfPresent(DaemonIntegrationSettingsPayload.self, forKey: .integrations) ?? defaults.integrations
+        privacy = try container.decodeIfPresent(DaemonPrivacySettingsPayload.self, forKey: .privacy) ?? defaults.privacy
+    }
 }
 
 public struct DaemonAppearanceSettingsPayload: Codable, Equatable, Sendable {
     public var theme: String
     public var animationSpeedMultiplier: Double
     public var reduceMotion: Bool
+    public var hamsterSkin: String
+    public var hat: String
+    public var deskTheme: String
 
-    public init(theme: String, animationSpeedMultiplier: Double = 1, reduceMotion: Bool = false) {
+    public init(theme: String, animationSpeedMultiplier: Double = 1, reduceMotion: Bool = false, hamsterSkin: String = "default", hat: String = "none", deskTheme: String = "classic") {
         self.theme = theme
         self.animationSpeedMultiplier = animationSpeedMultiplier
         self.reduceMotion = reduceMotion
+        self.hamsterSkin = hamsterSkin
+        self.hat = hat
+        self.deskTheme = deskTheme
     }
 
-    public static let `default` = DaemonAppearanceSettingsPayload(theme: "auto", animationSpeedMultiplier: 1, reduceMotion: false)
+    public static let `default` = DaemonAppearanceSettingsPayload(theme: "auto", animationSpeedMultiplier: 1, reduceMotion: false, hamsterSkin: "default", hat: "none", deskTheme: "classic")
 
     enum CodingKeys: String, CodingKey {
         case theme
         case animationSpeedMultiplier = "animation_speed_multiplier"
         case reduceMotion = "reduce_motion"
+        case hamsterSkin = "hamster_skin"
+        case hat
+        case deskTheme = "desk_theme"
     }
 
     public init(from decoder: Decoder) throws {
@@ -229,20 +282,63 @@ public struct DaemonAppearanceSettingsPayload: Codable, Equatable, Sendable {
         theme = try container.decodeIfPresent(String.self, forKey: .theme) ?? "auto"
         animationSpeedMultiplier = try container.decodeIfPresent(Double.self, forKey: .animationSpeedMultiplier) ?? 1
         reduceMotion = try container.decodeIfPresent(Bool.self, forKey: .reduceMotion) ?? false
+        hamsterSkin = try container.decodeIfPresent(String.self, forKey: .hamsterSkin) ?? "default"
+        hat = try container.decodeIfPresent(String.self, forKey: .hat) ?? "none"
+        deskTheme = try container.decodeIfPresent(String.self, forKey: .deskTheme) ?? "classic"
     }
 }
 
 public struct DaemonIntegrationSettingsPayload: Codable, Equatable, Sendable {
     public var itermEnabled: Bool
+    public var transcriptDirs: [String]
+    public var providerAdapters: [String: Bool]
 
-    public init(itermEnabled: Bool) {
+    public init(itermEnabled: Bool, transcriptDirs: [String] = [], providerAdapters: [String: Bool] = [:]) {
         self.itermEnabled = itermEnabled
+        self.transcriptDirs = transcriptDirs
+        self.providerAdapters = providerAdapters
     }
 
-    public static let `default` = DaemonIntegrationSettingsPayload(itermEnabled: true)
+    public static let `default` = DaemonIntegrationSettingsPayload(itermEnabled: true, transcriptDirs: [], providerAdapters: ["claude": true, "generic_process": true, "transcript": true])
 
     enum CodingKeys: String, CodingKey {
         case itermEnabled = "iterm_enabled"
+        case transcriptDirs = "transcript_dirs"
+        case providerAdapters = "provider_adapters"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        itermEnabled = try container.decodeIfPresent(Bool.self, forKey: .itermEnabled) ?? true
+        transcriptDirs = try container.decodeIfPresent([String].self, forKey: .transcriptDirs) ?? []
+        providerAdapters = try container.decodeIfPresent([String: Bool].self, forKey: .providerAdapters) ?? DaemonIntegrationSettingsPayload.default.providerAdapters
+    }
+}
+
+public struct DaemonPrivacySettingsPayload: Codable, Equatable, Sendable {
+    public var localOnlyMode: Bool
+    public var eventHistoryRetentionDays: Int
+    public var transcriptExcerptStorage: Bool
+
+    public init(localOnlyMode: Bool, eventHistoryRetentionDays: Int, transcriptExcerptStorage: Bool) {
+        self.localOnlyMode = localOnlyMode
+        self.eventHistoryRetentionDays = eventHistoryRetentionDays
+        self.transcriptExcerptStorage = transcriptExcerptStorage
+    }
+
+    public static let `default` = DaemonPrivacySettingsPayload(localOnlyMode: true, eventHistoryRetentionDays: 30, transcriptExcerptStorage: true)
+
+    enum CodingKeys: String, CodingKey {
+        case localOnlyMode = "local_only_mode"
+        case eventHistoryRetentionDays = "event_history_retention_days"
+        case transcriptExcerptStorage = "transcript_excerpt_storage"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        localOnlyMode = try container.decodeIfPresent(Bool.self, forKey: .localOnlyMode) ?? DaemonPrivacySettingsPayload.default.localOnlyMode
+        eventHistoryRetentionDays = try container.decodeIfPresent(Int.self, forKey: .eventHistoryRetentionDays) ?? DaemonPrivacySettingsPayload.default.eventHistoryRetentionDays
+        transcriptExcerptStorage = try container.decodeIfPresent(Bool.self, forKey: .transcriptExcerptStorage) ?? DaemonPrivacySettingsPayload.default.transcriptExcerptStorage
     }
 }
 

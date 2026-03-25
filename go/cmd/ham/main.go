@@ -96,9 +96,11 @@ Usage:
   ham team list [--json]
   ham team open <team>
   ham settings [--json]
+  ham settings general [--launch-at-login=true|false] [--compact-mode=true|false] [--show-menu-bar-animation-always=true|false]
   ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--silence=true|false] [--quiet-hours=true|false] [--quiet-start-hour=0-23] [--quiet-end-hour=0-23] [--preview-text=true|false]
-  ham settings appearance [--theme=auto|day|night]
-  ham settings integrations [--iterm-enabled=true|false]
+  ham settings appearance [--theme=auto|day|night] [--animation-speed=0.25-3] [--reduce-motion=true|false] [--hamster-skin=name] [--hat=name] [--desk-theme=name]
+  ham settings integrations [--iterm-enabled=true|false] [--transcript-dirs=dir1,dir2] [--provider-adapter=name=true|false]
+  ham settings privacy [--local-only-mode=true|false] [--event-history-retention-days=N] [--transcript-excerpt-storage=true|false]
   ham list [--json] [--team ref] [--workspace ref]
   ham status [--json] [--team ref] [--workspace ref]
   ham events [--json] [--limit N] [--follow] [--after-id ID] [--wait-ms N]

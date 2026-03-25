@@ -136,8 +136,12 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         let settings = try DaemonJSONDecoder.make().decode(DaemonSettingsPayload.self, from: Data(payload.utf8))
 
         XCTAssertTrue(settings.notifications.silence)
+        XCTAssertFalse(settings.general.launchAtLogin)
         XCTAssertEqual(settings.appearance.animationSpeedMultiplier, 1)
         XCTAssertFalse(settings.appearance.reduceMotion)
+        XCTAssertEqual(settings.integrations.transcriptDirs, [])
+        XCTAssertEqual(settings.integrations.providerAdapters["claude"], true)
+        XCTAssertTrue(settings.privacy.localOnlyMode)
     }
 
     func testDaemonSettingsPayloadDefaultsMissingSilenceNotificationFlag() throws {
@@ -164,8 +168,11 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         let settings = try DaemonJSONDecoder.make().decode(DaemonSettingsPayload.self, from: Data(payload.utf8))
 
         XCTAssertFalse(settings.notifications.silence)
+        XCTAssertFalse(settings.general.compactMode)
         XCTAssertEqual(settings.appearance.animationSpeedMultiplier, 1)
         XCTAssertFalse(settings.appearance.reduceMotion)
+        XCTAssertEqual(settings.integrations.transcriptDirs, [])
+        XCTAssertEqual(settings.privacy.eventHistoryRetentionDays, 30)
     }
 
     func testAgentEventPayloadDecodesFromGoEventsJSON() throws {

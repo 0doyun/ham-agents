@@ -359,15 +359,57 @@ func runSettings(ctx context.Context, client *ipc.Client, args []string) error {
 			return err
 		}
 		return writeJSON(settings)
+	case "general":
+		return runSettingsGeneral(ctx, client, args[1:])
 	case "notifications":
 		return runSettingsNotifications(ctx, client, args[1:])
 	case "appearance":
 		return runSettingsAppearance(ctx, client, args[1:])
 	case "integrations":
 		return runSettingsIntegrations(ctx, client, args[1:])
+	case "privacy":
+		return runSettingsPrivacy(ctx, client, args[1:])
 	default:
 		return fmt.Errorf("unsupported settings subcommand %q", args[0])
 	}
+}
+
+func runSettingsGeneral(ctx context.Context, client *ipc.Client, args []string) error {
+	settings, err := client.Settings(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, argument := range args {
+		switch {
+		case strings.HasPrefix(argument, "--launch-at-login="):
+			value, err := parseBoolFlag(argument, "--launch-at-login=")
+			if err != nil {
+				return err
+			}
+			settings.General.LaunchAtLogin = value
+		case strings.HasPrefix(argument, "--compact-mode="):
+			value, err := parseBoolFlag(argument, "--compact-mode=")
+			if err != nil {
+				return err
+			}
+			settings.General.CompactMode = value
+		case strings.HasPrefix(argument, "--show-menu-bar-animation-always="):
+			value, err := parseBoolFlag(argument, "--show-menu-bar-animation-always=")
+			if err != nil {
+				return err
+			}
+			settings.General.ShowMenuBarAnimationAlways = value
+		default:
+			return fmt.Errorf("unsupported general flag %q", argument)
+		}
+	}
+
+	updated, err := client.UpdateSettings(ctx, settings)
+	if err != nil {
+		return err
+	}
+	return writeJSON(updated)
 }
 
 func runSettingsNotifications(ctx context.Context, client *ipc.Client, args []string) error {
@@ -409,6 +451,12 @@ func runSettingsAppearance(ctx context.Context, client *ipc.Client, args []strin
 				return err
 			}
 			settings.Appearance.ReduceMotion = value
+		case strings.HasPrefix(argument, "--hamster-skin="):
+			settings.Appearance.HamsterSkin = strings.TrimSpace(strings.TrimPrefix(argument, "--hamster-skin="))
+		case strings.HasPrefix(argument, "--hat="):
+			settings.Appearance.Hat = strings.TrimSpace(strings.TrimPrefix(argument, "--hat="))
+		case strings.HasPrefix(argument, "--desk-theme="):
+			settings.Appearance.DeskTheme = strings.TrimSpace(strings.TrimPrefix(argument, "--desk-theme="))
 		default:
 			return fmt.Errorf("unsupported appearance flag %q", argument)
 		}
@@ -435,8 +483,76 @@ func runSettingsIntegrations(ctx context.Context, client *ipc.Client, args []str
 				return err
 			}
 			settings.Integrations.ItermEnabled = value
+		case strings.HasPrefix(argument, "--transcript-dirs="):
+			value := strings.TrimSpace(strings.TrimPrefix(argument, "--transcript-dirs="))
+			if value == "" {
+				settings.Integrations.TranscriptDirs = []string{}
+				continue
+			}
+			parts := strings.Split(value, ",")
+			dirs := make([]string, 0, len(parts))
+			for _, part := range parts {
+				trimmed := strings.TrimSpace(part)
+				if trimmed != "" {
+					dirs = append(dirs, trimmed)
+				}
+			}
+			settings.Integrations.TranscriptDirs = dirs
+		case strings.HasPrefix(argument, "--provider-adapter="):
+			value := strings.TrimSpace(strings.TrimPrefix(argument, "--provider-adapter="))
+			segments := strings.SplitN(value, "=", 2)
+			if len(segments) != 2 {
+				return fmt.Errorf("provider adapter flag must be name=true|false")
+			}
+			enabled, err := strconv.ParseBool(strings.TrimSpace(segments[1]))
+			if err != nil {
+				return fmt.Errorf("invalid provider adapter value %q", segments[1])
+			}
+			if settings.Integrations.ProviderAdapters == nil {
+				settings.Integrations.ProviderAdapters = map[string]bool{}
+			}
+			settings.Integrations.ProviderAdapters[strings.TrimSpace(segments[0])] = enabled
 		default:
 			return fmt.Errorf("unsupported integrations flag %q", argument)
+		}
+	}
+
+	updated, err := client.UpdateSettings(ctx, settings)
+	if err != nil {
+		return err
+	}
+	return writeJSON(updated)
+}
+
+func runSettingsPrivacy(ctx context.Context, client *ipc.Client, args []string) error {
+	settings, err := client.Settings(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, argument := range args {
+		switch {
+		case strings.HasPrefix(argument, "--local-only-mode="):
+			value, err := parseBoolFlag(argument, "--local-only-mode=")
+			if err != nil {
+				return err
+			}
+			settings.Privacy.LocalOnlyMode = value
+		case strings.HasPrefix(argument, "--event-history-retention-days="):
+			value := strings.TrimSpace(strings.TrimPrefix(argument, "--event-history-retention-days="))
+			days, err := strconv.Atoi(value)
+			if err != nil {
+				return fmt.Errorf("invalid retention days %q", value)
+			}
+			settings.Privacy.EventHistoryRetentionDays = days
+		case strings.HasPrefix(argument, "--transcript-excerpt-storage="):
+			value, err := parseBoolFlag(argument, "--transcript-excerpt-storage=")
+			if err != nil {
+				return err
+			}
+			settings.Privacy.TranscriptExcerptStorage = value
+		default:
+			return fmt.Errorf("unsupported privacy flag %q", argument)
 		}
 	}
 

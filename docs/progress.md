@@ -78,6 +78,15 @@
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
 - `tasks.md` Active Scope advanced to Epic 14 per Progression policy.
 
+### 2026-03-26 (Epic 14 settings completeness complete)
+- Settings schema now spans `general`, expanded `appearance`, richer `integrations`, and `privacy` sections in both Go and Swift payload layers.
+- CLI now exposes the broader settings surface under `ham settings general|appearance|integrations|privacy ...`.
+- Menu bar settings UI now exposes the new general/privacy controls plus richer appearance and integration options.
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 15 per Progression policy.
+
 ### 2026-03-24
 - 문서 초기 세팅 완료
 - spec / roadmap / AGENTS / tasks / docs 뼈대 작성
