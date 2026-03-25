@@ -1175,4 +1175,10 @@ func TestRemoveDeletesAgentFromRegistry(t *testing.T) {
 	if events[len(events)-1].Type != core.EventTypeAgentRemoved {
 		t.Fatalf("expected agent removed event, got %q", events[len(events)-1].Type)
 	}
+	if events[len(events)-1].LifecycleMode != "managed" || events[len(events)-1].LifecycleStatus != "booting" {
+		t.Fatalf("expected removed event to retain lifecycle metadata %#v", events[len(events)-1])
+	}
+	if events[len(events)-1].LifecycleReason != "Managed launch requested." || events[len(events)-1].LifecycleConfidence != 1 {
+		t.Fatalf("expected removed event to retain lifecycle detail %#v", events[len(events)-1])
+	}
 }

@@ -1024,3 +1024,12 @@
   - `swift build --disable-sandbox` ✅
   - `swift test --disable-sandbox` ✅
 - 다음 우선순위 후보: runtime lifecycle coverage follow-up, stronger feed semantics, lower-latency visual polish
+
+### 2026-03-25 (richer lifecycle coverage follow-up)
+- `agent.removed` event 도 removed agent 의 mode/status/reason/confidence 를 함께 보존하도록 정리해, tracking removal 이후에도 downstream consumer 가 마지막 lifecycle context 를 잃지 않게 만들었다.
+- Go regression test 로 removed event 가 lifecycle metadata/detail 을 유지하는지 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - `swift test --disable-sandbox` ✅
+- 다음 우선순위 후보: daemon-backed lifecycle detail follow-up, stronger feed semantics, lower-latency visual polish

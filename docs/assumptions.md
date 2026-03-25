@@ -103,6 +103,7 @@
 - 2026-03-25: CLI human event detail baseline makes the terminal event/log view follow the same summary fallback chain as Swift detail surfaces, but it still keeps the existing tab-separated row format.
 - 2026-03-25: latest-event lifecycle detail baseline reuses the same `displaySummary` fallback chain as recent event rows, so the banner and detail list should not diverge in wording for the same event.
 - 2026-03-25: low-confidence lifecycle event presentation baseline softens labels with `Likely ...` but keeps existing emphasis colors, so caution increases without fully hiding urgency.
+- 2026-03-25: richer lifecycle coverage follow-up preserves the removed agent’s last known lifecycle metadata on `agent.removed` events so history consumers can still understand what was removed after the registry entry is gone.
 - 2026-03-25: CLI event lifecycle metadata contract baseline keeps `lifecycle_status` / `lifecycle_mode` additive on JSON event/log output only; human CLI event rows still use the existing tab-separated format.
 - 2026-03-25: CLI event lifecycle reason contract baseline keeps `lifecycle_reason` additive on JSON event/log output only; human CLI event rows still rely on the existing tab-separated summary format.
 - 2026-03-25: CLI event lifecycle confidence contract baseline keeps `lifecycle_confidence` additive on JSON event/log output only; human CLI event rows still rely on the existing tab-separated summary format.
