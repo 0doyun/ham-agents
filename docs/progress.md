@@ -1167,6 +1167,13 @@
 - 검증:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
 
+### 2026-03-25 (long-silence notification baseline)
+- active agent 가 silence threshold 를 막 넘길 때 `went quiet` notification candidate 를 1회 생성하도록 정리했다.
+- threshold 를 이미 넘긴 뒤에는 같은 상태에서 반복 candidate 를 만들지 않게 해서 notification spam 을 줄였다.
+- Swift regression tests 로 long-silence notification baseline 을 보호했다.
+- 검증:
+  - `swift test --filter StatusChangeNotificationEngineTests --disable-sandbox` ✅
+
 ### 2026-03-25 (observed error phrase refinement baseline)
 - observed 로그의 explicit `timed out` / `timeout` / `permission denied` / `unauthorized` 류 문구가 generic error fallback 전에 더 직접적으로 `error` 로 추론되게 정리했다.
 - 그래서 more explicit failure text 가 just `error` / `failed` substring 에만 의존하지 않게 됐다.

@@ -42,10 +42,49 @@ final class StatusChangeNotificationEngineTests: XCTestCase {
         XCTAssertEqual(candidates[0].body, "needs input at /tmp/app")
     }
 
+    func testCandidateProducedWhenActiveAgentCrossesSilenceThreshold() {
+        let previousObservedAt = Date(timeIntervalSince1970: 1_000)
+        let currentObservedAt = Date(timeIntervalSince1970: 1_120)
+        let lastEventAt = Date(timeIntervalSince1970: 1_000 - (9 * 60))
+        let previous = [makeAgent(status: .thinking, lastEventAt: lastEventAt)]
+        let current = [makeAgent(status: .thinking, lastEventAt: lastEventAt)]
+        let engine = StatusChangeNotificationEngine()
+
+        let candidates = engine.candidates(
+            previous: previous,
+            current: current,
+            previousObservedAt: previousObservedAt,
+            currentObservedAt: currentObservedAt
+        )
+
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertEqual(candidates[0].title, "builder went quiet")
+        XCTAssertEqual(candidates[0].body, "No activity for 11m at /tmp/app")
+    }
+
+    func testNoRepeatedSilenceCandidateAfterThresholdAlreadyCrossed() {
+        let previousObservedAt = Date(timeIntervalSince1970: 1_000)
+        let currentObservedAt = Date(timeIntervalSince1970: 1_120)
+        let lastEventAt = Date(timeIntervalSince1970: 1_000 - (11 * 60))
+        let previous = [makeAgent(status: .reading, lastEventAt: lastEventAt)]
+        let current = [makeAgent(status: .reading, lastEventAt: lastEventAt)]
+        let engine = StatusChangeNotificationEngine()
+
+        XCTAssertTrue(
+            engine.candidates(
+                previous: previous,
+                current: current,
+                previousObservedAt: previousObservedAt,
+                currentObservedAt: currentObservedAt
+            ).isEmpty
+        )
+    }
+
     private func makeAgent(
         status: AgentStatus,
         summary: String? = nil,
-        policy: NotificationPolicy = .default
+        policy: NotificationPolicy = .default,
+        lastEventAt: Date = Date(timeIntervalSince1970: 1)
     ) -> Agent {
         Agent(
             id: "agent-1",
@@ -56,7 +95,7 @@ final class StatusChangeNotificationEngineTests: XCTestCase {
             projectPath: "/tmp/app",
             status: status,
             statusConfidence: 1,
-            lastEventAt: Date(timeIntervalSince1970: 1),
+            lastEventAt: lastEventAt,
             lastUserVisibleSummary: summary,
             notificationPolicy: policy
         )
