@@ -224,7 +224,7 @@ func TestSnapshotAttentionSubtitleUsesConfidenceAndReason(t *testing.T) {
 		t.Fatalf("snapshot: %v", err)
 	}
 
-	if got := snapshot.AttentionSubtitles["agent-1"]; got != "likely waiting_input · low confidence · Needs approval." {
+	if got := snapshot.AttentionSubtitles["agent-1"]; got != "likely needs input · low confidence · Needs approval." {
 		t.Fatalf("unexpected subtitle %q", got)
 	}
 }
@@ -429,7 +429,7 @@ func TestRefreshObservedUpdatesPersistedStatus(t *testing.T) {
 	if events[len(events)-1].Type != core.EventTypeAgentStatusUpdated {
 		t.Fatalf("expected observed status event, got %q", events[len(events)-1].Type)
 	}
-	if events[len(events)-1].Summary != "Status changed to waiting_input. Question-like output detected." {
+	if events[len(events)-1].Summary != "Status changed to waiting_input. Observed question-like output." {
 		t.Fatalf("unexpected observed status summary %q", events[len(events)-1].Summary)
 	}
 }
@@ -474,7 +474,7 @@ func TestSnapshotRefreshesObservedAgentAndPersistsLifecycleEvent(t *testing.T) {
 	if events[len(events)-1].Type != core.EventTypeAgentStatusUpdated {
 		t.Fatalf("expected observed status event from snapshot refresh, got %q", events[len(events)-1].Type)
 	}
-	if events[len(events)-1].Summary != "Status changed to error. Error-like output detected." {
+	if events[len(events)-1].Summary != "Status changed to error. Observed error-like output." {
 		t.Fatalf("unexpected snapshot-driven status summary %q", events[len(events)-1].Summary)
 	}
 }

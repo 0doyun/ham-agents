@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **thinking-sleeping event presentation baseline** 다.
+현재 활성 범위는 **observed disconnected phrase inference baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -147,6 +147,17 @@
 - [x] observed tool-read inference baseline 추가
 - [x] tool-read event presentation baseline 추가
 - [x] thinking-sleeping event presentation baseline 추가
+- [x] humanized status label baseline 추가
+- [x] attention subtitle humanization baseline 추가
+- [x] notification fallback humanization baseline 추가
+- [x] human attention breakdown wording baseline 추가
+- [x] observed thinking phrase inference baseline 추가
+- [x] observed status summary alignment baseline 추가
+- [x] observed sleeping phrase inference baseline 추가
+- [x] observed booting phrase inference baseline 추가
+- [x] booting event presentation baseline 추가
+- [x] observed idle phrase inference baseline 추가
+- [x] observed disconnected phrase inference baseline 추가
 
 ### Current Slice Checklist
 
@@ -330,6 +341,39 @@
 - [x] `agent.status_updated` 가 `thinking` / `sleeping` 도 더 직접적인 event label 로 보여줌
 - [x] Swift feed/presenter 와 daemon presentation hint 가 thinking/sleeping 상태에 대해 정렬됨
 - [x] Go/Swift tests로 thinking-sleeping event presentation baseline 보호
+- [x] human CLI/status display 가 underscore status 를 더 사람 친화적으로 보여줌
+- [x] Swift detail/status display 가 same humanized status wording 을 사용함
+- [x] Go/Swift tests로 humanized status label baseline 보호
+- [x] daemon attention subtitle 도 same humanized status wording 을 사용함
+- [x] Swift attention subtitle path 가 daemon-provided humanized wording 과 정렬됨
+- [x] Go/Swift tests로 attention subtitle humanization baseline 보호
+- [x] notification fallback body 도 raw underscore status 대신 humanized wording 을 사용함
+- [x] summary 없는 notification candidate 에서 humanized status phrase 가 보임
+- [x] Swift tests로 notification fallback humanization baseline 보호
+- [x] human `ham status` attention breakdown line 이 raw `waiting_input` 대신 더 읽기 쉬운 wording 을 사용함
+- [x] JSON attention breakdown contract 는 그대로 유지됨
+- [x] Go tests로 human attention breakdown wording baseline 보호
+- [x] observed 로그의 explicit thinking/planning/investigating line 이 generic freshness fallback 전에 `thinking` 으로 추론됨
+- [x] continuation phrase 와 plain recent-output fallback 사이에 thinking-like phrase layer 가 생김
+- [x] Go tests로 observed thinking phrase inference baseline 보호
+- [x] observed `agent.status_updated` summary 가 raw reason 보다 user-visible summary 를 우선 사용함
+- [x] observed event row/detail wording 이 observed inference summary 와 더 직접적으로 정렬됨
+- [x] Go tests로 observed status summary alignment baseline 보호
+- [x] observed 로그의 explicit idle/paused/sleeping line 이 staleness fallback 전에 `sleeping` 으로 추론됨
+- [x] age-based sleeping fallback 과 explicit sleeping-like phrase layer 가 분리됨
+- [x] Go tests로 observed sleeping phrase inference baseline 보호
+- [x] observed 로그의 explicit starting/initializing/booting line 이 generic freshness fallback 전에 `booting` 으로 추론됨
+- [x] explicit booting phrase layer 가 thinking-like phrase layer 보다 우선함
+- [x] Go tests로 observed booting phrase inference baseline 보호
+- [x] `agent.status_updated` 가 `booting` 도 직접적인 event label 로 보여줌
+- [x] Swift feed/presenter 와 daemon presentation hint 가 booting 상태에 대해 정렬됨
+- [x] Go/Swift tests로 booting event presentation baseline 보호
+- [x] observed 로그의 explicit ready/idle/standing-by line 이 `sleeping` 대신 `idle` 로 추론됨
+- [x] explicit idle phrase layer 가 sleeping/staleness fallback 과 분리됨
+- [x] Go tests로 observed idle phrase inference baseline 보호
+- [x] observed 로그의 explicit disconnected/offline/session-lost line 이 file-missing fallback 전에 `disconnected` 로 추론됨
+- [x] explicit disconnected phrase layer 가 error/idle fallback 과 분리됨
+- [x] Go tests로 observed disconnected phrase inference baseline 보호
 - [x] `ham events --json` 이 lifecycle_confidence 필드를 유지
 - [x] `ham logs --json` 도 same lifecycle_confidence contract 를 유지
 - [x] Go tests로 CLI event lifecycle confidence contract baseline 보호

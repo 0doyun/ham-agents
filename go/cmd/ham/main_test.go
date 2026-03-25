@@ -577,7 +577,7 @@ func TestFormatAgentListLineIncludesConfidenceAndReason(t *testing.T) {
 		StatusReason:     "Question-like output detected.",
 	})
 
-	if !strings.Contains(line, "likely waiting_input") {
+	if !strings.Contains(line, "likely needs input") {
 		t.Fatalf("expected softened status in line %q", line)
 	}
 	if !strings.Contains(line, "low 45%") {
@@ -615,7 +615,7 @@ func TestRenderAgentsHumanReadableIncludesConfidenceAndReason(t *testing.T) {
 		t.Fatalf("expected summary line in output %q", output.String())
 	}
 	line := lines[1]
-	if !strings.Contains(line, "likely waiting_input") {
+	if !strings.Contains(line, "likely needs input") {
 		t.Fatalf("expected softened status in line %q", output.String())
 	}
 	if !strings.Contains(line, "low 45%") {
@@ -799,7 +799,7 @@ func TestRenderStatusHumanReadableIncludesAttentionSummary(t *testing.T) {
 	if !strings.Contains(line, "attention=2") {
 		t.Fatalf("expected attention summary in line %q", line)
 	}
-	if !strings.Contains(line, "attention_breakdown error=1 waiting_input=1 disconnected=0") {
+	if !strings.Contains(line, "attention_breakdown error=1 needs_input=1 disconnected=0") {
 		t.Fatalf("expected attention breakdown in output %q", line)
 	}
 }
@@ -844,7 +844,7 @@ func TestRenderStatusHumanReadableIncludesUrgentAgentDetails(t *testing.T) {
 	if len(lines) != 5 {
 		t.Fatalf("expected summary, breakdown, and 3 urgent lines, got %d from %q", len(lines), output.String())
 	}
-	if !strings.Contains(lines[1], "attention_breakdown error=1 waiting_input=1 disconnected=1") {
+	if !strings.Contains(lines[1], "attention_breakdown error=1 needs_input=1 disconnected=1") {
 		t.Fatalf("expected breakdown line, got %q", output.String())
 	}
 	if !strings.Contains(lines[2], "erroring") || !strings.Contains(lines[3], "waiting") || !strings.Contains(lines[4], "disconnected") {
@@ -901,7 +901,7 @@ func TestRenderStatusJSONKeepsMachineReadableShape(t *testing.T) {
 		AttentionCount:     1,
 		AttentionBreakdown: core.AttentionBreakdown{Error: 0, WaitingInput: 1, Disconnected: 0},
 		AttentionOrder:     []string{"agent-2"},
-		AttentionSubtitles: map[string]string{"agent-2": "waiting_input · high confidence · Needs confirmation."},
+		AttentionSubtitles: map[string]string{"agent-2": "needs input · high confidence · Needs confirmation."},
 		GeneratedAt:        time.Unix(10, 0).UTC(),
 	}, true)
 	if err != nil {
@@ -915,7 +915,7 @@ func TestRenderStatusJSONKeepsMachineReadableShape(t *testing.T) {
 	if !strings.Contains(payload, `"attention_count": 1`) || !strings.Contains(payload, `"waiting_input": 1`) || !strings.Contains(payload, `"attention_order": [`) || !strings.Contains(payload, `"attention_subtitles": {`) {
 		t.Fatalf("expected attention fields in payload %q", payload)
 	}
-	if !strings.Contains(payload, `"agent-2": "waiting_input · high confidence · Needs confirmation."`) {
+	if !strings.Contains(payload, `"agent-2": "needs input · high confidence · Needs confirmation."`) {
 		t.Fatalf("expected attention subtitles in payload %q", payload)
 	}
 	if strings.Contains(payload, "attention=") || strings.Contains(payload, "\n!") {

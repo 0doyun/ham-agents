@@ -185,6 +185,8 @@ public enum AgentEventPresenter {
             return AgentEventPresentation(label: "Running Tool", emphasis: .info)
         case summary.contains("status changed to reading"):
             return AgentEventPresentation(label: "Reading", emphasis: .info)
+        case summary.contains("status changed to booting"):
+            return AgentEventPresentation(label: "Booting", emphasis: .info)
         case summary.contains("status changed to thinking"):
             return AgentEventPresentation(label: "Thinking", emphasis: .info)
         case summary.contains("status changed to sleeping"):
@@ -253,6 +255,8 @@ public enum AgentEventPresenter {
                 return AgentEventPresentation(label: "Running Tool", emphasis: .info)
             case "reading":
                 return AgentEventPresentation(label: "Reading", emphasis: .info)
+            case "booting":
+                return AgentEventPresentation(label: "Booting", emphasis: .info)
             case "thinking":
                 return AgentEventPresentation(label: "Thinking", emphasis: .info)
             case "sleeping":

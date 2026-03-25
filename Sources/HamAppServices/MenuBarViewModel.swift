@@ -187,15 +187,27 @@ public final class MenuBarViewModel: ObservableObject {
 
     public func statusDisplayText(for agent: Agent?) -> String {
         guard let agent else { return "unknown" }
+        let label = humanizedStatusLabel(agent.status)
         if agent.statusConfidence < 0.5 {
-            return "likely \(agent.status.rawValue)"
+            return "likely \(label)"
         }
-        return agent.status.rawValue
+        return label
     }
 
     public func confidenceSummaryText(for agent: Agent?) -> String {
         guard let agent else { return "unknown confidence" }
         return "\(confidenceLevelText(for: agent).lowercased()) confidence (\(confidenceText(for: agent)))"
+    }
+
+    private func humanizedStatusLabel(_ status: AgentStatus) -> String {
+        switch status {
+        case .waitingInput:
+            return "needs input"
+        case .runningTool:
+            return "running tool"
+        default:
+            return status.rawValue.replacingOccurrences(of: "_", with: " ")
+        }
     }
 
     public func openProject(forAgentID id: Agent.ID?) {

@@ -1096,3 +1096,81 @@
 - Go/Swift regression tests 로 thinking-sleeping event presentation baseline 을 보호했다.
 - 검증:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime` ✅
+
+### 2026-03-25 (humanized status label baseline)
+- human CLI 와 Swift status display 가 raw underscore status 대신 `needs input`, `running tool` 같은 더 사람 친화적인 wording 을 사용하게 정리했다.
+- JSON/status contracts 는 그대로 두고, human-facing text 만 바꿔 operator scanability 를 높였다.
+- Go/Swift regression tests 로 humanized status label baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/cmd/ham` ✅
+
+### 2026-03-25 (attention subtitle humanization baseline)
+- daemon-generated attention subtitle 도 raw `waiting_input` 대신 `needs input` 같은 humanized status wording 을 사용하게 정리했다.
+- Swift attention subtitle path 와 daemon-provided urgent subtitle wording 이 다시 정렬되도록 테스트 기대값도 함께 갱신했다.
+- Go/Swift regression tests 로 attention subtitle humanization baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime ./go/cmd/ham` ✅
+
+### 2026-03-25 (notification fallback humanization baseline)
+- notification candidate 가 summary 없이 fallback body 를 만들 때도 raw underscore status 대신 humanized status wording 을 사용하게 정리했다.
+- 그래서 `waiting_input at /tmp/app` 같은 표현이 `needs input at /tmp/app` 으로 더 자연스럽게 보이게 됐다.
+- Swift regression test 로 notification fallback humanization baseline 을 보호했다.
+- 검증:
+  - `swift test --filter StatusChangeNotificationEngineTests --disable-sandbox` ✅
+
+### 2026-03-25 (human attention breakdown wording baseline)
+- human `ham status` 의 attention breakdown line 이 raw `waiting_input` 대신 더 읽기 쉬운 `needs_input` wording 을 쓰도록 정리했다.
+- JSON `attention_breakdown.waiting_input` contract 는 그대로 유지해서 automation path 를 깨지 않게 했다.
+- Go regression tests 로 human attention breakdown wording baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/cmd/ham` ✅
+
+### 2026-03-25 (observed thinking phrase inference baseline)
+- observed 로그의 explicit `thinking` / `planning` / `investigating` 류 line 이 generic recent-output fallback 전에 `thinking` 상태로 직접 추론되게 정리했다.
+- 그래서 continuation phrase 와 plain freshness fallback 사이에 더 설명적인 thinking-like heuristic layer 가 생겼다.
+- Go regression test 로 observed thinking phrase inference baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (observed status summary alignment baseline)
+- observed `agent.status_updated` event summary 가 raw reason 보다 `LastUserVisibleSummary` 를 우선 사용하게 정리했다.
+- 그래서 event feed / CLI event row wording 이 `Observed question-like output.` / `Observed error-like output.` 같이 observed inference surface 와 더 직접적으로 맞춰졌다.
+- Go regression tests 로 observed status summary alignment baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime` ✅
+
+### 2026-03-25 (observed sleeping phrase inference baseline)
+- observed 로그의 explicit `idle` / `paused` / `waiting for changes` 류 문구가 age-based staleness fallback 전에 직접 `sleeping` 으로 추론되게 정리했다.
+- 그래서 최근에 갱신된 로그라도 명시적으로 쉬는 상태를 말하면 generic freshness/thinking 으로 보지 않고 sleeping-like state 로 반영된다.
+- Go regression test 로 observed sleeping phrase inference baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (observed booting phrase inference baseline)
+- observed 로그의 explicit `starting up` / `initializing` / `booting` 류 문구가 thinking/freshness fallback 전에 직접 `booting` 으로 추론되게 정리했다.
+- 그래서 observed mode 도 spec 상태 집합의 `booting` 을 좀 더 직접 반영할 수 있게 됐다.
+- Go regression test 로 observed booting phrase inference baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (observed idle phrase inference baseline)
+- observed 로그의 explicit `ready` / `idle` / `standing by` 류 문구가 `sleeping` stale fallback 대신 직접 `idle` 로 추론되게 정리했다.
+- 그래서 observed mode 에서 explicit idle wording 과 paused/stale sleeping wording 이 더 잘 분리된다.
+- Go regression tests 로 observed idle phrase inference baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (observed disconnected phrase inference baseline)
+- observed 로그의 explicit `disconnected` / `offline` / `session lost` 류 문구가 file-missing fallback 전에 직접 `disconnected` 로 추론되게 정리했다.
+- disconnected negation guard 는 `connected` substring false-positive 를 피하도록 더 좁게 다듬었다.
+- Go regression test 로 observed disconnected phrase inference baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/inference` ✅
+
+### 2026-03-25 (booting event presentation baseline)
+- daemon event presentation hint 와 Swift presenter 가 `booting` 상태도 `Booting` 으로 직접 보여주게 정리했다.
+- 그래서 observed booting inference 가 activity feed 에서 generic `Status` 로 다시 뭉개지지 않게 됐다.
+- Go/Swift regression tests 로 booting event presentation baseline 을 보호했다.
+- 검증:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime` ✅
+  - `swift test --filter EventPresentationTests --disable-sandbox` ✅

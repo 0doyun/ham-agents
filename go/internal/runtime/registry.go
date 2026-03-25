@@ -321,7 +321,7 @@ func snapshotAttentionSubtitles(agents []core.Agent) map[string]string {
 }
 
 func attentionSubtitle(agent core.Agent) string {
-	status := string(agent.Status)
+	status := humanAgentStatusLabel(agent.Status)
 	if agent.StatusConfidence < 0.5 {
 		status = "likely " + status
 	}
@@ -338,6 +338,17 @@ func attentionSubtitle(agent core.Agent) string {
 		return fmt.Sprintf("%s · %s confidence · %s", status, confidenceLevel, trimmed)
 	}
 	return fmt.Sprintf("%s · %s confidence", status, confidenceLevel)
+}
+
+func humanAgentStatusLabel(status core.AgentStatus) string {
+	switch status {
+	case core.AgentStatusWaitingInput:
+		return "needs input"
+	case core.AgentStatusRunningTool:
+		return "running tool"
+	default:
+		return strings.ReplaceAll(string(status), "_", " ")
+	}
 }
 
 func attentionSeverity(status core.AgentStatus) int {
@@ -663,6 +674,11 @@ func eventsAfterID(events []core.Event, afterEventID string, limit int) []core.E
 }
 
 func statusTransitionSummary(agent core.Agent) string {
+	if agent.Mode == core.AgentModeObserved {
+		if summary := strings.TrimSpace(agent.LastUserVisibleSummary); summary != "" {
+			return fmt.Sprintf("Status changed to %s. %s", agent.Status, summary)
+		}
+	}
 	if strings.TrimSpace(agent.StatusReason) == "" {
 		return fmt.Sprintf("Status changed to %s.", agent.Status)
 	}
@@ -873,6 +889,8 @@ func eventPresentationHint(event core.Event) (label string, emphasis string, pre
 			return "Running Tool", "info", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to reading"):
 			return "Reading", "info", trimLifecyclePresentationSummary(event.Summary)
+		case strings.Contains(lowerSummary, "status changed to booting"):
+			return "Booting", "info", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to thinking"):
 			return "Thinking", "info", trimLifecyclePresentationSummary(event.Summary)
 		case strings.Contains(lowerSummary, "status changed to sleeping"):
