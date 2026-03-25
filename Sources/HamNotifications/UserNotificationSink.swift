@@ -125,6 +125,8 @@ public final class UserNotificationSink: NotificationSink, NotificationPermissio
             return "\(agent.id).error"
         case .silence(let agent):
             return "\(agent.id).silence"
+        case .teamDigest(let teamName):
+            return "\(teamName).team_digest"
         }
     }
 }

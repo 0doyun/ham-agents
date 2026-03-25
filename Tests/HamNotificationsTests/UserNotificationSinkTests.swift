@@ -60,6 +60,24 @@ final class UserNotificationSinkTests: XCTestCase {
         XCTAssertEqual(status, .denied)
     }
 
+    func testTeamDigestUsesStableIdentifier() async throws {
+        let center = RecordingUserNotificationCenter(granted: true)
+        let sink = UserNotificationSink(center: center)
+
+        sink.send(
+            NotificationCandidate(
+                event: .teamDigest("frontend"),
+                title: "frontend needs attention",
+                body: "1 needs input"
+            )
+        )
+
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        let requests = await center.requests
+        XCTAssertEqual(requests.first?.identifier, "frontend.team_digest")
+    }
+
     private func makeAgent() -> Agent {
         Agent(
             id: "agent-1",

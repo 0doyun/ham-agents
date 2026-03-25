@@ -88,6 +88,50 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.attachableSessions.first?.id, "abc")
     }
 
+    func testRefreshLoadsTeamsAndFiltersAgentsByTeamAndWorkspace() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let otherAgent = Agent(
+            id: "agent-2",
+            displayName: "reviewer",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/other",
+            status: .idle,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2)
+        )
+        let team = DaemonTeamPayload(id: "team-1", displayName: "alpha", memberAgentIDs: ["agent-1"])
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent, otherAgent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent, otherAgent],
+                teams: [team]
+            )
+        )
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.teams.map(\.displayName), ["alpha"])
+        XCTAssertEqual(viewModel.workspaceOptions, ["/tmp/app", "/tmp/other"])
+        XCTAssertEqual(viewModel.filteredNonAttentionAgents(teamID: "team-1", workspace: nil).map(\.id), ["agent-1"])
+        XCTAssertEqual(viewModel.filteredNonAttentionAgents(teamID: nil, workspace: "/tmp/other").map(\.id), ["agent-2"])
+    }
+
     func testRefreshSurfacesDisconnectedAttachedAgent() async {
         let agent = Agent(
             id: "agent-1",
@@ -271,6 +315,43 @@ final class MenuBarViewModelTests: XCTestCase {
         let sent = sink.candidates
         XCTAssertEqual(sent.count, 1)
         XCTAssertEqual(sent.first?.title, "builder finished")
+    }
+
+    func testRefreshSendsTeamDigestWhenTeamNewlyNeedsAttention() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2),
+            lastUserVisibleSummary: "Need approval."
+        )
+        let team = DaemonTeamPayload(id: "team-1", displayName: "alpha", memberAgentIDs: ["agent-1"])
+        var settings = DaemonSettingsPayload.default
+        settings.notifications.previewText = true
+        let client = TransitioningClient(initialAgents: [previous], nextAgents: [current], teams: [team], settings: settings)
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(client: client, notificationSink: sink)
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertTrue(sink.candidates.contains(where: { $0.title == "alpha needs attention" && $0.body.contains("needs input") }))
     }
 
     func testRecentEventsFiltersBySelectedAgent() async {
@@ -1698,6 +1779,7 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
     let events: [AgentEventPayload]
     let agents: [Agent]
     let attachableSessions: [DaemonAttachableSessionPayload]
+    let teams: [DaemonTeamPayload]
     let settings: DaemonSettingsPayload
 
     init(
@@ -1705,18 +1787,21 @@ private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
         events: [AgentEventPayload],
         agents: [Agent],
         attachableSessions: [DaemonAttachableSessionPayload] = [],
+        teams: [DaemonTeamPayload] = [],
         settings: DaemonSettingsPayload = .default
     ) {
         self.snapshot = snapshot
         self.events = events
         self.agents = agents
         self.attachableSessions = attachableSessions
+        self.teams = teams
         self.settings = settings
     }
 
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload { snapshot }
     func fetchAgents() async throws -> [Agent] { agents }
     func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] { attachableSessions }
+    func fetchTeams() async throws -> [DaemonTeamPayload] { teams }
     func fetchEvents(limit: Int) async throws -> [AgentEventPayload] { events }
     func followEvents(afterEventID: String, limit: Int, waitMilliseconds: Int) async throws -> [AgentEventPayload] {
         _ = afterEventID
@@ -1892,6 +1977,7 @@ private actor TransitioningClient: HamDaemonClientProtocol {
     private let initialAgents: [Agent]
     private let nextAgents: [Agent]
     private let followedEvents: [AgentEventPayload]
+    private let teams: [DaemonTeamPayload]
     private var fetchAgentsCalls = 0
     private var policyOverride: NotificationPolicy?
     private let settings: DaemonSettingsPayload
@@ -1902,6 +1988,7 @@ private actor TransitioningClient: HamDaemonClientProtocol {
         initialAgents: [Agent],
         nextAgents: [Agent],
         followedEvents: [AgentEventPayload] = [],
+        teams: [DaemonTeamPayload] = [],
         settings: DaemonSettingsPayload = .default,
         initialGeneratedAt: Date = Date(timeIntervalSince1970: 10),
         nextGeneratedAt: Date = Date(timeIntervalSince1970: 10)
@@ -1909,6 +1996,7 @@ private actor TransitioningClient: HamDaemonClientProtocol {
         self.initialAgents = initialAgents
         self.nextAgents = nextAgents
         self.followedEvents = followedEvents
+        self.teams = teams
         self.settings = settings
         self.initialGeneratedAt = initialGeneratedAt
         self.nextGeneratedAt = nextGeneratedAt
@@ -1940,6 +2028,10 @@ private actor TransitioningClient: HamDaemonClientProtocol {
 
     func fetchAttachableSessions() async throws -> [DaemonAttachableSessionPayload] {
         []
+    }
+
+    func fetchTeams() async throws -> [DaemonTeamPayload] {
+        teams
     }
 
     func fetchSettings() async throws -> DaemonSettingsPayload {

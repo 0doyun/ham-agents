@@ -32,8 +32,11 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	settingsService := runtime.NewSettingsService(
 		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
 	)
+	teamService := runtime.NewTeamService(
+		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
+	)
 
-	server := ipc.NewServer(socketPath, registry, settingsService, stubSessionLister{
+	server := ipc.NewServer(socketPath, registry, settingsService, teamService, stubSessionLister{
 		sessions: []core.AttachableSession{
 			{ID: "abc", Title: "Claude", SessionRef: "iterm2://session/abc", IsActive: true},
 		},
@@ -248,13 +251,105 @@ func TestServerRejectsDirectoryAtSocketPath(t *testing.T) {
 	settingsService := runtime.NewSettingsService(
 		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
 	)
+	teamService := runtime.NewTeamService(
+		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
+	)
 
-	server := ipc.NewServer(socketPath, registry, settingsService, nil)
+	server := ipc.NewServer(socketPath, registry, settingsService, teamService, nil)
 	err := server.Serve(context.Background())
 	if err == nil {
 		t.Fatal("expected server startup to fail when socket path is a directory")
 	}
 	if !strings.Contains(err.Error(), "not a unix socket") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestClientServerRoundTripForTeamCommands(t *testing.T) {
+	t.Parallel()
+
+	root, err := os.MkdirTemp("/tmp", "hamd-ipc-team-")
+	if err != nil {
+		t.Fatalf("create temp dir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+
+	socketPath := filepath.Join(root, "s.sock")
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+	settingsService := runtime.NewSettingsService(
+		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
+	)
+	teamService := runtime.NewTeamService(
+		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
+	)
+
+	server := ipc.NewServer(socketPath, registry, settingsService, teamService, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- server.Serve(ctx)
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if _, err := os.Stat(socketPath); err == nil {
+			break
+		}
+		select {
+		case err := <-serverErrors:
+			if err != nil && strings.Contains(err.Error(), "operation not permitted") {
+				t.Skipf("unix socket binding unavailable in sandbox: %v", err)
+			}
+			t.Fatalf("server exited before socket became ready: %v", err)
+		default:
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("socket did not appear: %s", socketPath)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	client := ipc.NewClient(socketPath)
+	agent, err := client.RunManaged(context.Background(), runtime.RegisterManagedInput{
+		Provider:    "claude",
+		DisplayName: "builder",
+		ProjectPath: "/tmp/project",
+	})
+	if err != nil {
+		t.Fatalf("run managed: %v", err)
+	}
+
+	team, err := client.CreateTeam(context.Background(), "frontend")
+	if err != nil {
+		t.Fatalf("create team: %v", err)
+	}
+	if team.DisplayName != "frontend" {
+		t.Fatalf("unexpected team %#v", team)
+	}
+
+	updated, err := client.AddTeamMember(context.Background(), team.ID, agent.ID)
+	if err != nil {
+		t.Fatalf("add team member: %v", err)
+	}
+	if len(updated.MemberAgentIDs) != 1 || updated.MemberAgentIDs[0] != agent.ID {
+		t.Fatalf("unexpected updated team %#v", updated)
+	}
+
+	listed, err := client.ListTeams(context.Background())
+	if err != nil {
+		t.Fatalf("list teams: %v", err)
+	}
+	if len(listed) != 1 || listed[0].ID != team.ID {
+		t.Fatalf("unexpected listed teams %#v", listed)
+	}
+
+	cancel()
+	if err := <-serverErrors; err != nil && !errors.Is(err, context.Canceled) {
+		t.Fatalf("server shutdown: %v", err)
 	}
 }

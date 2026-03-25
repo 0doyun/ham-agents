@@ -102,6 +102,18 @@ func TestParseLogsInputRejectsNonPositiveLimit(t *testing.T) {
 	}
 }
 
+func TestParseAgentQueryOptionsAcceptsTeamWorkspaceAndJSON(t *testing.T) {
+	t.Parallel()
+
+	options, err := parseAgentQueryOptions("list", []string{"--json", "--team", "frontend", "--workspace", "/tmp/app"})
+	if err != nil {
+		t.Fatalf("parse agent query options: %v", err)
+	}
+	if !options.asJSON || options.teamRef != "frontend" || options.workspaceRef != "/tmp/app" {
+		t.Fatalf("unexpected options %#v", options)
+	}
+}
+
 func TestResolveUICommandPrefersEnvironmentOverride(t *testing.T) {
 	t.Parallel()
 
@@ -350,6 +362,70 @@ func TestChooseAttachableSessionReadsNumericSelection(t *testing.T) {
 	}
 	if !strings.Contains(output.String(), "Select iTerm session") {
 		t.Fatalf("expected prompt output, got %q", output.String())
+	}
+}
+
+func TestFilterAgentsForTeamKeepsOnlyMembers(t *testing.T) {
+	t.Parallel()
+
+	filtered := filterAgentsForTeam([]core.Agent{
+		{ID: "agent-1"},
+		{ID: "agent-2"},
+		{ID: "agent-3"},
+	}, core.Team{MemberAgentIDs: []string{"agent-2", "agent-3"}})
+
+	if len(filtered) != 2 || filtered[0].ID != "agent-2" || filtered[1].ID != "agent-3" {
+		t.Fatalf("unexpected filtered agents %#v", filtered)
+	}
+}
+
+func TestResolveWorkspaceMatchesByProjectPathAndDisplayName(t *testing.T) {
+	t.Parallel()
+
+	agents := []core.Agent{
+		{ID: "agent-1", ProjectPath: "/tmp/app"},
+		{ID: "agent-2", ProjectPath: "/tmp/infra"},
+	}
+
+	workspace, ok := resolveWorkspace(agents, nil, "app")
+	if !ok {
+		t.Fatal("expected workspace lookup by display name to succeed")
+	}
+	if workspace.ProjectPath != "/tmp/app" {
+		t.Fatalf("unexpected workspace %#v", workspace)
+	}
+}
+
+func TestBuildFilteredSnapshotPopulatesAttentionMetadata(t *testing.T) {
+	t.Parallel()
+
+	snapshot := buildFilteredSnapshot([]core.Agent{
+		{
+			ID:               "agent-1",
+			DisplayName:      "broken",
+			Status:           core.AgentStatusError,
+			StatusConfidence: 0.9,
+			StatusReason:     "Tool failed.",
+			LastEventAt:      time.Unix(3, 0).UTC(),
+		},
+		{
+			ID:               "agent-2",
+			DisplayName:      "waiting",
+			Status:           core.AgentStatusWaitingInput,
+			StatusConfidence: 0.55,
+			StatusReason:     "Needs approval.",
+			LastEventAt:      time.Unix(2, 0).UTC(),
+		},
+	}, time.Unix(10, 0).UTC())
+
+	if snapshot.AttentionCount != 2 {
+		t.Fatalf("expected attention count 2, got %d", snapshot.AttentionCount)
+	}
+	if got := snapshot.AttentionOrder; len(got) != 2 || got[0] != "agent-1" || got[1] != "agent-2" {
+		t.Fatalf("unexpected attention order %#v", got)
+	}
+	if got := snapshot.AttentionSubtitles["agent-1"]; !strings.Contains(got, "Tool failed.") {
+		t.Fatalf("expected attention subtitle to include reason, got %q", got)
 	}
 }
 

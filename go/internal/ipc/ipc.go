@@ -23,6 +23,9 @@ const (
 	CommandRunManaged            Command = "run.managed"
 	CommandAttachSession         Command = "attach.session"
 	CommandObserveSource         Command = "observe.source"
+	CommandCreateTeam            Command = "teams.create"
+	CommandAddTeamMember         Command = "teams.add_member"
+	CommandListTeams             Command = "teams.list"
 	CommandOpenTarget            Command = "agents.open_target"
 	CommandListItermSessions     Command = "iterm.sessions"
 	CommandListAgents            Command = "agents.list"
@@ -37,23 +40,27 @@ const (
 )
 
 type Request struct {
-	Command      Command        `json:"command"`
-	AgentID      string         `json:"agent_id,omitempty"`
-	Provider     string         `json:"provider,omitempty"`
-	DisplayName  string         `json:"display_name,omitempty"`
-	ProjectPath  string         `json:"project_path,omitempty"`
-	Role         string         `json:"role,omitempty"`
-	SessionRef   string         `json:"session_ref,omitempty"`
-	Limit        int            `json:"limit,omitempty"`
-	AfterEventID string         `json:"after_event_id,omitempty"`
-	WaitMillis   int            `json:"wait_millis,omitempty"`
-	Policy       string         `json:"policy,omitempty"`
-	Settings     *core.Settings `json:"settings,omitempty"`
+	Command       Command        `json:"command"`
+	AgentID       string         `json:"agent_id,omitempty"`
+	Provider      string         `json:"provider,omitempty"`
+	DisplayName   string         `json:"display_name,omitempty"`
+	ProjectPath   string         `json:"project_path,omitempty"`
+	Role          string         `json:"role,omitempty"`
+	SessionRef    string         `json:"session_ref,omitempty"`
+	TeamRef       string         `json:"team_ref,omitempty"`
+	MemberAgentID string         `json:"member_agent_id,omitempty"`
+	Limit         int            `json:"limit,omitempty"`
+	AfterEventID  string         `json:"after_event_id,omitempty"`
+	WaitMillis    int            `json:"wait_millis,omitempty"`
+	Policy        string         `json:"policy,omitempty"`
+	Settings      *core.Settings `json:"settings,omitempty"`
 }
 
 type Response struct {
 	Agent              *core.Agent              `json:"agent,omitempty"`
+	Team               *core.Team               `json:"team,omitempty"`
 	Agents             []core.Agent             `json:"agents,omitempty"`
+	Teams              []core.Team              `json:"teams,omitempty"`
 	Events             []core.Event             `json:"events,omitempty"`
 	AttachableSessions []core.AttachableSession `json:"attachable_sessions,omitempty"`
 	OpenTarget         *core.OpenTarget         `json:"open_target,omitempty"`
@@ -162,6 +169,36 @@ func (c *Client) OpenTarget(ctx context.Context, agentID string) (core.OpenTarge
 		return core.OpenTarget{}, fmt.Errorf("daemon response missing open target payload")
 	}
 	return *response.OpenTarget, nil
+}
+
+func (c *Client) CreateTeam(ctx context.Context, name string) (core.Team, error) {
+	response, err := c.request(ctx, Request{Command: CommandCreateTeam, DisplayName: name})
+	if err != nil {
+		return core.Team{}, err
+	}
+	if response.Team == nil {
+		return core.Team{}, fmt.Errorf("daemon response missing team payload")
+	}
+	return *response.Team, nil
+}
+
+func (c *Client) AddTeamMember(ctx context.Context, teamRef string, agentID string) (core.Team, error) {
+	response, err := c.request(ctx, Request{Command: CommandAddTeamMember, TeamRef: teamRef, MemberAgentID: agentID})
+	if err != nil {
+		return core.Team{}, err
+	}
+	if response.Team == nil {
+		return core.Team{}, fmt.Errorf("daemon response missing team payload")
+	}
+	return *response.Team, nil
+}
+
+func (c *Client) ListTeams(ctx context.Context) ([]core.Team, error) {
+	response, err := c.request(ctx, Request{Command: CommandListTeams})
+	if err != nil {
+		return nil, err
+	}
+	return response.Teams, nil
 }
 
 func (c *Client) ListItermSessions(ctx context.Context) ([]core.AttachableSession, error) {

@@ -22,16 +22,18 @@ type Server struct {
 	socketPath    string
 	registry      *hamruntime.Registry
 	settings      *hamruntime.SettingsService
+	teams         *hamruntime.TeamService
 	sessionLister SessionLister
 
 	listener net.Listener
 }
 
-func NewServer(socketPath string, registry *hamruntime.Registry, settings *hamruntime.SettingsService, sessionLister SessionLister) *Server {
+func NewServer(socketPath string, registry *hamruntime.Registry, settings *hamruntime.SettingsService, teams *hamruntime.TeamService, sessionLister SessionLister) *Server {
 	return &Server{
 		socketPath:    socketPath,
 		registry:      registry,
 		settings:      settings,
+		teams:         teams,
 		sessionLister: sessionLister,
 	}
 }
@@ -145,6 +147,33 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{Agent: &agent}, nil
+	case CommandCreateTeam:
+		if s.teams == nil {
+			return Response{}, fmt.Errorf("team service is not configured")
+		}
+		team, err := s.teams.Create(ctx, request.DisplayName)
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Team: &team}, nil
+	case CommandAddTeamMember:
+		if s.teams == nil {
+			return Response{}, fmt.Errorf("team service is not configured")
+		}
+		team, err := s.teams.AddMember(ctx, request.TeamRef, request.MemberAgentID)
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Team: &team}, nil
+	case CommandListTeams:
+		if s.teams == nil {
+			return Response{Teams: []core.Team{}}, nil
+		}
+		teams, err := s.teams.List(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Teams: teams}, nil
 	case CommandOpenTarget:
 		target, err := s.registry.OpenTarget(ctx, request.AgentID)
 		if err != nil {
