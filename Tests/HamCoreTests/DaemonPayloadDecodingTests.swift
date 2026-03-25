@@ -136,6 +136,8 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         let settings = try DaemonJSONDecoder.make().decode(DaemonSettingsPayload.self, from: Data(payload.utf8))
 
         XCTAssertTrue(settings.notifications.silence)
+        XCTAssertEqual(settings.appearance.animationSpeedMultiplier, 1)
+        XCTAssertFalse(settings.appearance.reduceMotion)
     }
 
     func testDaemonSettingsPayloadDefaultsMissingSilenceNotificationFlag() throws {
@@ -162,6 +164,8 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         let settings = try DaemonJSONDecoder.make().decode(DaemonSettingsPayload.self, from: Data(payload.utf8))
 
         XCTAssertFalse(settings.notifications.silence)
+        XCTAssertEqual(settings.appearance.animationSpeedMultiplier, 1)
+        XCTAssertFalse(settings.appearance.reduceMotion)
     }
 
     func testAgentEventPayloadDecodesFromGoEventsJSON() throws {

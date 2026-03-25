@@ -15,7 +15,7 @@
 - [x] Epic 9: Code Cleanup
 - [x] Epic 10: Team and Workspace
 - [x] Epic 11: Managed Process Lifecycle
-- [ ] Epic 12: Pixel Office Experience
+- [x] Epic 12: Pixel Office Experience
 - [ ] Epic 13: Notification Completeness
 - [ ] Epic 14: Settings Completeness
 - [ ] Epic 15: Provider Adapter Layer
@@ -25,27 +25,23 @@
 
 ## Active Scope
 
-현재 활성 범위는 **Epic 12: Pixel Office Experience** 이다.
+현재 활성 범위는 **Epic 13: Notification Completeness** 이다.
 
-이 epic의 목표는 메뉴바 햄스터와 popover 안의 pixel office를 실제 상태 시각화로 바꿔 제품의 대표 비주얼 경험을 완성하는 것이다.
+이 epic의 목표는 알림 정책의 누락분을 채워서 상태 flap/dedupe/history/team digest가 안정적으로 동작하게 만드는 것이다.
 
 ### Current Slice Checklist
 
-- [ ] `avatar_variant` 필드를 agent model에 추가 (§6)
-- [ ] 메뉴바 햄스터 아이콘 애니메이션 — idle/running/waiting/error/done 상태별 (§8)
-- [ ] room layout 구현 (Desk/Library/Kitchen/Alert zone) (§9)
-- [ ] sprite asset 기본 세트 (idle/walk/run/type/read/think/sleep/celebrate/alert/error) (§9)
-- [ ] 상태 → zone/animation 매핑 (§9)
-- [ ] SpriteKit 또는 Canvas 기반 렌더링
-- [ ] popover 내 캔버스 통합
-- [ ] Appearance 설정 — animation speed multiplier, reduce motion (§17)
+- [ ] 팀 요약 알림 — Epic 10 이후 team이 있을 때 team 단위 digest (§11)
+- [ ] 상태 flap bundling — 같은 agent가 짧은 시간에 상태를 왕복하면 묶어서 1건 처리 (§11)
+- [ ] 연속 유사 알림 dedupe 강화 — 현재 transition-based dedupe 위에 time-window dedupe 추가 (§11)
+- [ ] notification history 저장 — 과거 알림 이력을 store에 기록 (§16)
+- [ ] `done` 알림을 long-running task에만 제한하는 정책 (§11 기본 정책)
 - [ ] Go/Swift tests
 
 #### Acceptance Criteria
-- [ ] 메뉴바 아이콘이 상태에 따라 시각적으로 변화
-- [ ] popover에 pixel office가 렌더링됨
-- [ ] 상태가 시각적으로 구분됨
-- [ ] 귀여움이 정보 전달을 가리지 않음
+- [ ] 상태가 빠르게 왕복해도 알림이 1건만 옴
+- [ ] 과거 알림 이력을 조회할 수 있음
+- [ ] team 요약 알림이 동작함
 
 ---
 
@@ -240,8 +236,8 @@ spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
 9. ~~Epic 9: Code Cleanup~~ ✅
 10. ~~Epic 10: Team and Workspace~~ ✅
 11. ~~Epic 11: Managed Process Lifecycle~~ ✅
-12. **Epic 12: Pixel Office Experience** ← 현재
-13. Epic 13: Notification Completeness
+12. ~~Epic 12: Pixel Office Experience~~ ✅
+13. **Epic 13: Notification Completeness** ← 현재
 14. Epic 14: Settings Completeness
 15. Epic 15: Provider Adapter Layer
 16. Epic 16: Final Polish and Performance

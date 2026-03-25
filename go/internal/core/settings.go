@@ -12,6 +12,7 @@ const (
 	DefaultQuietStartHour = 22
 	DefaultQuietEndHour   = 8
 	DefaultTheme          = "auto"
+	DefaultAnimationSpeed = 1.0
 )
 
 type NotificationSettings struct {
@@ -26,7 +27,9 @@ type NotificationSettings struct {
 }
 
 type AppearanceSettings struct {
-	Theme string `json:"theme"`
+	Theme                    string  `json:"theme"`
+	AnimationSpeedMultiplier float64 `json:"animation_speed_multiplier"`
+	ReduceMotion             bool    `json:"reduce_motion"`
 }
 
 type IntegrationSettings struct {
@@ -35,7 +38,9 @@ type IntegrationSettings struct {
 
 func (a *AppearanceSettings) UnmarshalJSON(data []byte) error {
 	type rawAppearanceSettings struct {
-		Theme *string `json:"theme"`
+		Theme                    *string  `json:"theme"`
+		AnimationSpeedMultiplier *float64 `json:"animation_speed_multiplier"`
+		ReduceMotion             *bool    `json:"reduce_motion"`
 	}
 
 	var raw rawAppearanceSettings
@@ -49,6 +54,12 @@ func (a *AppearanceSettings) UnmarshalJSON(data []byte) error {
 	if raw.Theme != nil {
 		a.Theme = strings.TrimSpace(*raw.Theme)
 	}
+	if raw.AnimationSpeedMultiplier != nil {
+		a.AnimationSpeedMultiplier = *raw.AnimationSpeedMultiplier
+	}
+	if raw.ReduceMotion != nil {
+		a.ReduceMotion = *raw.ReduceMotion
+	}
 
 	return nil
 }
@@ -56,6 +67,9 @@ func (a *AppearanceSettings) UnmarshalJSON(data []byte) error {
 func (a AppearanceSettings) Validate() error {
 	switch strings.TrimSpace(a.Theme) {
 	case "auto", "day", "night":
+		if a.AnimationSpeedMultiplier < 0.25 || a.AnimationSpeedMultiplier > 3 {
+			return fmt.Errorf("appearance animation speed must be between 0.25 and 3")
+		}
 		return nil
 	default:
 		return fmt.Errorf("appearance theme must be one of auto, day, or night")
@@ -200,7 +214,9 @@ func DefaultSettings() Settings {
 			PreviewText:         false,
 		},
 		Appearance: AppearanceSettings{
-			Theme: DefaultTheme,
+			Theme:                    DefaultTheme,
+			AnimationSpeedMultiplier: DefaultAnimationSpeed,
+			ReduceMotion:             false,
 		},
 		Integrations: IntegrationSettings{
 			ItermEnabled: true,

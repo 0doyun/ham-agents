@@ -207,12 +207,29 @@ public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
 
 public struct DaemonAppearanceSettingsPayload: Codable, Equatable, Sendable {
     public var theme: String
+    public var animationSpeedMultiplier: Double
+    public var reduceMotion: Bool
 
-    public init(theme: String) {
+    public init(theme: String, animationSpeedMultiplier: Double = 1, reduceMotion: Bool = false) {
         self.theme = theme
+        self.animationSpeedMultiplier = animationSpeedMultiplier
+        self.reduceMotion = reduceMotion
     }
 
-    public static let `default` = DaemonAppearanceSettingsPayload(theme: "auto")
+    public static let `default` = DaemonAppearanceSettingsPayload(theme: "auto", animationSpeedMultiplier: 1, reduceMotion: false)
+
+    enum CodingKeys: String, CodingKey {
+        case theme
+        case animationSpeedMultiplier = "animation_speed_multiplier"
+        case reduceMotion = "reduce_motion"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        theme = try container.decodeIfPresent(String.self, forKey: .theme) ?? "auto"
+        animationSpeedMultiplier = try container.decodeIfPresent(Double.self, forKey: .animationSpeedMultiplier) ?? 1
+        reduceMotion = try container.decodeIfPresent(Bool.self, forKey: .reduceMotion) ?? false
+    }
 }
 
 public struct DaemonIntegrationSettingsPayload: Codable, Equatable, Sendable {

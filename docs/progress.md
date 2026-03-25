@@ -61,6 +61,15 @@
   - daemon-backed smoke evidence collected for real unsandboxed `hamd` + `ham run` spawn and running status (`running=1`) before stop-path parsing retried; remaining stop semantics are covered by focused managed runtime tests ✅
 - `tasks.md` Active Scope advanced to Epic 12 per Progression policy.
 
+### 2026-03-25 (Epic 12 pixel office complete)
+- Menu bar now renders an animated hamster glyph that changes with status and respects appearance settings.
+- Popover now embeds a Canvas-based `PixelOfficeView` with Desk/Library/Kitchen/Alert zones and agent-to-zone mapping.
+- Appearance settings now include `animation_speed_multiplier` and `reduce_motion`, with Go/Swift payload round-trip support and menu bar controls.
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 13 per Progression policy.
+
 ### 2026-03-24
 - 문서 초기 세팅 완료
 - spec / roadmap / AGENTS / tasks / docs 뼈대 작성

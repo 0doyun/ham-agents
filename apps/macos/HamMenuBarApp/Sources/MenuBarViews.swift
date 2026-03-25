@@ -105,6 +105,12 @@ struct MenuBarContentView: View {
                     settings: viewModel.settings.appearance,
                     updateTheme: { value in
                         Task { await viewModel.updateAppearanceSetting(theme: value) }
+                    },
+                    updateAnimationSpeed: { value in
+                        Task { await viewModel.updateAppearanceSetting(animationSpeedMultiplier: value) }
+                    },
+                    updateReduceMotion: { value in
+                        Task { await viewModel.updateAppearanceSetting(reduceMotion: value) }
                     }
                 )
 
@@ -145,6 +151,14 @@ struct MenuBarContentView: View {
 
                 let filteredAttentionAgents = viewModel.filteredAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
                 let filteredNonAttentionAgents = viewModel.filteredNonAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
+                let filteredOfficeAgents = filteredAttentionAgents + filteredNonAttentionAgents
+                let filteredOfficeOccupants = PixelOfficeMapper.occupants(from: filteredOfficeAgents)
+
+                PixelOfficeView(
+                    occupants: filteredOfficeOccupants,
+                    animationSpeedMultiplier: viewModel.settings.appearance.animationSpeedMultiplier,
+                    reduceMotion: viewModel.settings.appearance.reduceMotion
+                )
 
                 if !filteredAttentionAgents.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
@@ -424,6 +438,8 @@ private struct LatestEventBanner: View {
 private struct AppearanceSettingsSection: View {
     let settings: DaemonAppearanceSettingsPayload
     let updateTheme: (String) -> Void
+    let updateAnimationSpeed: (Double) -> Void
+    let updateReduceMotion: (Bool) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -442,6 +458,29 @@ private struct AppearanceSettingsSection: View {
                 Text("Night").tag("night")
             }
             .labelsHidden()
+
+            HStack {
+                Text("Animation")
+                Slider(
+                    value: Binding(
+                        get: { settings.animationSpeedMultiplier },
+                        set: updateAnimationSpeed
+                    ),
+                    in: 0.25 ... 3,
+                    step: 0.25
+                )
+                Text(String(format: "%.2fx", settings.animationSpeedMultiplier))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Toggle(
+                "Reduce Motion",
+                isOn: Binding(
+                    get: { settings.reduceMotion },
+                    set: updateReduceMotion
+                )
+            )
         }
     }
 }
