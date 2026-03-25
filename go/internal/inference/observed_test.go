@@ -608,10 +608,41 @@ func TestRefreshObservedAgentDetectsTimeoutLikeOutputAsError(t *testing.T) {
 	if updated.Status != core.AgentStatusError {
 		t.Fatalf("expected error status, got %q", updated.Status)
 	}
-	if updated.StatusReason != "Explicit error-like output detected." {
+	if updated.StatusReason != "Timeout-like output detected." {
 		t.Fatalf("unexpected status reason %q", updated.StatusReason)
 	}
-	if updated.LastUserVisibleSummary != "Observed explicit error-like output." {
+	if updated.LastUserVisibleSummary != "Observed timeout-like output." {
+		t.Fatalf("unexpected summary %q", updated.LastUserVisibleSummary)
+	}
+}
+
+func TestRefreshObservedAgentDetectsPermissionDeniedOutputAsError(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	log := "Permission denied while writing to the destination\n"
+	if err := os.WriteFile(path, []byte(log), 0o644); err != nil {
+		t.Fatalf("write observed log: %v", err)
+	}
+
+	agent := core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "observer",
+		Mode:             core.AgentModeObserved,
+		SessionRef:       path,
+		Status:           core.AgentStatusThinking,
+		StatusConfidence: 0.35,
+	}
+
+	updated := inference.RefreshObservedAgent(agent, time.Now())
+	if updated.Status != core.AgentStatusError {
+		t.Fatalf("expected error status, got %q", updated.Status)
+	}
+	if updated.StatusReason != "Permission-denied output detected." {
+		t.Fatalf("unexpected status reason %q", updated.StatusReason)
+	}
+	if updated.LastUserVisibleSummary != "Observed permission-denied output." {
 		t.Fatalf("unexpected summary %q", updated.LastUserVisibleSummary)
 	}
 }
