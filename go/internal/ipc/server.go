@@ -21,6 +21,7 @@ type SessionLister interface {
 type Server struct {
 	socketPath    string
 	registry      *hamruntime.Registry
+	managed       *hamruntime.ManagedService
 	settings      *hamruntime.SettingsService
 	teams         *hamruntime.TeamService
 	sessionLister SessionLister
@@ -28,10 +29,11 @@ type Server struct {
 	listener net.Listener
 }
 
-func NewServer(socketPath string, registry *hamruntime.Registry, settings *hamruntime.SettingsService, teams *hamruntime.TeamService, sessionLister SessionLister) *Server {
+func NewServer(socketPath string, registry *hamruntime.Registry, managed *hamruntime.ManagedService, settings *hamruntime.SettingsService, teams *hamruntime.TeamService, sessionLister SessionLister) *Server {
 	return &Server{
 		socketPath:    socketPath,
 		registry:      registry,
+		managed:       managed,
 		settings:      settings,
 		teams:         teams,
 		sessionLister: sessionLister,
@@ -113,7 +115,10 @@ func (s *Server) handleConnection(ctx context.Context, connection net.Conn) {
 func (s *Server) dispatch(ctx context.Context, request Request) (Response, error) {
 	switch request.Command {
 	case CommandRunManaged:
-		agent, err := s.registry.RegisterManaged(ctx, hamruntime.RegisterManagedInput{
+		if s.managed == nil {
+			return Response{}, fmt.Errorf("managed service is not configured")
+		}
+		agent, err := s.managed.Start(ctx, hamruntime.RegisterManagedInput{
 			Provider:    request.Provider,
 			DisplayName: request.DisplayName,
 			ProjectPath: request.ProjectPath,
@@ -123,6 +128,14 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{Agent: &agent}, nil
+	case CommandStopManaged:
+		if s.managed == nil {
+			return Response{}, fmt.Errorf("managed service is not configured")
+		}
+		if err := s.managed.Stop(ctx, request.AgentID); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
 	case CommandAttachSession:
 		agent, err := s.registry.RegisterAttached(ctx, hamruntime.RegisterAttachedInput{
 			Provider:    request.Provider,

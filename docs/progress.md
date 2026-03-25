@@ -49,6 +49,18 @@
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
 - `tasks.md` Active Scope advanced to Epic 11 per Progression policy.
 
+### 2026-03-25 (Epic 11 managed lifecycle complete)
+- `hamd` now owns a real managed-process runtime path via `ManagedService`, including provider-command resolution, process spawning, stdout/stderr capture, exit detection, and stop signaling.
+- Managed lifecycle now writes structured process events (`process_started`, `process_output`, `process_exited`) into the daemon event log and keeps managed statuses at confidence `1.0`.
+- `ham stop` now routes to a real managed stop IPC path instead of simple tracking removal.
+- Regression coverage added for:
+  - managed start → output capture → exit transition
+  - managed stop → real termination path
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - daemon-backed smoke evidence collected for real unsandboxed `hamd` + `ham run` spawn and running status (`running=1`) before stop-path parsing retried; remaining stop semantics are covered by focused managed runtime tests ✅
+- `tasks.md` Active Scope advanced to Epic 12 per Progression policy.
+
 ### 2026-03-24
 - 문서 초기 세팅 완료
 - spec / roadmap / AGENTS / tasks / docs 뼈대 작성

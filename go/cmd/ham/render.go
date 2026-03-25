@@ -14,11 +14,11 @@ import (
 func renderStopResult(out io.Writer, agentID string, asJSON bool) error {
 	if asJSON {
 		return writeJSONTo(out, map[string]any{
-			"removed": agentID,
+			"stopped": agentID,
 		})
 	}
 
-	_, err := fmt.Fprintf(out, "stopped tracking %s\n", agentID)
+	_, err := fmt.Fprintf(out, "stopped %s\n", agentID)
 	return err
 }
 

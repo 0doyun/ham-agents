@@ -81,6 +81,8 @@
 - 2026-03-25: CLI attention detail baseline also remains human-only — attention-first ordering and urgent detail rows affect `ham list` / `ham status` text output, while JSON responses keep their existing unsorted machine-oriented shape.
 - 2026-03-25: CLI attention breakdown baseline keeps `attention_breakdown` as a human-readable status affordance only; JSON status payloads stay unchanged so scripts do not need to learn presentation-only fields.
 - 2026-03-25: `ham stop` baseline currently maps to the existing registry removal / stop-tracking path, not provider/session termination; human output can say “stopped tracking” even though actual process shutdown remains a later slice.
+- 2026-03-25: Epic 11 replaces the earlier `ham stop` baseline — `ham stop` now targets the daemon-owned managed process lifecycle rather than simple tracking removal.
+- 2026-03-25: managed provider smoke/tests currently use `HAM_MANAGED_PROVIDER_<PROVIDER>_SHELL` environment overrides so the daemon can spawn deterministic shell-backed providers without hardcoding test-only executables.
 - 2026-03-25: `ham logs` baseline reuses the current global recent event log and filters by agent on the client side, so it is a best-effort recent-window view rather than a dedicated indexed per-agent history yet.
 - 2026-03-25: CLI list summary baseline keeps the top `summary ...` line human-only so operator scanability can improve without changing the JSON list array contract.
 - 2026-03-25: `ham doctor` baseline is currently a local path/socket inspection tool, not a full self-healing doctor; it reports resolved paths and socket reachability but does not attempt automatic repair yet.

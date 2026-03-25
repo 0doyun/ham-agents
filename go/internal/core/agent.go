@@ -83,6 +83,9 @@ const (
 	EventTypeAgentReconnected               EventType = "agent.reconnected"
 	EventTypeAgentRemoved                   EventType = "agent.removed"
 	EventTypeAgentStatusUpdated             EventType = "agent.status_updated"
+	EventTypeAgentProcessStarted            EventType = "agent.process_started"
+	EventTypeAgentProcessOutput             EventType = "agent.process_output"
+	EventTypeAgentProcessExited             EventType = "agent.process_exited"
 )
 
 type Event struct {

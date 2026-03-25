@@ -14,7 +14,7 @@
 - [x] Epic 1–8 완료 (상세 내역은 아래 Completed Epics 참조)
 - [x] Epic 9: Code Cleanup
 - [x] Epic 10: Team and Workspace
-- [ ] Epic 11: Managed Process Lifecycle
+- [x] Epic 11: Managed Process Lifecycle
 - [ ] Epic 12: Pixel Office Experience
 - [ ] Epic 13: Notification Completeness
 - [ ] Epic 14: Settings Completeness
@@ -25,25 +25,27 @@
 
 ## Active Scope
 
-현재 활성 범위는 **Epic 11: Managed Process Lifecycle** 이다.
+현재 활성 범위는 **Epic 12: Pixel Office Experience** 이다.
 
-이 epic의 목표는 `ham run`/`ham stop`이 실제 provider process lifecycle을 관리하게 만들어 managed mode를 진짜 실행/종료 경로로 승격하는 것이다.
+이 epic의 목표는 메뉴바 햄스터와 popover 안의 pixel office를 실제 상태 시각화로 바꿔 제품의 대표 비주얼 경험을 완성하는 것이다.
 
 ### Current Slice Checklist
 
-- [ ] `ham run`이 실제 child process를 spawn (provider별 command 결정)
-- [ ] process stdout/stderr를 structured event로 수집
-- [ ] structured launch events를 daemon event log로 연결 (§15)
-- [ ] process exit 감지 → done/error 상태 전이
-- [ ] `ham stop`이 실제 process signal/termination 수행
-- [ ] managed mode의 high-confidence 상태 추론 — structured events 기반 (§15)
-- [ ] Go tests
+- [ ] `avatar_variant` 필드를 agent model에 추가 (§6)
+- [ ] 메뉴바 햄스터 아이콘 애니메이션 — idle/running/waiting/error/done 상태별 (§8)
+- [ ] room layout 구현 (Desk/Library/Kitchen/Alert zone) (§9)
+- [ ] sprite asset 기본 세트 (idle/walk/run/type/read/think/sleep/celebrate/alert/error) (§9)
+- [ ] 상태 → zone/animation 매핑 (§9)
+- [ ] SpriteKit 또는 Canvas 기반 렌더링
+- [ ] popover 내 캔버스 통합
+- [ ] Appearance 설정 — animation speed multiplier, reduce motion (§17)
+- [ ] Go/Swift tests
 
 #### Acceptance Criteria
-- [ ] `ham run claude --project ... --role ...`로 실제 세션이 뜸
-- [ ] 세션 종료가 자동으로 agent 상태에 반영됨
-- [ ] `ham stop`이 진짜 세션을 멈춤
-- [ ] managed agent는 structured events 덕분에 highest confidence
+- [ ] 메뉴바 아이콘이 상태에 따라 시각적으로 변화
+- [ ] popover에 pixel office가 렌더링됨
+- [ ] 상태가 시각적으로 구분됨
+- [ ] 귀여움이 정보 전달을 가리지 않음
 
 ---
 
@@ -237,8 +239,8 @@ spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
 8. ~~Epic 8: Inference and Attention UX~~ ✅
 9. ~~Epic 9: Code Cleanup~~ ✅
 10. ~~Epic 10: Team and Workspace~~ ✅
-11. **Epic 11: Managed Process Lifecycle** ← 현재
-12. Epic 12: Pixel Office Experience
+11. ~~Epic 11: Managed Process Lifecycle~~ ✅
+12. **Epic 12: Pixel Office Experience** ← 현재
 13. Epic 13: Notification Completeness
 14. Epic 14: Settings Completeness
 15. Epic 15: Provider Adapter Layer

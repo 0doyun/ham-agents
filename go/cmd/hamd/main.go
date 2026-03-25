@@ -47,6 +47,7 @@ func run(args []string) error {
 		store.NewFileAgentStore(statePath),
 		store.NewFileEventStore(eventPath),
 	)
+	managedService := runtime.NewManagedService(registry)
 	settingsService := runtime.NewSettingsService(store.NewFileSettingsStore(settingsPath))
 	teamService := runtime.NewTeamService(store.NewFileTeamStore(teamPath))
 	itermAdapter := adapters.NewIterm2Adapter(nil)
@@ -74,7 +75,7 @@ func run(args []string) error {
 			return nil
 		}
 
-		server := ipc.NewServer(ipcConfig.SocketPath, registry, settingsService, teamService, itermAdapter)
+		server := ipc.NewServer(ipcConfig.SocketPath, registry, managedService, settingsService, teamService, itermAdapter)
 		go pollRuntimeState(ctx, registry, itermAdapter, 2*time.Second)
 		fmt.Printf("hamd serving on %s\n", ipcConfig.SocketPath)
 		return server.Serve(ctx)
