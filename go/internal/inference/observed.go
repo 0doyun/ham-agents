@@ -45,7 +45,7 @@ func RefreshObservedAgent(agent core.Agent, now time.Time) core.Agent {
 	modifiedAt := info.ModTime().UTC()
 	age := now.UTC().Sub(modifiedAt)
 
-	explicitErrorSignals := []string{"traceback", "panic:", "fatal:", "exception"}
+	explicitErrorSignals := []string{"traceback", "panic:", "fatal:", "exception", "timed out", "timeout", "permission denied", "unauthorized"}
 	genericErrorSignals := []string{"error", "failed"}
 	genericErrorNegations := []string{"no error", "without error", "0 failed", "zero failed", "not failed"}
 	explicitDisconnectedSignals := []string{"disconnected", "connection lost", "offline", "session lost", "session vanished"}
