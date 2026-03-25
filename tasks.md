@@ -31,7 +31,7 @@
 
 ## Active Scope
 
-현재 활성 범위는 **observed reconnection event presentation baseline** 다.
+현재 활성 범위는 **silence notification preview masking baseline** 다.
 
 - [x] 상세 스펙 복원 및 제품 truth 강화
 - [x] `Swift UI + Go CLI/runtime` 방향으로 아키텍처 정렬
@@ -164,6 +164,9 @@
 - [x] silence settings decode coverage baseline 추가
 - [x] observed reconnection phrase inference baseline 추가
 - [x] observed reconnection event presentation baseline 추가
+- [x] silence notification settings UI baseline 추가
+- [x] silence notification summary copy baseline 추가
+- [x] silence notification preview masking baseline 추가
 
 ### Current Slice Checklist
 
@@ -174,6 +177,15 @@
 - [x] notification settings 에 silence toggle 이 추가됨
 - [x] daemon/CLI/Swift 설정 경로가 silence toggle 을 round-trip 함
 - [x] silence notification filtering 이 settings.notifications.silence 를 존중함
+- [x] macOS menu bar settings section 에 silence toggle 이 노출됨
+- [x] MenuBarViewModel settings update path 가 silence toggle UI 와 연결됨
+- [x] Swift tests로 silence settings UI baseline 보호
+- [x] long-silence notification body 가 lastUserVisibleSummary 를 활용해 더 구체적임
+- [x] previewText 가 켜진 silence notification 에서 마지막 관측 요약을 보여줌
+- [x] Swift tests로 silence notification summary copy baseline 보호
+- [x] previewText=false 일 때 silence notification body 가 generic detail copy 로 마스킹됨
+- [x] silence notification 도 기존 preview masking policy 를 동일하게 따름
+- [x] Swift tests로 silence notification preview masking baseline 보호
 - [x] Go/Swift tests로 silence notification setting baseline 보호
 - [x] Swift payload decode 가 explicit silence=true 를 읽음
 - [x] Swift payload decode 가 missing silence field 를 false 로 backfill 함

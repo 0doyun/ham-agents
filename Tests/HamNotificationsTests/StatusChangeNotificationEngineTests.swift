@@ -80,6 +80,25 @@ final class StatusChangeNotificationEngineTests: XCTestCase {
         )
     }
 
+    func testSilenceCandidateUsesLastSeenSummaryWhenAvailable() {
+        let previousObservedAt = Date(timeIntervalSince1970: 1_000)
+        let currentObservedAt = Date(timeIntervalSince1970: 1_120)
+        let lastEventAt = Date(timeIntervalSince1970: 1_000 - (9 * 60))
+        let previous = [makeAgent(status: .runningTool, summary: "Observed tool-like activity.", lastEventAt: lastEventAt)]
+        let current = [makeAgent(status: .runningTool, summary: "Observed tool-like activity.", lastEventAt: lastEventAt)]
+        let engine = StatusChangeNotificationEngine()
+
+        let candidates = engine.candidates(
+            previous: previous,
+            current: current,
+            previousObservedAt: previousObservedAt,
+            currentObservedAt: currentObservedAt
+        )
+
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertEqual(candidates[0].body, "No activity for 11m. Last seen: Observed tool-like activity.")
+    }
+
     private func makeAgent(
         status: AgentStatus,
         summary: String? = nil,

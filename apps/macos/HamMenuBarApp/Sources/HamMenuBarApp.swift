@@ -126,6 +126,9 @@ private struct MenuBarContentView: View {
                     updateWaiting: { value in
                         Task { await viewModel.updateNotificationSetting(waitingInput: value) }
                     },
+                    updateSilence: { value in
+                        Task { await viewModel.updateNotificationSetting(silence: value) }
+                    },
                     updateQuietHours: { value in
                         Task { await viewModel.updateNotificationSetting(quietHoursEnabled: value) }
                     },
@@ -277,6 +280,7 @@ private struct NotificationSettingsSection: View {
     let updateDone: (Bool) -> Void
     let updateError: (Bool) -> Void
     let updateWaiting: (Bool) -> Void
+    let updateSilence: (Bool) -> Void
     let updateQuietHours: (Bool) -> Void
     let updateQuietStartHour: (Int) -> Void
     let updateQuietEndHour: (Int) -> Void
@@ -290,6 +294,7 @@ private struct NotificationSettingsSection: View {
             Toggle("Done", isOn: Binding(get: { settings.done }, set: updateDone))
             Toggle("Error", isOn: Binding(get: { settings.error }, set: updateError))
             Toggle("Waiting Input", isOn: Binding(get: { settings.waitingInput }, set: updateWaiting))
+            Toggle("Silence", isOn: Binding(get: { settings.silence }, set: updateSilence))
             Toggle("Quiet Hours", isOn: Binding(get: { settings.quietHoursEnabled }, set: updateQuietHours))
             if settings.quietHoursEnabled {
                 HStack {

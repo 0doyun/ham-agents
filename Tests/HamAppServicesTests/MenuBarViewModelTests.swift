@@ -760,6 +760,35 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.settings.notifications.quietHoursEndHour, 7)
     }
 
+    func testUpdateNotificationSettingsCanToggleSilence() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateNotificationSetting(silence: true)
+
+        XCTAssertTrue(viewModel.settings.notifications.silence)
+    }
+
     func testUpdateAppearanceSettingsChangesPublishedTheme() async {
         let agent = Agent(
             id: "agent-1",
@@ -1462,6 +1491,54 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.refresh()
         await viewModel.refresh()
 
+        XCTAssertEqual(sink.candidates.first?.body, "Open ham-menubar for details.")
+    }
+
+    func testNotificationSettingsCanMaskSilencePreviewText() async {
+        let previousObservedAt = Date(timeIntervalSince1970: 1_000)
+        let currentObservedAt = Date(timeIntervalSince1970: 1_120)
+        let lastEventAt = Date(timeIntervalSince1970: 1_000 - (9 * 60))
+
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: lastEventAt,
+            lastUserVisibleSummary: "Observed tool-like activity."
+        )
+        let current = previous
+        let settings = DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: true,
+                error: true,
+                waitingInput: true,
+                silence: true,
+                quietHoursEnabled: false,
+                quietHoursStartHour: 22,
+                quietHoursEndHour: 8,
+                previewText: false
+            )
+        )
+        let client = TransitioningClient(
+            initialAgents: [previous],
+            nextAgents: [current],
+            settings: settings,
+            initialGeneratedAt: previousObservedAt,
+            nextGeneratedAt: currentObservedAt
+        )
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(client: client, notificationSink: sink)
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertEqual(sink.candidates.count, 1)
+        XCTAssertEqual(sink.candidates.first?.title, "builder went quiet")
         XCTAssertEqual(sink.candidates.first?.body, "Open ham-menubar for details.")
     }
 

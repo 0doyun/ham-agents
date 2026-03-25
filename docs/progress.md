@@ -1182,6 +1182,27 @@
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./go/internal/runtime` ✅
   - `swift test --filter EventPresentationTests --disable-sandbox` ✅
 
+### 2026-03-25 (silence notification settings UI baseline)
+- menu bar popover notification settings section 에 silence toggle 을 추가해 long-silence alerts 를 UI 에서 직접 켜고 끌 수 있게 정리했다.
+- 기존 MenuBarViewModel notification settings update path 를 그대로 재사용해서 새 UI-only state 를 만들지 않았다.
+- Swift tests 로 silence settings UI baseline 을 보호했다.
+- 검증:
+  - `swift test --filter MenuBarViewModelTests --disable-sandbox` ✅
+
+### 2026-03-25 (silence notification summary copy baseline)
+- long-silence notification body 가 lastUserVisibleSummary 를 알고 있으면 `Last seen: ...` 형태로 더 구체적인 copy 를 보여주게 정리했다.
+- 그래서 silence alert 이 단순 duration/path 알림이 아니라 마지막 관측 맥락도 함께 전달할 수 있게 됐다.
+- Swift regression test 로 silence notification summary copy baseline 을 보호했다.
+- 검증:
+  - `swift test --filter StatusChangeNotificationEngineTests --disable-sandbox` ✅
+
+### 2026-03-25 (silence notification preview masking baseline)
+- previewText=false 일 때 silence notification 도 다른 notification 과 동일하게 `Open ham-menubar for details.` 로 마스킹되도록 regression coverage 를 추가했다.
+- 그래서 silence alert 도 preview privacy policy 에서 예외가 생기지 않게 정리했다.
+- Swift regression test 로 silence notification preview masking baseline 을 보호했다.
+- 검증:
+  - `swift test --filter MenuBarViewModelTests --disable-sandbox` ✅
+
 ### 2026-03-25 (long-silence notification baseline)
 - active agent 가 silence threshold 를 막 넘길 때 `went quiet` notification candidate 를 1회 생성하도록 정리했다.
 - threshold 를 이미 넘긴 뒤에는 같은 상태에서 반복 candidate 를 만들지 않게 해서 notification spam 을 줄였다.

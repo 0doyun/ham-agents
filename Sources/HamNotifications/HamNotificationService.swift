@@ -120,7 +120,11 @@ public struct StatusChangeNotificationEngine {
         case .done(let agent), .waitingInput(let agent), .error(let agent):
             return agent.lastUserVisibleSummary ?? "\(humanizedStatusLabel(agent.status)) at \(agent.projectPath)"
         case .silence(let agent):
-            return "No activity for \(humanizedSilenceInterval(agent.lastEventAt, now: observedAt)) at \(agent.projectPath)"
+            let duration = humanizedSilenceInterval(agent.lastEventAt, now: observedAt)
+            if let summary = agent.lastUserVisibleSummary, !summary.isEmpty {
+                return "No activity for \(duration). Last seen: \(summary)"
+            }
+            return "No activity for \(duration) at \(agent.projectPath)"
         }
     }
 
