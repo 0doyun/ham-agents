@@ -134,8 +134,7 @@ func (s RuntimeSnapshot) TotalCount() int {
 func (s RuntimeSnapshot) RunningCount() int {
 	count := 0
 	for _, agent := range s.Agents {
-		switch agent.Status {
-		case AgentStatusBooting, AgentStatusThinking, AgentStatusReading, AgentStatusRunningTool:
+		if IsRunningStatus(agent.Status) {
 			count++
 		}
 	}

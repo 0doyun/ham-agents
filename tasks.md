@@ -12,7 +12,7 @@
 
 ## Current Status
 - [x] Epic 1–8 완료 (상세 내역은 아래 Completed Epics 참조)
-- [ ] Epic 9: Code Cleanup (현재 활성)
+- [x] Epic 9: Code Cleanup
 - [ ] Epic 10: Team and Workspace
 - [ ] Epic 11: Managed Process Lifecycle
 - [ ] Epic 12: Pixel Office Experience
@@ -25,34 +25,27 @@
 
 ## Active Scope
 
-현재 활성 범위는 **Epic 9: Code Cleanup** 이다.
+현재 활성 범위는 **Epic 10: Team and Workspace** 이다.
 
-이 epic의 목표는 지금까지 누적된 코드 중복과 대형 파일을 정리해서 이후 기능 추가가 깨끗한 기반 위에서 진행되게 하는 것이다.
+이 epic의 목표는 agent를 team/workspace 단위로 묶고, CLI/daemon/menu bar 모두에서 그 그룹 개념을 다룰 수 있게 만드는 것이다.
 
 ### Current Slice Checklist
 
-**Go 중복 제거:**
-- [ ] `attentionSeverity()` 중복 제거 — `registry.go`와 `main.go`에 동일 함수가 있음. 하나로 통합
-- [ ] `humanAgentStatusLabel` / `humanizeAgentStatus` 중복 제거 — `registry.go`와 `main.go`에 동일 로직. 하나로 통합
-- [ ] `eventsAfterID` / `eventsAfterIDForDisplay` 중복 제거 — `registry.go`와 `main.go`에 유사 로직. 공유 함수로 통합
-- [ ] `RegisterManaged` / `RegisterAttached` / `RegisterObserved` 공통 패턴 추출 — 3개 메서드가 거의 동일한 구조. 공유 builder 또는 내부 helper로 정리
+- [ ] Team domain model 추가 (Go core) — team_id, display_name, member agent_ids
+- [ ] Workspace domain model 추가 — project_path 기반 자동 그룹핑
+- [ ] `ham team create <name>` / `ham team add <name> <agent>` CLI
+- [ ] daemon IPC에 team CRUD surface 추가
+- [ ] `ham ask <team> "..."` — team 대상 메시지 브로드캐스트
+- [ ] team 단위 focus — team의 agent들을 한 번에 열기 (§14 Should)
+- [ ] 팀 요약 알림 — team 전체 상태 요약 notification (§11)
+- [ ] menu bar popover에 workspace/team filter 추가
+- [ ] Go/Swift tests
 
-**Go 책임 분리:**
-- [ ] `cmd/ham/main.go` — 서브커맨드 dispatch, output rendering, sorting/filtering helpers가 한 파일에 섞여 있음. 책임별로 분리
-- [ ] `internal/runtime/registry.go` — agent registration, observed/attached refresh, event helpers, attention computation이 한 파일에 섞여 있음. 책임별로 분리
-
-**Swift 중복 제거:**
-- [ ] `appleScriptEscaped` 중복 제거 — `HamMenuBarApp.swift` 안에 2곳에 동일 함수
-- [ ] `humanizedStatusLabel` 중복 제거 — `MenuBarViewModel`과 `HamNotificationService`에 동일 로직
-- [ ] `[.booting, .thinking, .reading, .runningTool]` running status set 공유 — 3곳에서 반복되는 필터 조건
-
-**Swift 책임 분리:**
-- [ ] `HamMenuBarApp.swift` — SwiftUI views, iTerm AppleScript automation, Preview mock client가 한 파일에 섞여 있음. 책임별로 분리
-
-**검증:**
-- [ ] Go tests green 유지
-- [ ] Swift build/test green 유지
-- [ ] 기존 동작 변경 없음 확인
+#### Acceptance Criteria
+- [ ] agent를 team으로 묶을 수 있음
+- [ ] CLI와 menu bar에서 team/workspace 단위로 필터/조회 가능
+- [ ] team 없는 agent도 정상 동작
+- [ ] team 대상 메시지가 모든 멤버에게 전달됨
 
 ---
 
@@ -244,8 +237,8 @@ spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
 6. ~~Epic 6: iTerm2 Integration~~ ✅
 7. ~~Epic 7: Attached and Observed Modes~~ ✅
 8. ~~Epic 8: Inference and Attention UX~~ ✅
-9. **Epic 9: Code Cleanup** ← 현재
-10. Epic 10: Team and Workspace
+9. ~~Epic 9: Code Cleanup~~ ✅
+10. **Epic 10: Team and Workspace** ← 현재
 11. Epic 11: Managed Process Lifecycle
 12. Epic 12: Pixel Office Experience
 13. Epic 13: Notification Completeness

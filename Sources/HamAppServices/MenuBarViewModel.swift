@@ -188,7 +188,7 @@ public final class MenuBarViewModel: ObservableObject {
 
     public func statusDisplayText(for agent: Agent?) -> String {
         guard let agent else { return "unknown" }
-        let label = humanizedStatusLabel(agent.status)
+        let label = agent.status.humanizedLabel
         if agent.statusConfidence < 0.5 {
             return "likely \(label)"
         }
@@ -198,17 +198,6 @@ public final class MenuBarViewModel: ObservableObject {
     public func confidenceSummaryText(for agent: Agent?) -> String {
         guard let agent else { return "unknown confidence" }
         return "\(confidenceLevelText(for: agent).lowercased()) confidence (\(confidenceText(for: agent)))"
-    }
-
-    private func humanizedStatusLabel(_ status: AgentStatus) -> String {
-        switch status {
-        case .waitingInput:
-            return "needs input"
-        case .runningTool:
-            return "running tool"
-        default:
-            return status.rawValue.replacingOccurrences(of: "_", with: " ")
-        }
     }
 
     public func openProject(forAgentID id: Agent.ID?) {
@@ -534,7 +523,7 @@ public final class MenuBarViewModel: ObservableObject {
     private func makeSummary(agents: [Agent], recentEvents: [AgentEventPayload], generatedAt: Date) -> HamMenuBarSummary {
         let totalAgents = agents.count
         let attentionAgents = agents.filter { attentionPriority(for: $0) != nil }.count
-        let runningAgents = agents.filter { [.booting, .thinking, .reading, .runningTool].contains($0.status) }.count
+        let runningAgents = agents.filter { $0.status.isRunningActivity }.count
         let waitingAgents = agents.filter { $0.status == .waitingInput }.count
         let doneAgents = agents.filter { $0.status == .done }.count
 

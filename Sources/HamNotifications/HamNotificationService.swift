@@ -118,24 +118,13 @@ public struct StatusChangeNotificationEngine {
     private func body(for event: NotificationEvent, observedAt: Date) -> String {
         switch event {
         case .done(let agent), .waitingInput(let agent), .error(let agent):
-            return agent.lastUserVisibleSummary ?? "\(humanizedStatusLabel(agent.status)) at \(agent.projectPath)"
+            return agent.lastUserVisibleSummary ?? "\(agent.status.humanizedLabel) at \(agent.projectPath)"
         case .silence(let agent):
             let duration = humanizedSilenceInterval(agent.lastEventAt, now: observedAt)
             if let summary = agent.lastUserVisibleSummary, !summary.isEmpty {
                 return "No activity for \(duration). Last seen: \(summary)"
             }
             return "No activity for \(duration) at \(agent.projectPath)"
-        }
-    }
-
-    private func humanizedStatusLabel(_ status: AgentStatus) -> String {
-        switch status {
-        case .waitingInput:
-            return "needs input"
-        case .runningTool:
-            return "running tool"
-        default:
-            return status.rawValue.replacingOccurrences(of: "_", with: " ")
         }
     }
 
@@ -152,14 +141,8 @@ public struct StatusChangeNotificationEngine {
         let currentAge = currentObservedAt.timeIntervalSince(current.lastEventAt)
         return previousAge < silenceThreshold && currentAge >= silenceThreshold
     }
-
     private func isSilenceTrackable(_ status: AgentStatus) -> Bool {
-        switch status {
-        case .booting, .thinking, .reading, .runningTool:
-            return true
-        default:
-            return false
-        }
+        status.isRunningActivity
     }
 
     private func humanizedSilenceInterval(_ date: Date, now: Date) -> String {

@@ -12,6 +12,32 @@
 
 ## Log
 
+### 2026-03-25 (Epic 9 cleanup plan)
+- Ralph resumed for the user request to continue from `tasks.md` Active Scope and execute through Epic 16 in order.
+- Mandatory docs were re-read and Ralph grounding was refreshed at `.omx/context/epic9-to-16-ralph-20260325T141418Z.md`.
+- Existing Ralph planning artifacts already satisfy the plan gate: `.omx/plans/prd-ham-agents.md` and `.omx/plans/test-spec-ham-agents.md`.
+- Epic 9 pre-edit cleanup plan:
+  - Go lane: remove duplicated attention/status/event helpers, extract shared registration defaults, and split `cmd/ham/main.go` plus `internal/runtime/registry.go` by responsibility without changing behavior.
+  - Swift lane: remove duplicate AppleScript/status helpers, centralize the shared running-status set, and split `HamMenuBarApp.swift` into UI vs automation/bootstrap responsibilities without changing behavior.
+  - Verification target for Epic 9: `go test ./...`, `swift build`, and `swift test`, then update `tasks.md` Active Scope to Epic 10 immediately if green.
+
+### 2026-03-25 (Epic 9 cleanup complete)
+- Go cleanup complete:
+  - shared status/event helper logic moved into `go/internal/core/status_helpers.go`
+  - `cmd/ham` responsibilities split across entrypoint/commands/parse/render/output/doctor/ui files
+  - `internal/runtime` responsibilities split across registration/attention/events/attached/observed files
+  - `RegisterManaged` / `RegisterAttached` / `RegisterObserved` now share registration-context resolution helpers
+- Swift cleanup complete:
+  - shared `AgentStatus` presentation/running helpers moved into `Sources/HamCore/AgentStatusPresentation.swift`
+  - `HamMenuBarApp.swift` split into app entry, views, and platform automation/bootstrap files
+  - duplicate AppleScript escaping removed in favor of one shared helper
+  - repeated humanized-status/running-status logic replaced with shared `AgentStatus` helpers
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift build --disable-sandbox` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 10 per Progression policy.
+
 ### 2026-03-24
 - 문서 초기 세팅 완료
 - spec / roadmap / AGENTS / tasks / docs 뼈대 작성

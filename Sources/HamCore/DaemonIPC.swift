@@ -226,7 +226,7 @@ public struct DaemonRuntimeSnapshotPayload: Codable, Equatable, Sendable {
 
     public var totalCount: Int { agents.count }
     public var runningCount: Int {
-        agents.filter { [.booting, .thinking, .reading, .runningTool].contains($0.status) }.count
+        agents.filter { $0.status.isRunningActivity }.count
     }
     public var waitingCount: Int {
         agents.filter { $0.status == .waitingInput }.count
