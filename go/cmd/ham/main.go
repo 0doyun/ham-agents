@@ -103,7 +103,7 @@ Usage:
   ham doctor [--json]
   ham ui [--json] [--print]
   ham settings [--json]
-  ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--quiet-hours=true|false] [--quiet-start-hour=0-23] [--quiet-end-hour=0-23] [--preview-text=true|false]
+  ham settings notifications [--done=true|false] [--error=true|false] [--waiting-input=true|false] [--silence=true|false] [--quiet-hours=true|false] [--quiet-start-hour=0-23] [--quiet-end-hour=0-23] [--preview-text=true|false]
   ham settings appearance [--theme=auto|day|night]
   ham settings integrations [--iterm-enabled=true|false]
   ham list [--json]
@@ -382,53 +382,8 @@ func runSettingsNotifications(ctx context.Context, client *ipc.Client, args []st
 		return err
 	}
 
-	for _, argument := range args {
-		switch {
-		case strings.HasPrefix(argument, "--done="):
-			value, err := parseBoolFlag(argument, "--done=")
-			if err != nil {
-				return err
-			}
-			settings.Notifications.Done = value
-		case strings.HasPrefix(argument, "--error="):
-			value, err := parseBoolFlag(argument, "--error=")
-			if err != nil {
-				return err
-			}
-			settings.Notifications.Error = value
-		case strings.HasPrefix(argument, "--waiting-input="):
-			value, err := parseBoolFlag(argument, "--waiting-input=")
-			if err != nil {
-				return err
-			}
-			settings.Notifications.WaitingInput = value
-		case strings.HasPrefix(argument, "--quiet-hours="):
-			value, err := parseBoolFlag(argument, "--quiet-hours=")
-			if err != nil {
-				return err
-			}
-			settings.Notifications.QuietHoursEnabled = value
-		case strings.HasPrefix(argument, "--quiet-start-hour="):
-			value, err := parseHourFlag(argument, "--quiet-start-hour=")
-			if err != nil {
-				return err
-			}
-			settings.Notifications.QuietHoursStartHour = value
-		case strings.HasPrefix(argument, "--quiet-end-hour="):
-			value, err := parseHourFlag(argument, "--quiet-end-hour=")
-			if err != nil {
-				return err
-			}
-			settings.Notifications.QuietHoursEndHour = value
-		case strings.HasPrefix(argument, "--preview-text="):
-			value, err := parseBoolFlag(argument, "--preview-text=")
-			if err != nil {
-				return err
-			}
-			settings.Notifications.PreviewText = value
-		default:
-			return fmt.Errorf("unsupported notifications flag %q", argument)
-		}
+	if err := applyNotificationSettingsArgs(&settings.Notifications, args); err != nil {
+		return err
 	}
 
 	updated, err := client.UpdateSettings(ctx, settings)
@@ -436,6 +391,64 @@ func runSettingsNotifications(ctx context.Context, client *ipc.Client, args []st
 		return err
 	}
 	return writeJSON(updated)
+}
+
+func applyNotificationSettingsArgs(settings *core.NotificationSettings, args []string) error {
+	for _, argument := range args {
+		switch {
+		case strings.HasPrefix(argument, "--done="):
+			value, err := parseBoolFlag(argument, "--done=")
+			if err != nil {
+				return err
+			}
+			settings.Done = value
+		case strings.HasPrefix(argument, "--error="):
+			value, err := parseBoolFlag(argument, "--error=")
+			if err != nil {
+				return err
+			}
+			settings.Error = value
+		case strings.HasPrefix(argument, "--waiting-input="):
+			value, err := parseBoolFlag(argument, "--waiting-input=")
+			if err != nil {
+				return err
+			}
+			settings.WaitingInput = value
+		case strings.HasPrefix(argument, "--silence="):
+			value, err := parseBoolFlag(argument, "--silence=")
+			if err != nil {
+				return err
+			}
+			settings.Silence = value
+		case strings.HasPrefix(argument, "--quiet-hours="):
+			value, err := parseBoolFlag(argument, "--quiet-hours=")
+			if err != nil {
+				return err
+			}
+			settings.QuietHoursEnabled = value
+		case strings.HasPrefix(argument, "--quiet-start-hour="):
+			value, err := parseHourFlag(argument, "--quiet-start-hour=")
+			if err != nil {
+				return err
+			}
+			settings.QuietHoursStartHour = value
+		case strings.HasPrefix(argument, "--quiet-end-hour="):
+			value, err := parseHourFlag(argument, "--quiet-end-hour=")
+			if err != nil {
+				return err
+			}
+			settings.QuietHoursEndHour = value
+		case strings.HasPrefix(argument, "--preview-text="):
+			value, err := parseBoolFlag(argument, "--preview-text=")
+			if err != nil {
+				return err
+			}
+			settings.PreviewText = value
+		default:
+			return fmt.Errorf("unsupported notifications flag %q", argument)
+		}
+	}
+	return nil
 }
 
 func runSettingsAppearance(ctx context.Context, client *ipc.Client, args []string) error {

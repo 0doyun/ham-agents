@@ -23,6 +23,7 @@ func TestSettingsServicePersistsUpdates(t *testing.T) {
 		t.Fatalf("get settings: %v", err)
 	}
 	settings.Notifications.Done = false
+	settings.Notifications.Silence = true
 
 	updated, err := service.Update(ctx, settings)
 	if err != nil {
@@ -30,6 +31,9 @@ func TestSettingsServicePersistsUpdates(t *testing.T) {
 	}
 	if updated.Notifications.Done {
 		t.Fatal("expected done notifications to be disabled")
+	}
+	if !updated.Notifications.Silence {
+		t.Fatal("expected silence notifications to be enabled")
 	}
 }
 

@@ -95,6 +95,7 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
     public var done: Bool
     public var error: Bool
     public var waitingInput: Bool
+    public var silence: Bool
     public var quietHoursEnabled: Bool
     public var quietHoursStartHour: Int
     public var quietHoursEndHour: Int
@@ -104,6 +105,7 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
         done: Bool,
         error: Bool,
         waitingInput: Bool,
+        silence: Bool = false,
         quietHoursEnabled: Bool,
         quietHoursStartHour: Int,
         quietHoursEndHour: Int,
@@ -112,6 +114,7 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
         self.done = done
         self.error = error
         self.waitingInput = waitingInput
+        self.silence = silence
         self.quietHoursEnabled = quietHoursEnabled
         self.quietHoursStartHour = quietHoursStartHour
         self.quietHoursEndHour = quietHoursEndHour
@@ -122,10 +125,23 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
         case done
         case error
         case waitingInput = "waiting_input"
+        case silence
         case quietHoursEnabled = "quiet_hours_enabled"
         case quietHoursStartHour = "quiet_hours_start_hour"
         case quietHoursEndHour = "quiet_hours_end_hour"
         case previewText = "preview_text"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        done = try container.decode(Bool.self, forKey: .done)
+        error = try container.decode(Bool.self, forKey: .error)
+        waitingInput = try container.decode(Bool.self, forKey: .waitingInput)
+        silence = try container.decodeIfPresent(Bool.self, forKey: .silence) ?? false
+        quietHoursEnabled = try container.decode(Bool.self, forKey: .quietHoursEnabled)
+        quietHoursStartHour = try container.decode(Int.self, forKey: .quietHoursStartHour)
+        quietHoursEndHour = try container.decode(Int.self, forKey: .quietHoursEndHour)
+        previewText = try container.decode(Bool.self, forKey: .previewText)
     }
 }
 
@@ -149,6 +165,7 @@ public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
             done: true,
             error: true,
             waitingInput: true,
+            silence: false,
             quietHoursEnabled: false,
             quietHoursStartHour: 22,
             quietHoursEndHour: 8,

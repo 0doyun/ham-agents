@@ -718,9 +718,10 @@ final class MenuBarViewModelTests: XCTestCase {
         )
 
         await viewModel.refresh()
-        await viewModel.updateNotificationSetting(done: false, previewText: true)
+        await viewModel.updateNotificationSetting(done: false, silence: true, previewText: true)
 
         XCTAssertFalse(viewModel.settings.notifications.done)
+        XCTAssertTrue(viewModel.settings.notifications.silence)
         XCTAssertTrue(viewModel.settings.notifications.previewText)
     }
 
@@ -1568,6 +1569,51 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(sink.candidates.count, 1)
         XCTAssertEqual(sink.candidates.first?.title, "builder hit an error")
     }
+
+    func testNotificationSettingsCanSuppressSilenceNotifications() async {
+        let previousObservedAt = Date(timeIntervalSince1970: 1_000)
+        let currentObservedAt = Date(timeIntervalSince1970: 1_120)
+        let lastEventAt = Date(timeIntervalSince1970: 1_000 - (9 * 60))
+
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: lastEventAt
+        )
+        let current = previous
+        let settings = DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: true,
+                error: true,
+                waitingInput: true,
+                silence: false,
+                quietHoursEnabled: false,
+                quietHoursStartHour: 22,
+                quietHoursEndHour: 8,
+                previewText: true
+            )
+        )
+        let client = TransitioningClient(
+            initialAgents: [previous],
+            nextAgents: [current],
+            settings: settings,
+            initialGeneratedAt: previousObservedAt,
+            nextGeneratedAt: currentObservedAt
+        )
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(client: client, notificationSink: sink)
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertTrue(sink.candidates.isEmpty)
+    }
 }
 
 private final class StubClient: HamDaemonClientProtocol, @unchecked Sendable {
@@ -1772,23 +1818,30 @@ private actor TransitioningClient: HamDaemonClientProtocol {
     private var fetchAgentsCalls = 0
     private var policyOverride: NotificationPolicy?
     private let settings: DaemonSettingsPayload
+    private let initialGeneratedAt: Date
+    private let nextGeneratedAt: Date
 
     init(
         initialAgents: [Agent],
         nextAgents: [Agent],
         followedEvents: [AgentEventPayload] = [],
-        settings: DaemonSettingsPayload = .default
+        settings: DaemonSettingsPayload = .default,
+        initialGeneratedAt: Date = Date(timeIntervalSince1970: 10),
+        nextGeneratedAt: Date = Date(timeIntervalSince1970: 10)
     ) {
         self.initialAgents = initialAgents
         self.nextAgents = nextAgents
         self.followedEvents = followedEvents
         self.settings = settings
+        self.initialGeneratedAt = initialGeneratedAt
+        self.nextGeneratedAt = nextGeneratedAt
     }
 
     func fetchSnapshot() async throws -> DaemonRuntimeSnapshotPayload {
         let baseAgents = fetchAgentsCalls == 0 ? initialAgents : nextAgents
         let agents = applyPolicyOverride(to: baseAgents)
-        return DaemonRuntimeSnapshotPayload(agents: agents, generatedAt: Date(timeIntervalSince1970: 10))
+        let generatedAt = fetchAgentsCalls == 0 ? initialGeneratedAt : nextGeneratedAt
+        return DaemonRuntimeSnapshotPayload(agents: agents, generatedAt: generatedAt)
     }
 
     func fetchAgents() async throws -> [Agent] {
