@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ham-agents/ham-agents/go/internal/adapters"
 	"github.com/ham-agents/ham-agents/go/internal/core"
 )
 
@@ -34,7 +35,7 @@ func (r *Registry) RecordManagedStartFailure(ctx context.Context, agentID string
 	return err
 }
 
-func (r *Registry) RecordManagedOutput(ctx context.Context, agentID string, line string, isStderr bool) error {
+func (r *Registry) RecordManagedOutput(ctx context.Context, agentID string, line string, isStderr bool, providerHintsEnabled bool) error {
 	trimmed := strings.TrimSpace(line)
 	if trimmed == "" {
 		return nil
@@ -46,6 +47,16 @@ func (r *Registry) RecordManagedOutput(ctx context.Context, agentID string, line
 		}
 		status := core.AgentStatusThinking
 		reason := "Managed process emitted output."
+		summary := trimmed
+		if providerHintsEnabled {
+			if hintedStatus, hintedReason, hintedSummary, ok := adapters.ManagedProviderHint(agent.Provider, trimmed, isStderr); ok {
+				status = hintedStatus
+				reason = hintedReason
+				if hintedSummary != "" {
+					summary = hintedSummary
+				}
+			}
+		}
 		lower := strings.ToLower(trimmed)
 		if strings.Contains(lower, "need input") || strings.Contains(lower, "needs input") || strings.Contains(lower, "approval") || strings.Contains(lower, "?") {
 			status = core.AgentStatusWaitingInput
@@ -60,9 +71,9 @@ func (r *Registry) RecordManagedOutput(ctx context.Context, agentID string, line
 		agent.Status = status
 		agent.StatusConfidence = 1
 		agent.StatusReason = reason
-		agent.LastUserVisibleSummary = trimmed
+		agent.LastUserVisibleSummary = summary
 		agent.LastEventAt = now
-		return &core.Event{AgentID: agent.ID, Type: core.EventTypeAgentProcessOutput, Summary: trimmed, LifecycleStatus: string(agent.Status), LifecycleMode: string(agent.Mode), LifecycleReason: agent.StatusReason, LifecycleConfidence: agent.StatusConfidence}, nil
+		return &core.Event{AgentID: agent.ID, Type: core.EventTypeAgentProcessOutput, Summary: summary, LifecycleStatus: string(agent.Status), LifecycleMode: string(agent.Mode), LifecycleReason: agent.StatusReason, LifecycleConfidence: agent.StatusConfidence}, nil
 	})
 	return err
 }
@@ -91,20 +102,14 @@ func (r *Registry) RecordManagedStopped(ctx context.Context, agentID string) err
 
 func (r *Registry) RecordManagedExit(ctx context.Context, agentID string, exitErr error) error {
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
-		status := core.AgentStatusDone
-		reason := "Managed process exited successfully."
+		exitSummary := adapters.ClassifyProcessExit(exitErr)
 		summary := agent.LastUserVisibleSummary
-		if summary == "" {
-			summary = "Managed process exited successfully."
+		if summary == "" || exitErr != nil {
+			summary = exitSummary.Summary
 		}
-		if exitErr != nil {
-			status = core.AgentStatusError
-			reason = "Managed process exited with an error."
-			summary = strings.TrimSpace(exitErr.Error())
-		}
-		agent.Status = status
+		agent.Status = exitSummary.Status
 		agent.StatusConfidence = 1
-		agent.StatusReason = reason
+		agent.StatusReason = exitSummary.Reason
 		agent.LastUserVisibleSummary = summary
 		agent.LastEventAt = now
 		return &core.Event{AgentID: agent.ID, Type: core.EventTypeAgentProcessExited, Summary: summary, LifecycleStatus: string(agent.Status), LifecycleMode: string(agent.Mode), LifecycleReason: agent.StatusReason, LifecycleConfidence: agent.StatusConfidence}, nil

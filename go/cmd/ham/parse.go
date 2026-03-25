@@ -261,11 +261,12 @@ func parseStopInput(args []string) (agentID string, asJSON bool, err error) {
 	return
 }
 
-func parseLogsInput(args []string) (agentID string, limit int, asJSON bool, err error) {
+func parseLogsInput(args []string) (agentID string, limit int, asJSON bool, exportPath string, err error) {
 	flags := flag.NewFlagSet("logs", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	asJSONFlag := flags.Bool("json", false, "emit JSON")
 	limitFlag := flags.Int("limit", 20, "maximum events to show")
+	exportFlag := flags.String("export", "", "write output to this path")
 	if err = flags.Parse(args); err != nil {
 		return
 	}
@@ -283,6 +284,7 @@ func parseLogsInput(args []string) (agentID string, limit int, asJSON bool, err 
 	agentID = remaining[0]
 	limit = *limitFlag
 	asJSON = *asJSONFlag
+	exportPath = strings.TrimSpace(*exportFlag)
 	return
 }
 

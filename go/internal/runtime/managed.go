@@ -17,17 +17,23 @@ import (
 
 type managedProcess struct {
 	cmd      *exec.Cmd
+	provider string
 	stopping bool
 }
 
 type ManagedService struct {
 	registry  *Registry
+	settings  *SettingsService
 	mu        sync.Mutex
 	processes map[string]*managedProcess
 }
 
-func NewManagedService(registry *Registry) *ManagedService {
-	return &ManagedService{registry: registry, processes: map[string]*managedProcess{}}
+func NewManagedService(registry *Registry, settings ...*SettingsService) *ManagedService {
+	var settingsService *SettingsService
+	if len(settings) > 0 {
+		settingsService = settings[0]
+	}
+	return &ManagedService{registry: registry, settings: settingsService, processes: map[string]*managedProcess{}}
 }
 
 func (s *ManagedService) Start(ctx context.Context, input RegisterManagedInput) (core.Agent, error) {
@@ -70,7 +76,7 @@ func (s *ManagedService) Start(ctx context.Context, input RegisterManagedInput) 
 	}
 
 	s.mu.Lock()
-	s.processes[agent.ID] = &managedProcess{cmd: cmd}
+	s.processes[agent.ID] = &managedProcess{cmd: cmd, provider: agent.Provider}
 	s.mu.Unlock()
 
 	go s.consumeOutput(agent.ID, stdout, false)
@@ -112,7 +118,17 @@ func (s *ManagedService) consumeOutput(agentID string, reader io.Reader, isStder
 		if line == "" {
 			continue
 		}
-		_ = s.registry.RecordManagedOutput(context.Background(), agentID, line, isStderr)
+		enabled := true
+		s.mu.Lock()
+		provider := ""
+		if proc, ok := s.processes[agentID]; ok {
+			provider = proc.provider
+		}
+		s.mu.Unlock()
+		if provider != "" {
+			enabled = s.providerAdapterEnabled(strings.ToLower(strings.TrimSpace(provider)))
+		}
+		_ = s.registry.RecordManagedOutput(context.Background(), agentID, line, isStderr, enabled)
 	}
 }
 
@@ -144,4 +160,19 @@ func buildManagedCommand(agent core.Agent) (*exec.Cmd, string, error) {
 		return exec.Command(scriptPath, "-q", "/dev/null", provider), scriptPath + " -q /dev/null " + provider, nil
 	}
 	return exec.Command(provider), provider, nil
+}
+
+func (s *ManagedService) providerAdapterEnabled(name string) bool {
+	if s.settings == nil {
+		return true
+	}
+	settings, err := s.settings.Get(context.Background())
+	if err != nil {
+		return true
+	}
+	enabled, ok := settings.Integrations.ProviderAdapters[name]
+	if !ok {
+		return true
+	}
+	return enabled
 }
