@@ -791,6 +791,95 @@ func TestRefreshAttachedSyncsMetadataWithoutDisconnect(t *testing.T) {
 	}
 }
 
+func TestRefreshAttachedInfersRunningToolFromSessionCommand(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterAttached(ctx, runtime.RegisterAttachedInput{
+		Provider:    "iterm2",
+		DisplayName: "ops",
+		ProjectPath: "/tmp/project",
+		SessionRef:  "iterm2://session/tool",
+	})
+	if err != nil {
+		t.Fatalf("register attached: %v", err)
+	}
+
+	if err := registry.RefreshAttached(ctx, []core.AttachableSession{
+		{ID: "tool", Title: "Tool Run", SessionRef: "iterm2://session/tool", IsActive: true, Command: "go test ./...", Activity: "go test"},
+	}); err != nil {
+		t.Fatalf("refresh attached tool: %v", err)
+	}
+
+	listed, err := registry.List(ctx)
+	if err != nil {
+		t.Fatalf("list agents: %v", err)
+	}
+	if listed[0].ID != agent.ID {
+		t.Fatalf("expected agent %q, got %q", agent.ID, listed[0].ID)
+	}
+	if listed[0].Status != core.AgentStatusRunningTool {
+		t.Fatalf("expected running_tool status, got %q", listed[0].Status)
+	}
+	if listed[0].StatusReason != "Tool-like attached session activity detected." {
+		t.Fatalf("unexpected reason %q", listed[0].StatusReason)
+	}
+
+	events, err := registry.Events(ctx, 0)
+	if err != nil {
+		t.Fatalf("events: %v", err)
+	}
+	if events[len(events)-1].Type != core.EventTypeAgentStatusUpdated {
+		t.Fatalf("expected status updated event, got %q", events[len(events)-1].Type)
+	}
+	if events[len(events)-1].Summary != "Status changed to running_tool. Tool-like attached session activity detected." {
+		t.Fatalf("unexpected status summary %q", events[len(events)-1].Summary)
+	}
+}
+
+func TestRefreshAttachedInfersReadingFromSessionCommand(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	if _, err := registry.RegisterAttached(ctx, runtime.RegisterAttachedInput{
+		Provider:    "iterm2",
+		DisplayName: "ops",
+		ProjectPath: "/tmp/project",
+		SessionRef:  "iterm2://session/read",
+	}); err != nil {
+		t.Fatalf("register attached: %v", err)
+	}
+
+	if err := registry.RefreshAttached(ctx, []core.AttachableSession{
+		{ID: "read", Title: "Log Read", SessionRef: "iterm2://session/read", IsActive: true, Command: "less /tmp/project/build.log", Activity: "less"},
+	}); err != nil {
+		t.Fatalf("refresh attached reading: %v", err)
+	}
+
+	listed, err := registry.List(ctx)
+	if err != nil {
+		t.Fatalf("list agents: %v", err)
+	}
+	if listed[0].Status != core.AgentStatusReading {
+		t.Fatalf("expected reading status, got %q", listed[0].Status)
+	}
+	if listed[0].StatusReason != "Reading-like attached session activity detected." {
+		t.Fatalf("unexpected reason %q", listed[0].StatusReason)
+	}
+}
+
 func TestRefreshAttachedDoesNotPersistWhenNothingChanged(t *testing.T) {
 	t.Parallel()
 
