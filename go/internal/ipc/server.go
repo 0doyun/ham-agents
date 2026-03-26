@@ -128,6 +128,31 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{Agent: &agent}, nil
+	case CommandRegisterManaged:
+		agent, err := s.registry.RegisterManaged(ctx, hamruntime.RegisterManagedInput{
+			Provider:    request.Provider,
+			DisplayName: request.DisplayName,
+			ProjectPath: request.ProjectPath,
+			Role:        request.Role,
+		})
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Agent: &agent}, nil
+	case CommandRecordOutput:
+		if err := s.registry.RecordManagedOutput(ctx, request.AgentID, request.OutputLine, false, true); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandNotifyManagedExited:
+		var exitErr error
+		if request.ExitError != "" {
+			exitErr = fmt.Errorf("%s", request.ExitError)
+		}
+		if err := s.registry.RecordManagedExit(ctx, request.AgentID, exitErr); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
 	case CommandStopManaged:
 		if s.managed == nil {
 			return Response{}, fmt.Errorf("managed service is not configured")
