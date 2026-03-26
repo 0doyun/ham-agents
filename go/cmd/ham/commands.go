@@ -30,6 +30,34 @@ func runRegister(ctx context.Context, client *ipc.Client, args []string) error {
 	}
 
 	fmt.Printf("registered %s [%s] via %s\n", agent.DisplayName, agent.ID, agent.Provider)
+
+	// Run the provider command in the foreground so the user gets an interactive session.
+	providerBin, lookErr := exec.LookPath(agent.Provider)
+	if lookErr != nil {
+		return fmt.Errorf("provider %q not found in PATH: %w", agent.Provider, lookErr)
+	}
+
+	cmd := exec.CommandContext(ctx, providerBin)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if input.ProjectPath != "" {
+		cmd.Dir = input.ProjectPath
+	}
+	cmd.Env = append(os.Environ(),
+		"HAM_AGENT_ID="+agent.ID,
+		"HAM_AGENT_ROLE="+agent.Role,
+	)
+
+	runErr := cmd.Run()
+
+	// Notify daemon that the session ended.
+	_ = client.StopManaged(ctx, agent.ID)
+
+	if runErr != nil {
+		return fmt.Errorf("%s exited: %w", agent.Provider, runErr)
+	}
+	fmt.Printf("\n%s session ended. agent %s marked as done.\n", agent.Provider, agent.DisplayName)
 	return nil
 }
 
