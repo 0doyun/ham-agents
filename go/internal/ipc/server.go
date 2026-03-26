@@ -134,6 +134,7 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			DisplayName: request.DisplayName,
 			ProjectPath: request.ProjectPath,
 			Role:        request.Role,
+			SessionRef:  request.SessionRef,
 		})
 		if err != nil {
 			return Response{}, err
