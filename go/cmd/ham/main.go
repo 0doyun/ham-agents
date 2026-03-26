@@ -19,7 +19,7 @@ func main() {
 
 func run(args []string) error {
 	ctx := context.Background()
-	client, socketPath, err := newClient()
+	socketPath, err := ipc.DefaultSocketPath()
 	if err != nil {
 		return err
 	}
@@ -28,6 +28,14 @@ func run(args []string) error {
 		printHelp(socketPath)
 		return nil
 	}
+
+	if commandRequiresDaemon(args[0]) {
+		if err := ensureDaemon(socketPath); err != nil {
+			return err
+		}
+	}
+
+	client := ipc.NewClient(socketPath)
 
 	switch args[0] {
 	case "help", "--help", "-h":
@@ -66,15 +74,6 @@ func run(args []string) error {
 	default:
 		return fmt.Errorf("unsupported command %q", args[0])
 	}
-}
-
-func newClient() (*ipc.Client, string, error) {
-	socketPath, err := ipc.DefaultSocketPath()
-	if err != nil {
-		return nil, "", err
-	}
-
-	return ipc.NewClient(socketPath), socketPath, nil
 }
 
 func printHelp(socketPath string) {

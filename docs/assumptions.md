@@ -136,6 +136,9 @@
 - 2026-03-25: silence notification setting baseline keeps silence alerts opt-in at the settings level (`silence: false` by default), so the new alert path exists without surprising existing users.
 - 2026-03-26: managed provider launches prefer the system `script` wrapper when available so CLI providers get a best-effort pseudo-terminal without adding a PTY dependency.
 - 2026-03-26: iTerm layout-change detection is currently best-effort via window/tab index changes surfaced from AppleScript session polling; it is not a canonical full layout graph model.
+- 2026-03-26: CLI one-command bootstrap resolves `hamd` via env override (`HAM_DAEMON_EXECUTABLE` or `HAMD_EXECUTABLE`), sibling binary, PATH, then repo-root `go run ./go/cmd/hamd serve` fallback.
+- 2026-03-26: daemon auto-bootstrap waits up to 3 seconds for the unix socket to become reachable after spawning and otherwise returns a timeout instead of changing IPC semantics or adding a richer supervisor handshake.
+- 2026-03-26: `ham run` menu bar auto-launch is best-effort only — the CLI checks for a running `ham-menubar` process by executable basename (`pgrep` with `ps` fallback) and prints a warning on failure without failing the managed run itself.
 - 2026-03-25: silence settings decode coverage baseline keeps Swift payload decoding backward-compatible by defaulting missing `silence` to `false` instead of treating it as a required field.
 - 2026-03-25: observed error phrase refinement baseline extends explicit error detection to timeout/permission-denied style failures, but still keeps them in the same low-confidence observed-error bucket rather than inventing finer error subtypes.
 - 2026-03-25: observed explicit error summary refinement baseline makes timeout and permission-denied phrases keep the shared `error` status while upgrading their reason/summary copy to more specific user-visible wording.

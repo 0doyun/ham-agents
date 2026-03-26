@@ -12,6 +12,24 @@
 
 ## Log
 
+### 2026-03-26 (Epic 17 one-command bootstrap complete)
+- Added CLI-side daemon auto-bootstrap for daemon-backed commands by probing the socket first, spawning `hamd serve` only when unreachable, and waiting briefly for the socket to become reachable before continuing.
+- Added CLI-side daemon executable resolution with the following precedence:
+  - `HAM_DAEMON_EXECUTABLE` / `HAMD_EXECUTABLE`
+  - sibling `hamd` binary next to the current `ham` executable
+  - `hamd` on `PATH`
+  - repo-root `go run ./go/cmd/hamd serve` fallback for source-checkout workflows
+- Reused the menu bar executable resolution path for a new best-effort `ham run` auto-launch flow that only starts `ham-menubar` when it is not already running.
+- Kept direct `hamd serve` and `ham ui` paths intact; auto-bootstrap remains an additive “start if missing” behavior.
+- Added CLI regression coverage for:
+  - daemon bootstrap target resolution
+  - daemon bootstrap wait / timeout behavior
+  - menu bar auto-launch when absent vs already running
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+- Notes:
+  - sandboxed daemon smoke remains best-effort because unix socket bind/serve can still be restricted in this environment; this slice keeps validation at the Go test level rather than changing daemon behavior.
+
 ### 2026-03-25 (Epic 9 cleanup plan)
 - Ralph resumed for the user request to continue from `tasks.md` Active Scope and execute through Epic 16 in order.
 - Mandatory docs were re-read and Ralph grounding was refreshed at `.omx/context/epic9-to-16-ralph-20260325T141418Z.md`.

@@ -20,31 +20,32 @@
 - [x] Epic 14: Settings Completeness
 - [x] Epic 15: Provider Adapter Layer
 - [x] Epic 16: Final Polish and Performance
+- [x] Epic 17: One-Command Bootstrap
 
 ---
 
 ## Active Scope
 
-현재 활성 feature scope는 없다. **Epic 1–16 전체가 완료**되었다.
+현재 활성 feature scope는 없다. **Epic 17: One-Command Bootstrap 이 완료**되었다.
 
-남은 작업이 생기면 이 섹션은 새로운 사용자 요청 또는 polish backlog 기준으로 다시 갱신한다.
+남은 작업이 생기면 이 섹션은 새로운 사용자 요청 기준으로 다시 갱신한다.
 
 ### Current Slice Checklist
 
-- [x] exportable logs — `ham logs --export` 또는 파일 내보내기 (§20 v1.0)
-- [x] detach/reattach UX 개선 (§20 v1.0)
-- [x] 알림 flap bundling 고도화 (§11)
-- [x] observed inference heuristic 고도화 (§15)
-- [x] 민감 경로/환경변수 마스킹 (§16)
-- [x] 성능 목표 검증 및 최적화 (§19) — idle CPU <2%/<1%, 메모리 <150MB/<100MB, 팝오버 <200ms
-- [x] 디자인 polish / sprite variation
-- [x] iTerm2 레이아웃 변경 감지 (§14, Won't v1 이지만 best-effort)
-- [x] Go/Swift tests + 성능 벤치마크
+- [x] daemon 필요 명령(`ham run`, `list`, `status` 등)에서 socket 연결 실패 시 `hamd serve` 자동 부트스트랩
+- [x] daemon bootstrap 시 socket ready 대기 및 타임아웃/에러 메시지 처리
+- [x] `hamd` 실행 파일 경로 해석 헬퍼 추가 및 기존 CLI 경로와 공존
+- [x] `ham run` 성공 직후 menu bar app 자동 launch
+- [x] `ham ui` 와 공유 가능한 menu bar executable 해석/launch 로직 정리
+- [x] menu bar app이 이미 실행 중이면 중복 launch 하지 않음
+- [x] launch 실패는 warning 으로만 처리하고 `ham run` 자체는 계속 진행
+- [x] `go test ./...`
 
 #### Acceptance Criteria
-- [x] spec §19 성능 목표 달성
-- [x] 민감 정보가 마스킹됨
-- [x] 전체 UX 플로우(§18)가 end-to-end로 동작
+- [x] daemon이 없을 때 `ham run` / `ham list` / `ham status` 가 자동으로 daemon을 띄우고 원래 명령을 수행함
+- [x] daemon이 이미 떠 있으면 기존 동작과 동일하게 추가 spawn 없이 동작함
+- [x] `ham run` 이후 menu bar app이 없으면 자동 launch 되며, 이미 실행 중이면 그대로 유지됨
+- [x] 기존 `hamd serve` 직접 실행 경로와 `ham ui` 직접 실행 경로가 계속 동작함
 
 ---
 

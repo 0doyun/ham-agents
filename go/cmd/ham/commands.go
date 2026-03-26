@@ -31,6 +31,10 @@ func runRegister(ctx context.Context, client *ipc.Client, args []string) error {
 
 	fmt.Printf("registered %s [%s] via %s\n", agent.DisplayName, agent.ID, agent.Provider)
 
+	if err := ensureUIRunning(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: unable to auto-launch ham ui: %v\n", err)
+	}
+
 	// Run the provider command in the foreground so the user gets an interactive session.
 	providerBin, lookErr := exec.LookPath(agent.Provider)
 	if lookErr != nil {
@@ -385,11 +389,10 @@ func runUI(args []string) error {
 		return err
 	}
 
-	cmd := exec.Command(target.Executable)
-	if err := cmd.Start(); err != nil {
+	if err := startDetachedProcess(detachedLaunchTarget{Executable: target.Executable}); err != nil {
 		return fmt.Errorf("launch ham ui: %w", err)
 	}
-	return cmd.Process.Release()
+	return nil
 }
 
 func runSettings(ctx context.Context, client *ipc.Client, args []string) error {

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -70,4 +71,72 @@ func resolveUIExecutable(
 	}
 
 	return "", fmt.Errorf("ham-menubar executable could not be resolved")
+}
+
+type uiLaunchDependencies struct {
+	executablePath func() (string, error)
+	lookupEnv      func(string) (string, bool)
+	getwd          func() (string, error)
+	lookPath       func(string) (string, error)
+	isRunning      func(string) (bool, error)
+	start          func(detachedLaunchTarget) error
+}
+
+func defaultUILaunchDependencies() uiLaunchDependencies {
+	return uiLaunchDependencies{
+		executablePath: os.Executable,
+		lookupEnv:      os.LookupEnv,
+		getwd:          os.Getwd,
+		lookPath:       exec.LookPath,
+		isRunning:      isUIProcessRunning,
+		start:          startDetachedProcess,
+	}
+}
+
+func ensureUIRunning() error {
+	return ensureUIRunningWith(defaultUILaunchDependencies())
+}
+
+func ensureUIRunningWith(deps uiLaunchDependencies) error {
+	executable, err := resolveUIExecutable(deps.executablePath, deps.lookupEnv, deps.getwd, deps.lookPath)
+	if err != nil {
+		return err
+	}
+
+	running, err := deps.isRunning(executable)
+	if err != nil {
+		return err
+	}
+	if running {
+		return nil
+	}
+
+	return deps.start(detachedLaunchTarget{Executable: executable})
+}
+
+func isUIProcessRunning(executable string) (bool, error) {
+	processName := filepath.Base(executable)
+
+	if pgrepPath, err := exec.LookPath("pgrep"); err == nil {
+		cmd := exec.Command(pgrepPath, "-x", processName)
+		if err := cmd.Run(); err == nil {
+			return true, nil
+		} else if _, ok := err.(*exec.ExitError); ok {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+
+	output, err := exec.Command("ps", "-A", "-o", "comm=").Output()
+	if err != nil {
+		return false, err
+	}
+
+	for _, line := range strings.Split(string(output), "\n") {
+		if filepath.Base(strings.TrimSpace(line)) == processName {
+			return true, nil
+		}
+	}
+	return false, nil
 }
