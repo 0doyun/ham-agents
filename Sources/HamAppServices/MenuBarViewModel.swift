@@ -487,6 +487,7 @@ public final class MenuBarViewModel: ObservableObject {
             }
             errorMessage = nil
         } catch {
+            NSLog("[ham-viewmodel] refresh error: \(error)")
             errorMessage = error.localizedDescription
         }
     }

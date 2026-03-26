@@ -9,23 +9,59 @@ struct MenuBarContentView: View {
     @State private var quickMessage = ""
     @State private var selectedTeamID = ""
     @State private var selectedWorkspace = ""
+    @State private var showSettings = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Ham Office")
-                        .font(.headline)
-                    Spacer()
-                    if viewModel.isRefreshing {
-                        ProgressView()
-                            .controlSize(.small)
-                    }
-                    Button("Refresh") {
-                        Task { await viewModel.refresh() }
-                    }
+        VStack(spacing: 0) {
+            // Header
+            HStack {
+                Text("Ham Office")
+                    .font(.headline)
+                Spacer()
+                if viewModel.isRefreshing {
+                    ProgressView()
+                        .controlSize(.small)
                 }
+                Button {
+                    Task { await viewModel.refresh() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .buttonStyle(.borderless)
+                Button {
+                    showSettings.toggle()
+                } label: {
+                    Image(systemName: showSettings ? "gearshape.fill" : "gearshape")
+                }
+                .buttonStyle(.borderless)
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 8)
 
+            if showSettings {
+                settingsContent
+            } else {
+                officeContent
+            }
+        }
+        .onAppear {
+            if selectedAgentID == nil {
+                selectedAgentID = viewModel.agents.first?.id
+            }
+            viewModel.setRoleDraft(from: selectedAgentID)
+        }
+        .onChange(of: viewModel.agents.map(\.id)) { ids in
+            if selectedAgentID == nil || !ids.contains(selectedAgentID ?? "") {
+                selectedAgentID = ids.first
+            }
+            viewModel.setRoleDraft(from: selectedAgentID)
+        }
+    }
+
+    private var officeContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
                 if let summary = viewModel.summary {
                     HStack {
                         SummaryBadge(title: "Total", value: summary.totalAgents)
@@ -33,10 +69,6 @@ struct MenuBarContentView: View {
                         SummaryBadge(title: "Run", value: summary.runningAgents)
                         SummaryBadge(title: "Wait", value: summary.waitingAgents)
                         SummaryBadge(title: "Done", value: summary.doneAgents)
-                    }
-                    let attentionBreakdownChips = viewModel.topSummaryAttentionBreakdownChips
-                    if !attentionBreakdownChips.isEmpty {
-                        EventSummaryChipsView(chips: attentionBreakdownChips)
                     }
                 }
 
@@ -46,43 +78,106 @@ struct MenuBarContentView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if let presentation = viewModel.latestEventPresentation,
-                   let summary = viewModel.latestEventSummary {
-                    LatestEventBanner(presentation: presentation, summary: summary)
-                }
+                let filteredAttentionAgents = viewModel.filteredAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
+                let filteredNonAttentionAgents = viewModel.filteredNonAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
+                let filteredOfficeAgents = filteredAttentionAgents + filteredNonAttentionAgents
+                let filteredOfficeOccupants = PixelOfficeMapper.occupants(from: filteredOfficeAgents)
 
-                let recentActivitySeverityChips = viewModel.recentEventSeverityChips(forAgentID: nil)
-                let recentActivityChips = viewModel.recentEventSummaryChips(forAgentID: nil)
-                if !recentActivitySeverityChips.isEmpty || !recentActivityChips.isEmpty {
+                PixelOfficeView(
+                    occupants: filteredOfficeOccupants,
+                    animationSpeedMultiplier: viewModel.settings.appearance.animationSpeedMultiplier,
+                    reduceMotion: viewModel.settings.appearance.reduceMotion,
+                    hamsterSkin: viewModel.settings.appearance.hamsterSkin,
+                    hat: viewModel.settings.appearance.hat,
+                    deskTheme: viewModel.settings.appearance.deskTheme
+                )
+
+                if !filteredAttentionAgents.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Recent Activity")
+                        Text("Needs Attention")
                             .font(.caption.weight(.semibold))
-                        if !recentActivitySeverityChips.isEmpty {
-                            EventSummaryChipsView(chips: recentActivitySeverityChips)
-                        }
-                        if !recentActivityChips.isEmpty {
-                            EventSummaryChipsView(chips: recentActivityChips)
+                        ForEach(filteredAttentionAgents) { agent in
+                            AttentionAgentRow(
+                                name: agent.displayName,
+                                subtitle: viewModel.attentionSubtitle(for: agent)
+                            )
                         }
                     }
                 }
 
-                if !viewModel.notificationHistory.isEmpty {
+                if filteredAttentionAgents.isEmpty && filteredNonAttentionAgents.isEmpty {
+                    Text("No tracked agents")
+                        .foregroundStyle(.secondary)
+                } else {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Notification History")
-                            .font(.caption.weight(.semibold))
-                        ForEach(viewModel.notificationHistory.suffix(3).reversed()) { entry in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(entry.title)
-                                    .font(.caption2.weight(.semibold))
-                                Text(entry.body)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
+                        ForEach(filteredNonAttentionAgents) { agent in
+                            Button {
+                                selectedAgentID = agent.id
+                            } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(agent.displayName)
+                                        .font(.body.weight(.medium))
+                                    Text("\(viewModel.statusDisplayText(for: agent)) · \(agent.mode.rawValue) · \(viewModel.confidenceLevelText(for: agent)) \(viewModel.confidenceText(for: agent))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(6)
+                                .background(selectedAgentID == agent.id ? Color.accentColor.opacity(0.15) : Color.clear)
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
 
+                if selectedAgentID != nil {
+                    Divider()
+                    AgentDetailView(
+                        agent: viewModel.agent(withID: selectedAgentID),
+                        recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID),
+                        recentEventSummaryChips: viewModel.recentEventSummaryChips(forAgentID: selectedAgentID),
+                        notificationsMuted: viewModel.isNotificationsMuted(forAgentID: selectedAgentID),
+                        quickMessageFeedback: viewModel.quickMessageFeedback,
+                        confidenceText: viewModel.confidenceSummaryText(for: viewModel.agent(withID: selectedAgentID)),
+                        roleDraft: Binding(
+                            get: { viewModel.roleDraft },
+                            set: { viewModel.roleDraft = $0 }
+                        ),
+                        quickMessage: $quickMessage,
+                        openProject: {
+                            viewModel.openProject(forAgentID: selectedAgentID)
+                        },
+                        openSession: {
+                            viewModel.openSession(forAgentID: selectedAgentID)
+                        },
+                        canOpenSession: viewModel.settings.integrations.itermEnabled,
+                        toggleNotifications: {
+                            viewModel.toggleNotificationPause(forAgentID: selectedAgentID)
+                        },
+                        saveRole: {
+                            await viewModel.saveRole(forAgentID: selectedAgentID)
+                        },
+                        stopTracking: {
+                            await viewModel.stopTracking(forAgentID: selectedAgentID)
+                            selectedAgentID = viewModel.agents.first?.id
+                        },
+                        sendQuickMessage: {
+                            viewModel.sendQuickMessage(quickMessage, forAgentID: selectedAgentID)
+                            quickMessage = ""
+                        }
+                    )
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 14)
+        }
+    }
+
+    private var settingsContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
                 NotificationPermissionRow(
                     status: viewModel.notificationPermissionStatus,
                     requestPermission: {
@@ -189,130 +284,9 @@ struct MenuBarContentView: View {
                 if viewModel.settings.integrations.itermEnabled && !viewModel.attachableSessions.isEmpty {
                     AttachableSessionsSection(sessions: viewModel.attachableSessions)
                 }
-
-                if !viewModel.teams.isEmpty || !viewModel.workspaceOptions.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        if !viewModel.teams.isEmpty {
-                            Picker("Team", selection: $selectedTeamID) {
-                                Text("All Teams").tag("")
-                                ForEach(viewModel.teams) { team in
-                                    Text(team.displayName).tag(team.id)
-                                }
-                            }
-                        }
-                        if !viewModel.workspaceOptions.isEmpty {
-                            Picker("Workspace", selection: $selectedWorkspace) {
-                                Text("All Workspaces").tag("")
-                                ForEach(viewModel.workspaceOptions, id: \.self) { workspace in
-                                    Text(workspace).tag(workspace)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Text("Agents")
-                    .font(.subheadline.weight(.semibold))
-
-                let filteredAttentionAgents = viewModel.filteredAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
-                let filteredNonAttentionAgents = viewModel.filteredNonAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
-                let filteredOfficeAgents = filteredAttentionAgents + filteredNonAttentionAgents
-                let filteredOfficeOccupants = PixelOfficeMapper.occupants(from: filteredOfficeAgents)
-
-                PixelOfficeView(
-                    occupants: filteredOfficeOccupants,
-                    animationSpeedMultiplier: viewModel.settings.appearance.animationSpeedMultiplier,
-                    reduceMotion: viewModel.settings.appearance.reduceMotion,
-                    hamsterSkin: viewModel.settings.appearance.hamsterSkin,
-                    hat: viewModel.settings.appearance.hat,
-                    deskTheme: viewModel.settings.appearance.deskTheme
-                )
-
-                if !filteredAttentionAgents.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Needs Attention")
-                            .font(.caption.weight(.semibold))
-                        ForEach(filteredAttentionAgents) { agent in
-                            AttentionAgentRow(
-                                name: agent.displayName,
-                                subtitle: viewModel.attentionSubtitle(for: agent)
-                            )
-                        }
-                    }
-                }
-
-                if filteredAttentionAgents.isEmpty && filteredNonAttentionAgents.isEmpty {
-                    Text("No tracked agents")
-                        .foregroundStyle(.secondary)
-                } else {
-                    List(selection: $selectedAgentID) {
-                        ForEach(filteredNonAttentionAgents) { agent in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(agent.displayName)
-                                    .font(.body.weight(.medium))
-                                Text("\(viewModel.statusDisplayText(for: agent)) · \(agent.mode.rawValue) · \(viewModel.confidenceLevelText(for: agent)) \(viewModel.confidenceText(for: agent))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                            .tag(agent.id)
-                        }
-                    }
-                    .listStyle(.plain)
-                }
             }
-            .frame(minWidth: 190)
-
-            Divider()
-
-            AgentDetailView(
-                agent: viewModel.agent(withID: selectedAgentID),
-                recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID),
-                recentEventSummaryChips: viewModel.recentEventSummaryChips(forAgentID: selectedAgentID),
-                notificationsMuted: viewModel.isNotificationsMuted(forAgentID: selectedAgentID),
-                quickMessageFeedback: viewModel.quickMessageFeedback,
-                confidenceText: viewModel.confidenceSummaryText(for: viewModel.agent(withID: selectedAgentID)),
-                roleDraft: Binding(
-                    get: { viewModel.roleDraft },
-                    set: { viewModel.roleDraft = $0 }
-                ),
-                quickMessage: $quickMessage,
-                openProject: {
-                    viewModel.openProject(forAgentID: selectedAgentID)
-                },
-                openSession: {
-                    viewModel.openSession(forAgentID: selectedAgentID)
-                },
-                canOpenSession: viewModel.settings.integrations.itermEnabled,
-                toggleNotifications: {
-                    viewModel.toggleNotificationPause(forAgentID: selectedAgentID)
-                },
-                saveRole: {
-                    await viewModel.saveRole(forAgentID: selectedAgentID)
-                },
-                stopTracking: {
-                    await viewModel.stopTracking(forAgentID: selectedAgentID)
-                    selectedAgentID = viewModel.agents.first?.id
-                },
-                sendQuickMessage: {
-                    viewModel.sendQuickMessage(quickMessage, forAgentID: selectedAgentID)
-                    quickMessage = ""
-                }
-            )
-            .frame(minWidth: 140, maxWidth: .infinity, alignment: .topLeading)
-        }
-        .padding(14)
-        .onAppear {
-            if selectedAgentID == nil {
-                selectedAgentID = viewModel.agents.first?.id
-            }
-            viewModel.setRoleDraft(from: selectedAgentID)
-        }
-        .onChange(of: viewModel.agents.map(\.id)) { ids in
-            if selectedAgentID == nil || !ids.contains(selectedAgentID ?? "") {
-                selectedAgentID = ids.first
-            }
-            viewModel.setRoleDraft(from: selectedAgentID)
+            .padding(.horizontal, 14)
+            .padding(.bottom, 14)
         }
     }
 }

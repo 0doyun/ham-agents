@@ -121,4 +121,30 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         case sessionCommand = "session_command"
         case avatarVariant = "avatar_variant"
     }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        displayName = try c.decode(String.self, forKey: .displayName)
+        provider = try c.decode(String.self, forKey: .provider)
+        host = try c.decodeIfPresent(String.self, forKey: .host) ?? ""
+        mode = try c.decode(AgentMode.self, forKey: .mode)
+        projectPath = try c.decode(String.self, forKey: .projectPath)
+        role = try c.decodeIfPresent(String.self, forKey: .role)
+        status = try c.decode(AgentStatus.self, forKey: .status)
+        statusConfidence = try c.decodeIfPresent(Double.self, forKey: .statusConfidence) ?? 0
+        statusReason = try c.decodeIfPresent(String.self, forKey: .statusReason)
+        lastEventAt = try c.decodeIfPresent(Date.self, forKey: .lastEventAt) ?? Date()
+        lastUserVisibleSummary = try c.decodeIfPresent(String.self, forKey: .lastUserVisibleSummary)
+        notificationPolicy = try c.decodeIfPresent(NotificationPolicy.self, forKey: .notificationPolicy) ?? .default
+        sessionRef = try c.decodeIfPresent(String.self, forKey: .sessionRef)
+        sessionTitle = try c.decodeIfPresent(String.self, forKey: .sessionTitle)
+        sessionIsActive = try c.decodeIfPresent(Bool.self, forKey: .sessionIsActive) ?? false
+        sessionTTY = try c.decodeIfPresent(String.self, forKey: .sessionTTY)
+        sessionWorkingDirectory = try c.decodeIfPresent(String.self, forKey: .sessionWorkingDirectory)
+        sessionActivity = try c.decodeIfPresent(String.self, forKey: .sessionActivity)
+        sessionProcessID = try c.decodeIfPresent(Int.self, forKey: .sessionProcessID)
+        sessionCommand = try c.decodeIfPresent(String.self, forKey: .sessionCommand)
+        avatarVariant = try c.decodeIfPresent(String.self, forKey: .avatarVariant) ?? "default"
+    }
 }

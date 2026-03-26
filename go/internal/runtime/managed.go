@@ -47,6 +47,10 @@ func (s *ManagedService) Start(ctx context.Context, input RegisterManagedInput) 
 		_ = s.registry.RecordManagedStartFailure(ctx, agent.ID, err.Error())
 		return core.Agent{}, err
 	}
+	if err := os.MkdirAll(agent.ProjectPath, 0o755); err != nil {
+		_ = s.registry.RecordManagedStartFailure(ctx, agent.ID, err.Error())
+		return core.Agent{}, fmt.Errorf("create project dir: %w", err)
+	}
 	cmd.Dir = agent.ProjectPath
 	cmd.Env = append(os.Environ(),
 		"HAM_AGENT_ID="+agent.ID,

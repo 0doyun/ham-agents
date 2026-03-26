@@ -21,8 +21,14 @@ public protocol NotificationPermissionControlling: Sendable {
 public final class LiveUserNotificationCenter: UserNotificationCentering, @unchecked Sendable {
     private let center: UNUserNotificationCenter
 
-    public init(center: UNUserNotificationCenter = .current()) {
+    public init(center: UNUserNotificationCenter) {
         self.center = center
+    }
+
+    /// Returns a live center when running inside an app bundle, nil otherwise.
+    public static func makeIfAvailable() -> LiveUserNotificationCenter? {
+        guard Bundle.main.bundleIdentifier != nil else { return nil }
+        return LiveUserNotificationCenter(center: .current())
     }
 
     public func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
@@ -53,6 +59,14 @@ public final class LiveUserNotificationCenter: UserNotificationCentering, @unche
     }
 }
 
+/// Silent no-op center for environments without an app bundle.
+public struct NoopUserNotificationCenter: UserNotificationCentering {
+    public init() {}
+    public func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool { false }
+    public func add(_ request: UNNotificationRequest) async throws {}
+    public func authorizationStatus() async -> NotificationPermissionStatus { .notDetermined }
+}
+
 public struct NoopNotificationPermissionController: NotificationPermissionControlling {
     public init() {}
 
@@ -69,8 +83,10 @@ public final class UserNotificationSink: NotificationSink, NotificationPermissio
     private let center: UserNotificationCentering
     private let authorizationState = AuthorizationState()
 
-    public init(center: UserNotificationCentering = LiveUserNotificationCenter()) {
+    public init(center: UserNotificationCentering? = nil) {
         self.center = center
+            ?? LiveUserNotificationCenter.makeIfAvailable()
+            ?? NoopUserNotificationCenter()
     }
 
     public func send(_ candidate: NotificationCandidate) {

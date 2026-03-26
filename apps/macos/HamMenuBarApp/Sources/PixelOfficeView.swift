@@ -10,14 +10,9 @@ struct MenuBarHamsterGlyph: View {
     let hat: String
 
     var body: some View {
-        PixelHamsterSpriteView(
-            state: spriteState,
-            variant: hamsterSkin,
-            hat: hat,
-            animationSpeedMultiplier: animationSpeed,
-            reduceMotion: reduceMotion
-        )
-        .frame(width: 18, height: 18)
+        let frame = PixelHamsterLibrary.frame(for: spriteState, variant: hamsterSkin, frameIndex: 0)
+        let nsImage = PixelHamsterLibrary.renderToNSImage(frame: frame, hat: hat, variant: hamsterSkin, size: NSSize(width: 18, height: 18))
+        Image(nsImage: nsImage)
     }
 
     private var spriteState: HamsterSpriteState {
@@ -146,7 +141,7 @@ private struct PixelHamsterSpriteView: View {
     }
 }
 
-private enum PixelHamsterLibrary {
+enum PixelHamsterLibrary {
     private static let furDefault = Color(red: 0.67, green: 0.52, blue: 0.40)
     private static let furNight = Color(red: 0.55, green: 0.43, blue: 0.34)
     private static let furGolden = Color(red: 0.87, green: 0.72, blue: 0.37)
@@ -157,6 +152,57 @@ private enum PixelHamsterLibrary {
     private static let alert = Color(red: 0.98, green: 0.64, blue: 0.16)
     private static let error = Color(red: 0.88, green: 0.28, blue: 0.28)
     private static let success = Color(red: 0.26, green: 0.76, blue: 0.41)
+
+    static func renderToNSImage(frame: [String], hat: String, variant: String, size: NSSize) -> NSImage {
+        let image = NSImage(size: size, flipped: false) { rect in
+            guard let cgContext = NSGraphicsContext.current?.cgContext else { return false }
+            let rows = frame.count
+            let columns = frame.isEmpty ? 0 : frame[0].count
+            guard rows > 0, columns > 0 else { return true }
+            let pixelSize = min(rect.width / CGFloat(columns), rect.height / CGFloat(rows))
+            let xOffset = (rect.width - pixelSize * CGFloat(columns)) / 2
+            let yOffset = (rect.height - pixelSize * CGFloat(rows)) / 2
+
+            for (rowIndex, row) in frame.enumerated() {
+                for (columnIndex, symbol) in row.enumerated() {
+                    guard let nsColor = nsColor(for: symbol, variant: variant) else { continue }
+                    cgContext.setFillColor(nsColor)
+                    // Flip Y: NSImage drawing rep is bottom-up
+                    let y = rect.height - yOffset - CGFloat(rowIndex + 1) * pixelSize
+                    let pixelRect = CGRect(
+                        x: xOffset + CGFloat(columnIndex) * pixelSize,
+                        y: y,
+                        width: pixelSize,
+                        height: pixelSize
+                    )
+                    cgContext.fill(pixelRect)
+                }
+            }
+            return true
+        }
+        image.isTemplate = false
+        return image
+    }
+
+    private static func nsColor(for symbol: Character, variant: String) -> CGColor? {
+        switch symbol {
+        case "F":
+            switch variant {
+            case "golden": return CGColor(red: 0.87, green: 0.72, blue: 0.37, alpha: 1)
+            case "mint":   return CGColor(red: 0.56, green: 0.74, blue: 0.64, alpha: 1)
+            case "night":  return CGColor(red: 0.55, green: 0.43, blue: 0.34, alpha: 1)
+            default:       return CGColor(red: 0.67, green: 0.52, blue: 0.40, alpha: 1)
+            }
+        case "N": return CGColor(red: 0.55, green: 0.43, blue: 0.34, alpha: 1)
+        case "E": return CGColor(red: 0.96, green: 0.76, blue: 0.80, alpha: 1)
+        case "B": return CGColor(red: 0.97, green: 0.95, blue: 0.88, alpha: 1)
+        case "K": return CGColor(red: 0, green: 0, blue: 0, alpha: 1)
+        case "A": return CGColor(red: 0.98, green: 0.64, blue: 0.16, alpha: 1)
+        case "R": return CGColor(red: 0.88, green: 0.28, blue: 0.28, alpha: 1)
+        case "S": return CGColor(red: 0.26, green: 0.76, blue: 0.41, alpha: 1)
+        default:  return nil
+        }
+    }
 
     static func frameIndex(for date: Date, state: HamsterSpriteState) -> Int {
         let frameCount = frames(for: state).count

@@ -63,7 +63,7 @@ func run(args []string) error {
 	case "serve":
 		flags := flag.NewFlagSet("serve", flag.ContinueOnError)
 		flags.SetOutput(os.Stderr)
-		once := flags.Bool("once", true, "emit bootstrap status and exit")
+		once := flags.Bool("once", false, "emit bootstrap status and exit")
 		if err := flags.Parse(args); err != nil {
 			return err
 		}
