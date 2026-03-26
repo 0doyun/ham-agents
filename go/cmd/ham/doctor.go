@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -20,6 +21,7 @@ type doctorReport struct {
 	State         doctorPathCheck `json:"state"`
 	Events        doctorPathCheck `json:"events"`
 	Settings      doctorPathCheck `json:"settings"`
+	Launchd       string          `json:"launchd"`
 }
 
 type doctorPathCheck struct {
@@ -59,6 +61,7 @@ func gatherDoctorReport(socketPath string) (doctorReport, error) {
 		State:         inspectRegularPath(statePath),
 		Events:        inspectRegularPath(eventPath),
 		Settings:      inspectRegularPath(settingsPath),
+		Launchd:       inspectLaunchdStatus(),
 	}, nil
 }
 
@@ -81,6 +84,7 @@ func renderDoctorReport(out io.Writer, report doctorReport, asJSON bool) error {
 		formatDoctorPathLine("state", report.State),
 		formatDoctorPathLine("events", report.Events),
 		formatDoctorPathLine("settings", report.Settings),
+		fmt.Sprintf("launchd: %s", report.Launchd),
 	}
 	for _, line := range lines {
 		if _, err := fmt.Fprintln(out, line); err != nil {
@@ -116,6 +120,20 @@ func inspectRegularPath(path string) doctorPathCheck {
 		kind = "directory"
 	}
 	return doctorPathCheck{Path: path, Exists: true, Kind: kind}
+}
+
+func inspectLaunchdStatus() string {
+	plistPath, err := launchdPlistPath()
+	if err != nil {
+		return "unknown"
+	}
+	if _, err := os.Stat(plistPath); os.IsNotExist(err) {
+		return "not_installed"
+	}
+	if err := exec.Command("launchctl", "print", fmt.Sprintf("gui/%d/%s", os.Getuid(), launchdLabel)).Run(); err != nil {
+		return "installed_not_running"
+	}
+	return "running"
 }
 
 func inspectSocketPath(path string) doctorPathCheck {

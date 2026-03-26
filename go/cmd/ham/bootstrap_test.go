@@ -141,7 +141,8 @@ func TestEnsureDaemonWithDependenciesStartsAndWaitsForSocket(t *testing.T) {
 		sleep: func(duration time.Duration) {
 			current = current.Add(duration)
 		},
-		now: func() time.Time { return current },
+		now:        func() time.Time { return current },
+		tryLaunchd: nil,
 	})
 	if err != nil {
 		t.Fatalf("ensure daemon: %v", err)
@@ -177,7 +178,8 @@ func TestEnsureDaemonWithDependenciesTimesOutWhenSocketNeverAppears(t *testing.T
 		sleep: func(duration time.Duration) {
 			current = current.Add(duration)
 		},
-		now: func() time.Time { return current },
+		now:        func() time.Time { return current },
+		tryLaunchd: nil,
 	})
 	if err == nil {
 		t.Fatal("expected timeout error")

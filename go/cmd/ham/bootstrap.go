@@ -23,14 +23,15 @@ type detachedLaunchTarget struct {
 }
 
 type daemonBootstrapDependencies struct {
-	executablePath func() (string, error)
-	lookupEnv      func(string) (string, bool)
-	getwd          func() (string, error)
-	lookPath       func(string) (string, error)
-	dial           func(string, time.Duration) (net.Conn, error)
-	start          func(detachedLaunchTarget) error
-	sleep          func(time.Duration)
-	now            func() time.Time
+	executablePath  func() (string, error)
+	lookupEnv       func(string) (string, bool)
+	getwd           func() (string, error)
+	lookPath        func(string) (string, error)
+	dial            func(string, time.Duration) (net.Conn, error)
+	start           func(detachedLaunchTarget) error
+	sleep           func(time.Duration)
+	now             func() time.Time
+	tryLaunchd      func(socketPath string, deps daemonBootstrapDependencies) bool
 }
 
 func defaultDaemonBootstrapDependencies() daemonBootstrapDependencies {
@@ -42,9 +43,10 @@ func defaultDaemonBootstrapDependencies() daemonBootstrapDependencies {
 		dial: func(socketPath string, timeout time.Duration) (net.Conn, error) {
 			return net.DialTimeout("unix", socketPath, timeout)
 		},
-		start: startDetachedProcess,
-		sleep: time.Sleep,
-		now:   time.Now,
+		start:      startDetachedProcess,
+		sleep:      time.Sleep,
+		now:        time.Now,
+		tryLaunchd: tryLaunchdBootstrap,
 	}
 }
 
@@ -57,6 +59,13 @@ func ensureDaemonWithDependencies(socketPath string, deps daemonBootstrapDepende
 		return nil
 	}
 
+	// Try launchd first: if hamd is installable, register it so macOS manages
+	// the lifecycle (auto-restart on crash, start on login).
+	if deps.tryLaunchd != nil && deps.tryLaunchd(socketPath, deps) {
+		return nil
+	}
+
+	// Fallback: direct detached process spawn for dev/source-checkout workflows.
 	target, err := resolveDaemonLaunchTarget(deps.executablePath, deps.lookupEnv, deps.getwd, deps.lookPath)
 	if err != nil {
 		return fmt.Errorf("resolve daemon bootstrap target: %w", err)
@@ -65,6 +74,36 @@ func ensureDaemonWithDependencies(socketPath string, deps daemonBootstrapDepende
 		return fmt.Errorf("launch hamd: %w", err)
 	}
 
+	return waitForDaemon(socketPath, deps)
+}
+
+func tryLaunchdBootstrap(socketPath string, deps daemonBootstrapDependencies) bool {
+	// If already installed via launchd, just kick it and wait.
+	plistPath, err := launchdPlistPath()
+	if err != nil {
+		return false
+	}
+
+	if _, err := os.Stat(plistPath); err == nil {
+		// Plist exists — launchd should bring it up. Just wait.
+		if waitForDaemon(socketPath, deps) == nil {
+			return true
+		}
+		// Launchd didn't bring it up in time, fall through.
+		return false
+	}
+
+	// Not installed yet. Try to auto-install if a built binary is available.
+	if _, err := resolveHamdForInstall(); err != nil {
+		return false
+	}
+	if err := installDaemonViaLaunchd(); err != nil {
+		return false
+	}
+	return waitForDaemon(socketPath, deps) == nil
+}
+
+func waitForDaemon(socketPath string, deps daemonBootstrapDependencies) error {
 	deadline := deps.now().Add(daemonBootstrapTimeout)
 	var lastErr error
 	for {
@@ -77,7 +116,6 @@ func ensureDaemonWithDependencies(socketPath string, deps daemonBootstrapDepende
 		}
 		deps.sleep(daemonBootstrapPollInterval)
 	}
-
 	return fmt.Errorf("timed out waiting for daemon socket %s after auto-bootstrap: %w", socketPath, lastErr)
 }
 
