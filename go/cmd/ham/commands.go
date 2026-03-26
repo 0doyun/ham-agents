@@ -24,44 +24,34 @@ func runRegister(ctx context.Context, client *ipc.Client, args []string) error {
 		return err
 	}
 
-	agent, err := client.RunManaged(ctx, input)
+	agent, err := client.RegisterManaged(ctx, input)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("registered %s [%s] via %s\n", agent.DisplayName, agent.ID, agent.Provider)
+	fmt.Fprintf(os.Stderr, "ham: %s registered [%s]\n", agent.DisplayName, agent.ID)
 
 	if err := ensureUIRunning(); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: unable to auto-launch ham ui: %v\n", err)
+		fmt.Fprintf(os.Stderr, "ham: warning: unable to auto-launch ham ui: %v\n", err)
 	}
 
-	// Run the provider command in the foreground so the user gets an interactive session.
+	// Run the provider inside a PTY so the user gets a full interactive session
+	// while ham tees output to the daemon for state inference.
 	providerBin, lookErr := exec.LookPath(agent.Provider)
 	if lookErr != nil {
+		_ = client.RemoveAgent(ctx, agent.ID)
 		return fmt.Errorf("provider %q not found in PATH: %w", agent.Provider, lookErr)
 	}
 
-	cmd := exec.CommandContext(ctx, providerBin)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if input.ProjectPath != "" {
-		cmd.Dir = input.ProjectPath
-	}
-	cmd.Env = append(os.Environ(),
-		"HAM_AGENT_ID="+agent.ID,
-		"HAM_AGENT_ROLE="+agent.Role,
-	)
+	runErr := runWithPTY(ctx, client, agent.ID, providerBin, agent.Provider, input.ProjectPath)
 
-	runErr := cmd.Run()
-
-	// Notify daemon that the session ended.
-	_ = client.StopManaged(ctx, agent.ID)
-
+	// Notify daemon that the session ended so the hamster updates.
 	if runErr != nil {
+		_ = client.NotifyManagedExited(context.Background(), agent.ID, runErr)
 		return fmt.Errorf("%s exited: %w", agent.Provider, runErr)
 	}
-	fmt.Printf("\n%s session ended. agent %s marked as done.\n", agent.Provider, agent.DisplayName)
+	// Clean exit — remove the agent so the hamster disappears.
+	_ = client.RemoveAgent(context.Background(), agent.ID)
 	return nil
 }
 
