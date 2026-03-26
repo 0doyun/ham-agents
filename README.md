@@ -1,113 +1,135 @@
 # ham-agents
 
-`ham-agents` is a local macOS orchestrator for terminal-based AI sessions.
+**Terminal AI sessions as a hamster team.**
 
-The long-term product goal is to implement the full experience described in [`spec.md`](./spec.md): managed terminal agents, a local runtime, a menu bar app, notifications, iTerm2 integration, and the pixel-office UI.
+ham-agents is a macOS menu bar app that lets you manage multiple AI coding agents (Claude Code, Codex, etc.) from one place. Run them, watch pixel hamsters work at their desks, get notified when they need you, and send messages — all without leaving your workflow.
 
-This repository is structured so autonomous execution workflows such as `ralph` can keep moving in small, verifiable slices without losing the product direction.
+## What it does
 
-## Source of Truth
+- `ham run claude` — starts Claude Code and registers a hamster in the office
+- `ham run codex` — same for Codex (or any CLI-based AI agent)
+- Menu bar shows a pixel office where each hamster represents a running agent
+- Hamsters move between zones based on agent state (desk = working, kitchen = idle, alert = needs input)
+- Click a hamster to see what it's doing, send it a message, or jump to its terminal
+- macOS notifications when an agent finishes, errors, or needs input
+- All state tracked locally — nothing leaves your machine
 
-- Product truth: `spec.md`
-- Future direction reference: `roadmap.md`
-- Active backlog and current slice: `tasks.md`
-- Current implementation architecture: `docs/architecture.md`
-- Working assumptions: `docs/assumptions.md`
-- Execution history: `docs/progress.md`
-- Ralph planning artifacts: `.omx/plans/`
+## Quick start
 
-## Current Technical Direction
+### Requirements
 
-- UI: SwiftUI/AppKit menu bar app
-- CLI/runtime: Go
-- Transitional bootstrap: SwiftPM package kept green during migration
-- Platform: macOS
-- IPC direction: Unix domain socket + JSON event stream
-- Initial delivery strategy: managed mode first, then runtime/persistence, then menu bar, then richer orchestration
+- macOS 13+
+- Go 1.21+
+- Swift 5.10+
+- iTerm2 (recommended, for session targeting)
 
-## Repository Layout
-
-```text
-apps/
-  macos/HamMenuBarApp/    # Swift macOS app planning surface
-go/
-  cmd/ham/                # Go CLI entrypoint
-  cmd/hamd/               # Go daemon entrypoint
-  internal/core/          # agent domain model and runtime snapshot
-  internal/runtime/       # managed registry service
-  internal/store/         # local file-backed persistence
-  internal/ipc/           # socket path/bootstrap IPC config
-  internal/adapters/      # iTerm2 adapter boundary
-Sources/
-  HamCore/                # shared Swift models + daemon payload contracts
-  HamAppServices/         # Swift daemon client + menu bar summary/view-model prep
-  ...                     # transitional Swift bootstrap code
-Tests/
-  ...                     # transitional Swift bootstrap tests
-docs/
-  architecture.md
-  assumptions.md
-  progress.md
-.omx/plans/
-  prd-ham-agents.md
-  test-spec-ham-agents.md
-```
-
-## Current Verification
-
-The bootstrap slice should remain green with:
+### Build and install
 
 ```bash
+git clone https://github.com/your-org/ham-agents.git
+cd ham-agents
+
+# Build CLI + daemon
+go build -o ~/go/bin/ham ./go/cmd/ham
+go build -o ~/go/bin/hamd ./go/cmd/hamd
+
+# Build menu bar app
 swift build --disable-sandbox
-swift test --disable-sandbox
 ```
 
-The Go bootstrap slice adds:
+Make sure `~/go/bin` is in your PATH.
+
+### Run
 
 ```bash
+ham run claude
+```
+
+That's it. The daemon starts automatically via launchd, the menu bar app launches, and your hamster appears at its desk.
+
+## CLI
+
+```
+ham run <provider>              # start an agent (claude, codex, etc.)
+ham list                        # list all tracked agents
+ham status                      # summary with attention counts
+ham ask <agent> "message"       # send a message to an agent
+ham stop <agent>                # stop a managed agent
+ham attach --pick-iterm-session # attach to an existing iTerm session
+ham doctor                      # check daemon, socket, launchd status
+ham ui                          # launch the menu bar app manually
+```
+
+## Architecture
+
+```
+ham (Go CLI) ──── IPC ────► hamd (Go daemon)
+     │                          │
+     │ PTY                      │ state inference
+     ▼                          ▼
+  provider               agent registry
+  (claude, codex)        event log
+                         settings
+                              │
+                              ▼
+                    ham-menubar (Swift)
+                    pixel office UI
+                    notifications
+```
+
+- **ham** — CLI that wraps providers in a PTY, forwarding output to the daemon for state inference
+- **hamd** — background daemon managed by launchd, tracks agent state, serves IPC
+- **ham-menubar** — SwiftUI menu bar app with pixel hamster office, notifications, quick actions
+
+## Menu bar app
+
+The popover shows a pixel office with four zones:
+
+| Zone | Meaning |
+|------|---------|
+| Desk | Agent is actively working (thinking, typing, running tools) |
+| Library | Agent is reading files or code |
+| Kitchen | Agent is idle or done |
+| Alert | Agent has an error or needs your input |
+
+From the popover you can:
+- See each agent's current status and last output
+- Send a quick message directly to the agent's terminal session
+- Open the agent's iTerm tab
+- Pause/resume notifications per agent
+- Edit agent roles
+- Stop tracking an agent
+
+## Development
+
+```bash
+# Run tests
 go test ./...
+swift test --disable-sandbox
+
+# Run from source (without installing)
+go run ./go/cmd/ham run claude
 ```
 
-Daemon-backed smoke verification currently requires running `hamd serve --once=false` outside the Codex sandbox because Unix socket binding is blocked inside the sandboxed test environment.
+## Status
 
-Current daemon-backed CLI surface:
+Early alpha. Core flow works end-to-end:
 
-```bash
-go run ./go/cmd/ham list
-go run ./go/cmd/ham run claude reviewer --project /tmp/demo --role reviewer
-go run ./go/cmd/ham attach iterm2://session/abc ops --project /tmp/demo --role reviewer
-go run ./go/cmd/ham open --print <agent-id>
-go run ./go/cmd/ham status --json
-go run ./go/cmd/ham events --json --limit 5
-```
+- [x] `ham run claude` / `ham run codex` with interactive PTY
+- [x] Automatic daemon bootstrap via launchd
+- [x] Automatic menu bar app launch
+- [x] Real-time state inference from provider output
+- [x] Pixel hamster office with status-based zone placement
+- [x] iTerm2 session targeting (open tab, send message)
+- [x] macOS notifications (done, error, waiting input)
+- [x] Agent lifecycle (register, track, stop, remove)
 
-Swift menu bar prep currently lives in `HamAppServices`, which provides:
-- daemon request/response payload models shared with Go
-- a Unix socket transport for `hamd`
-- a summary service that can turn snapshot + events into menu bar counts/feed data
-- a menu bar view model used by the baseline `ham-menubar` executable target
+Not yet done:
+- [ ] Homebrew formula
+- [ ] Team/workspace grouping
+- [ ] Multiple hamster skins and office customization in the wild
+- [ ] Broader provider support beyond Claude Code and Codex
 
-The current `ham-menubar` baseline:
-- starts an initial refresh on launch
-- polls daemon state on an interval through the shared view model
-- supports manual refresh from the popover
-- detects done / waiting_input / error status transitions and routes notification candidates through a sink boundary
-- requests notification permission on first delivery attempt and can submit macOS notification requests through `UserNotifications`
-- shows a selected-agent detail pane with recent event context inside the popover
-- includes a baseline “Open Project Folder” action from the selected-agent detail pane
-- shows current notification permission state and lets the user request permission from the popover
-- uses `sessionRef` as a URL-based session target when available, otherwise falls back to opening the workspace in iTerm or Finder
-- lets the user pause/resume notifications per selected agent inside the popover
-- includes a quick-message field that prefers iTerm write automation and falls back to clipboard/session handoff
-- shows quick-message result feedback so fallback/error behavior is visible instead of silent
-- persists notification pause/resume through the daemon so mute state survives refreshes instead of living only in Swift UI memory
-- lets the user edit and save the selected agent role through the daemon-backed detail pane
-- lets the user stop tracking the selected agent from the popover
-- lets the user edit notification toggles from the popover and have them affect actual delivery behavior
-- already renders attached agents distinctly because mode/confidence now flow through from the daemon
-- shows mode and confidence inline so managed/attached distinctions are visible in the baseline UI
-- can also register observed sources and refresh their status heuristically from transcript/log contents
-- keeps observed-source status fresher while `hamd` is serving by polling observed paths in the background
-- resolves open targets for agents through the daemon and exposes that path via `ham open`
-- reads and updates a minimal notification settings document from the popover
-- enforces notification toggles and preview-text masking from that backend settings document
+## License
+
+TBD
