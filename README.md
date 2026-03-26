@@ -4,6 +4,10 @@
 
 ham-agents is a macOS menu bar app that lets you manage multiple AI coding agents (Claude Code, Codex, etc.) from one place. Run them, watch pixel hamsters work at their desks, get notified when they need you, and send messages — all without leaving your workflow.
 
+<p align="center">
+  <img src="assets/image.png" alt="ham-agents pixel office" width="420">
+</p>
+
 ## What it does
 
 - `ham run claude` — starts Claude Code and registers a hamster in the office
@@ -26,7 +30,7 @@ ham-agents is a macOS menu bar app that lets you manage multiple AI coding agent
 ### Build and install
 
 ```bash
-git clone https://github.com/your-org/ham-agents.git
+git clone https://github.com/0doyun/ham-agents.git
 cd ham-agents
 
 # Build CLI + daemon
