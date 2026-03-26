@@ -145,7 +145,9 @@ struct ItermSessionOpener: SessionOpening {
                 repeat with aTab in tabs of aWindow
                     repeat with aSession in sessions of aTab
                         if id of aSession is "\(appleScriptEscaped(sessionID))" then
+                            select aTab
                             select aSession
+                            set index of aWindow to 1
                             return
                         end if
                     end repeat

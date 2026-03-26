@@ -121,6 +121,12 @@ struct MenuBarContentView: View {
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
+                                    if let summary = agent.lastUserVisibleSummary, !summary.isEmpty {
+                                        Text(summary)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary.opacity(0.7))
+                                            .lineLimit(2)
+                                    }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(6)
