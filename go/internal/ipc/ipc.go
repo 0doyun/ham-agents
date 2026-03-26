@@ -134,6 +134,7 @@ func (c *Client) RegisterManaged(ctx context.Context, input hamruntime.RegisterM
 		DisplayName: input.DisplayName,
 		ProjectPath: input.ProjectPath,
 		Role:        input.Role,
+		SessionRef:  input.SessionRef,
 	})
 	if err != nil {
 		return core.Agent{}, err
