@@ -1,30 +1,35 @@
+import AppKit
 import SwiftUI
 import HamAppServices
 import HamCore
 import HamNotifications
 
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.accessory)
+    }
+}
+
 @main
 struct HamMenuBarApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var viewModel = HamMenuBarApp.makeViewModel()
 
     var body: some Scene {
         MenuBarExtra {
             MenuBarContentView(viewModel: viewModel)
-                .frame(minWidth: 320, minHeight: 220)
+                .frame(minWidth: 480, minHeight: 400)
                 .task {
                     await viewModel.refresh()
                 }
         } label: {
-            HStack(spacing: 4) {
-                MenuBarHamsterGlyph(
-                    state: viewModel.menuBarHamsterState,
-                    animationSpeed: viewModel.settings.appearance.animationSpeedMultiplier,
-                    reduceMotion: viewModel.settings.appearance.reduceMotion,
-                    hamsterSkin: viewModel.settings.appearance.hamsterSkin,
-                    hat: viewModel.settings.appearance.hat
-                )
-                Text(viewModel.statusLine)
-            }
+            MenuBarHamsterGlyph(
+                state: viewModel.menuBarHamsterState,
+                animationSpeed: viewModel.settings.appearance.animationSpeedMultiplier,
+                reduceMotion: viewModel.settings.appearance.reduceMotion,
+                hamsterSkin: viewModel.settings.appearance.hamsterSkin,
+                hat: viewModel.settings.appearance.hat
+            )
         }
         .menuBarExtraStyle(.window)
     }
@@ -32,11 +37,15 @@ struct HamMenuBarApp: App {
     private static func makeViewModel() -> MenuBarViewModel {
         let client: HamDaemonClientProtocol
         if let transport = try? UnixSocketDaemonTransport() {
+            let socketPath = (try? DaemonEnvironment.defaultSocketPath()) ?? "unknown"
+            NSLog("[ham-menubar] using socket: %@", socketPath)
             client = HamDaemonClient(transport: transport)
         } else {
+            NSLog("[ham-menubar] falling back to PreviewDaemonClient")
             client = PreviewDaemonClient()
         }
-        let notificationSink = UserNotificationSink()
+        let center: UserNotificationCentering = LiveUserNotificationCenter.makeIfAvailable() ?? NoopUserNotificationCenter()
+        let notificationSink = UserNotificationSink(center: center)
         let projectOpener = WorkspaceProjectOpener()
         let sessionOpener = ItermSessionOpener(projectOpener: projectOpener)
         let viewModel = MenuBarViewModel(

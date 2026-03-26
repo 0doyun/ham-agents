@@ -274,57 +274,62 @@ public final class UnixSocketDaemonTransport: DaemonTransport, @unchecked Sendab
             throw HamDaemonClientError.encodingFailed
         }
 
-        let connection = NWConnection(to: .unix(path: socketPath), using: NWParameters(tls: nil))
-
         return try await withCheckedThrowingContinuation { continuation in
-            let accumulator = ReceiveAccumulator(
-                decoder: decoder,
-                continuation: continuation
-            )
+            queue.async { [socketPath, decoder] in
+                do {
+                    let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+                    guard fd >= 0 else {
+                        throw HamDaemonClientError.transportFailed("socket() failed: \(errno)")
+                    }
 
-            connection.stateUpdateHandler = { (state: NWConnection.State) in
-                switch state {
-                case .ready:
-                    connection.send(content: payload, completion: NWConnection.SendCompletion.contentProcessed { error in
-                        if let error {
-                            accumulator.fail(HamDaemonClientError.transportFailed(error.localizedDescription))
-                            connection.cancel()
-                            return
+                    var addr = sockaddr_un()
+                    addr.sun_family = sa_family_t(AF_UNIX)
+                    let pathBytes = socketPath.utf8CString
+                    guard pathBytes.count <= MemoryLayout.size(ofValue: addr.sun_path) else {
+                        close(fd)
+                        throw HamDaemonClientError.transportFailed("socket path too long")
+                    }
+                    withUnsafeMutablePointer(to: &addr.sun_path) { ptr in
+                        ptr.withMemoryRebound(to: CChar.self, capacity: pathBytes.count) { dest in
+                            for i in 0..<pathBytes.count { dest[i] = pathBytes[i] }
                         }
+                    }
 
-                        Self.receiveNextChunk(on: connection, accumulator: accumulator)
-                    })
-                case .failed(let error):
-                    accumulator.fail(HamDaemonClientError.transportFailed(error.localizedDescription))
-                    connection.cancel()
-                default:
-                    break
+                    let connectResult = withUnsafePointer(to: &addr) { ptr in
+                        ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockaddrPtr in
+                            Darwin.connect(fd, sockaddrPtr, socklen_t(MemoryLayout<sockaddr_un>.size))
+                        }
+                    }
+                    guard connectResult == 0 else {
+                        close(fd)
+                        throw HamDaemonClientError.transportFailed("connect() failed: \(errno)")
+                    }
+
+                    // Send
+                    let sent = payload.withUnsafeBytes { buf in
+                        Darwin.write(fd, buf.baseAddress!, buf.count)
+                    }
+                    guard sent == payload.count else {
+                        close(fd)
+                        throw HamDaemonClientError.transportFailed("write() incomplete")
+                    }
+
+                    // Receive until EOF
+                    var responseData = Data()
+                    var buf = [UInt8](repeating: 0, count: 65536)
+                    while true {
+                        let n = Darwin.read(fd, &buf, buf.count)
+                        if n <= 0 { break }
+                        responseData.append(buf, count: n)
+                    }
+                    close(fd)
+
+                    let response = try decoder.decode(DaemonResponse.self, from: responseData)
+                    continuation.resume(returning: response)
+                } catch {
+                    continuation.resume(throwing: error)
                 }
             }
-
-            connection.start(queue: queue)
-        }
-    }
-
-    private static func receiveNextChunk(on connection: NWConnection, accumulator: ReceiveAccumulator) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { content, _, isComplete, error in
-            if let error {
-                accumulator.fail(HamDaemonClientError.transportFailed(error.localizedDescription))
-                connection.cancel()
-                return
-            }
-
-            if let content, !content.isEmpty {
-                accumulator.append(content)
-            }
-
-            if isComplete {
-                accumulator.succeed()
-                connection.cancel()
-                return
-            }
-
-            receiveNextChunk(on: connection, accumulator: accumulator)
         }
     }
 }
