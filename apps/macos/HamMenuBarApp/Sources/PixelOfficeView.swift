@@ -58,29 +58,41 @@ struct PixelOfficeView: View {
     private func zoneCard(_ zone: PixelOfficeZone, icon: String, title: String) -> some View {
         let zoneOccupants = occupants.filter { $0.zone == zone }
 
-        ZStack(alignment: .topLeading) {
+        ZStack {
             // Pixel furniture background
             Canvas { context, size in
                 PixelFurnitureRenderer.draw(zone: zone, theme: deskTheme, in: context, size: size)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 3) {
-                    Image(systemName: icon)
-                        .font(.system(size: 8))
-                    Text(title)
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                }
-                .foregroundStyle(.white.opacity(0.7))
-                .padding(.horizontal, 6)
-                .padding(.top, 5)
-
-                if zoneOccupants.isEmpty {
+            // Room label top-left
+            VStack {
+                HStack {
+                    HStack(spacing: 3) {
+                        Image(systemName: icon)
+                            .font(.system(size: 8))
+                        Text(title)
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    }
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.horizontal, 6)
+                    .padding(.top, 5)
                     Spacer()
-                } else {
-                    HStack(spacing: 6) {
+                }
+                Spacer()
+            }
+
+            // Hamsters anchored to furniture position, left-aligned
+            if !zoneOccupants.isEmpty {
+                VStack(spacing: 0) {
+                    Spacer()
+                    HStack(alignment: .bottom, spacing: 6) {
                         ForEach(zoneOccupants) { occupant in
                             VStack(spacing: 1) {
+                                Text(occupant.agent.displayName)
+                                    .font(.system(size: 7, weight: .medium, design: .monospaced))
+                                    .foregroundStyle(.white.opacity(0.85))
+                                    .lineLimit(1)
+
                                 PixelHamsterSpriteView(
                                     state: occupant.sprite,
                                     variant: occupant.agent.avatarVariant == "default" ? hamsterSkin : occupant.agent.avatarVariant,
@@ -89,21 +101,30 @@ struct PixelOfficeView: View {
                                     reduceMotion: reduceMotion
                                 )
                                 .frame(width: 32, height: 32)
-
-                                Text(occupant.agent.displayName)
-                                    .font(.system(size: 7, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(.white.opacity(0.85))
-                                    .lineLimit(1)
                             }
                         }
+                        Spacer()
                     }
                     .padding(.horizontal, 6)
-                    Spacer(minLength: 0)
+                    .padding(.bottom, furnitureBottomPadding(for: zone))
                 }
             }
         }
         .frame(maxWidth: .infinity, minHeight: 100)
         .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    private func furnitureBottomPadding(for zone: PixelOfficeZone) -> CGFloat {
+        switch zone {
+        case .desk:
+            return 26  // sit at desk height
+        case .library:
+            return 6   // stand on floor by bookshelf
+        case .kitchen:
+            return 30  // stand in front of counter (counter is tall)
+        case .alertCorner:
+            return 8   // stand on warning stripes
+        }
     }
 }
 
@@ -149,15 +170,16 @@ private enum PixelFurnitureRenderer {
         // Desk legs
         context.fill(Path(CGRect(x: p * 3, y: deskY + p * 3, width: p * 1.5, height: p * 5)), with: .color(palette.furnitureDark))
         context.fill(Path(CGRect(x: w - p * 5, y: deskY + p * 3, width: p * 1.5, height: p * 5)), with: .color(palette.furnitureDark))
-        // Monitor
-        let monX = w - p * 12
+        // Plant (right area)
+        let plantX = w - p * 16
+        context.fill(Path(CGRect(x: plantX, y: deskY - p * 3, width: p * 2, height: p * 2)), with: .color(palette.plant))
+        context.fill(Path(CGRect(x: plantX, y: deskY - p * 1, width: p * 2, height: p * 1)), with: .color(palette.pot))
+        // Monitor (right side, gap after plant)
+        let monX = w - p * 10
         context.fill(Path(CGRect(x: monX, y: deskY - p * 6, width: p * 8, height: p * 5)), with: .color(palette.screen))
         context.fill(Path(CGRect(x: monX + p * 0.5, y: deskY - p * 5.5, width: p * 7, height: p * 4)), with: .color(palette.screenGlow))
         // Monitor stand
         context.fill(Path(CGRect(x: monX + p * 3, y: deskY - p * 1, width: p * 2, height: p * 1)), with: .color(palette.furnitureDark))
-        // Small plant
-        context.fill(Path(CGRect(x: p * 4, y: deskY - p * 3, width: p * 2, height: p * 2)), with: .color(palette.plant))
-        context.fill(Path(CGRect(x: p * 4, y: deskY - p * 1, width: p * 2, height: p * 1)), with: .color(palette.pot))
     }
 
     private static func drawLibrary(in context: GraphicsContext, size: CGSize, p: CGFloat, palette: ThemePalette) {
@@ -190,16 +212,16 @@ private enum PixelFurnitureRenderer {
         let counterY = size.height - p * 9
         context.fill(Path(CGRect(x: p * 2, y: counterY, width: size.width - p * 4, height: p * 2)), with: .color(palette.furniture))
         context.fill(Path(CGRect(x: p * 2, y: counterY + p * 2, width: size.width - p * 4, height: p * 7)), with: .color(palette.furnitureDark))
-        // Coffee machine
-        let cmX = p * 4
+        // Cup + Steam (right area)
+        let cupX = size.width - p * 18
+        context.fill(Path(CGRect(x: cupX, y: counterY - p * 2, width: p * 2, height: p * 2)), with: .color(.white.opacity(0.8)))
+        context.fill(Path(CGRect(x: cupX + p * 0.5, y: counterY - p * 3.5, width: p * 0.5, height: p * 1)), with: .color(.white.opacity(0.3)))
+        context.fill(Path(CGRect(x: cupX + p * 1.5, y: counterY - p * 4, width: p * 0.5, height: p * 1)), with: .color(.white.opacity(0.2)))
+        // Coffee machine (gap after cup)
+        let cmX = size.width - p * 14
         context.fill(Path(CGRect(x: cmX, y: counterY - p * 5, width: p * 4, height: p * 5)), with: .color(palette.appliance))
         context.fill(Path(CGRect(x: cmX + p, y: counterY - p * 4, width: p * 2, height: p * 2)), with: .color(palette.screen))
-        // Cup
-        context.fill(Path(CGRect(x: cmX + p * 5, y: counterY - p * 2, width: p * 2, height: p * 2)), with: .color(.white.opacity(0.8)))
-        // Steam
-        context.fill(Path(CGRect(x: cmX + p * 5.5, y: counterY - p * 3.5, width: p * 0.5, height: p * 1)), with: .color(.white.opacity(0.3)))
-        context.fill(Path(CGRect(x: cmX + p * 6.5, y: counterY - p * 4, width: p * 0.5, height: p * 1)), with: .color(.white.opacity(0.2)))
-        // Fridge
+        // Fridge (right side, original position)
         let fridgeX = size.width - p * 10
         context.fill(Path(CGRect(x: fridgeX, y: p * 3, width: p * 7, height: size.height - p * 11)), with: .color(palette.appliance))
         context.fill(Path(CGRect(x: fridgeX + p * 5.5, y: p * 6, width: p * 0.5, height: p * 3)), with: .color(palette.furnitureDark))
