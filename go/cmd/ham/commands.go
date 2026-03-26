@@ -24,6 +24,11 @@ func runRegister(ctx context.Context, client *ipc.Client, args []string) error {
 		return err
 	}
 
+	// Capture the current iTerm session ID so Open/Message can target it.
+	if sessionID := detectItermSessionID(); sessionID != "" {
+		input.SessionRef = "iterm2://session/" + sessionID
+	}
+
 	agent, err := client.RegisterManaged(ctx, input)
 	if err != nil {
 		return err
