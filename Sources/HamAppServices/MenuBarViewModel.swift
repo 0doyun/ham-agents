@@ -55,7 +55,7 @@ public final class MenuBarViewModel: ObservableObject {
         projectOpener: ProjectOpening = NoopProjectOpener(),
         sessionOpener: SessionOpening = NoopSessionOpener(),
         quickMessageSender: QuickMessageSending = NoopQuickMessageSender(),
-        pollIntervalNanoseconds: UInt64 = 15_000_000_000,
+        pollIntervalNanoseconds: UInt64 = 5_000_000_000,
         eventFollowWaitMilliseconds: Int = 15_000,
         now: @escaping @Sendable () -> Date = { Date() },
         calendar: Calendar = .autoupdatingCurrent,
@@ -420,29 +420,27 @@ public final class MenuBarViewModel: ObservableObject {
         guard !hasStarted else { return }
         hasStarted = true
 
+        let pollInterval = pollIntervalNanoseconds
+        let followWait = eventFollowWaitMilliseconds
+
         refreshTask = Task { [weak self] in
-            guard let self else { return }
-            await self.refresh()
+            await self?.refresh()
 
             while !Task.isCancelled {
                 do {
-                    try await self.sleep(self.pollIntervalNanoseconds)
+                    try await Task.sleep(nanoseconds: pollInterval)
                 } catch {
                     break
                 }
 
-                if Task.isCancelled {
-                    break
-                }
-
-                await self.refresh()
+                guard !Task.isCancelled else { break }
+                await self?.refresh()
             }
         }
 
         eventFollowTask = Task { [weak self] in
-            guard let self else { return }
             while !Task.isCancelled {
-                await self.followLatestEvents(waitMilliseconds: self.eventFollowWaitMilliseconds)
+                await self?.followLatestEvents(waitMilliseconds: followWait)
             }
         }
     }
