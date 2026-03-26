@@ -6,6 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/adapters"
@@ -75,6 +77,17 @@ func run(args []string) error {
 			fmt.Printf("hamd bootstrap ready: tracked=%d socket=%s state=%s events=%s\n", snapshot.TotalCount(), ipcConfig.SocketPath, statePath, eventPath)
 			return nil
 		}
+
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		sigCh := make(chan os.Signal, 1)
+		signal.Notify(sigCh, syscall.SIGTERM, syscall.SIGINT)
+		go func() {
+			<-sigCh
+			fmt.Fprintf(os.Stderr, "hamd: shutting down\n")
+			cancel()
+		}()
 
 		server := ipc.NewServer(ipcConfig.SocketPath, registry, managedService, settingsService, teamService, itermAdapter)
 		go pollRuntimeState(ctx, registry, settingsService, itermAdapter, transcriptAdapter, 2*time.Second)
