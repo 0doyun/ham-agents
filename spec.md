@@ -108,21 +108,51 @@ Workspace는 프로젝트 경로 중심 묶음이다. 메뉴바 팝오버의 기
 
 이건 제품의 핵심이다.
 
-### Managed
+### Managed (Hook 기반 — Claude Code 우선)
 
 `ham run ...` 으로 시작한 세션.
 
 특징:
 
 - 생성 시점부터 ham-agents가 추적
-- 가장 높은 정확도의 상태 추론
+- **Claude Code hooks 연동으로 100% 정확한 상태 추론** (confidence=1.0)
+- Claude Code의 `PreToolUse`, `PostToolUse`, `Stop` 등 hook에서 `ham hook` 커맨드로 데몬에 상태 전송
+- 환경변수 `HAM_AGENT_ID`로 에이전트 식별 (PTY 실행 시 자동 주입)
 - focus / reopen / stop / message 전송 지원
 - v1의 기준 모드
+- **hook 미설정 시 기존 PTY 출력 키워드 매칭으로 fallback** (정확도 낮음)
+
+Hook 기반 상태 매핑:
+
+| Hook 이벤트 | AgentStatus | confidence |
+|---|---|---|
+| 프로세스 시작 | `booting` | 1.0 |
+| `PreToolUse` Read/Grep/Glob | `reading` | 1.0 |
+| `PreToolUse` Edit/Write/Bash | `running_tool` | 1.0 |
+| `PostToolUse` (any) | `thinking` | 1.0 |
+| assistant 응답 중 | `thinking` | 1.0 |
+| 프롬프트 대기 (stop_reason: end_turn) | `waiting_input` | 1.0 |
+| `Stop` 정상 | `done` | 1.0 |
+| `Stop` 에러 | `error` | 1.0 |
+
+서브에이전트 지원:
+
+- 부모의 `PreToolUse "Agent"` → 자식 햄스터 등록 (존재 표시만)
+- 부모의 `PostToolUse "Agent"` → 자식 햄스터 제거/완료
+- 서브에이전트 내부 상태는 추적 불가 (Claude Code가 subagent에 고유 ID를 넘기지 않음)
+- UI에서 미니 햄스터로 부모 근처에 시각적 표현
 
 예시:
 
 ```bash
 ham run claude --project ~/src/app --role reviewer
+```
+
+설정 플로우:
+
+```bash
+brew install ham-agents     # 바이너리 설치
+ham setup                   # 대화형: Claude Code 감지 → ~/.claude/settings.json에 hooks 자동 추가 (사용자 확인)
 ```
 
 ### Attached
@@ -151,11 +181,18 @@ transcript/log/file watch만으로 추적하는 모드.
 - 가장 넓은 호환성
 - 가장 낮은 제어력
 - 상태는 휴리스틱 + confidence 기반
+- hook 미지원 프로바이더를 위한 fallback 경로
 - 클릭 시 원 세션을 직접 열지 못할 수도 있음
 
-원칙은 단순하다.  
-**모든 agent를 같은 확신도로 보이게 하면 안 된다.**  
+원칙은 단순하다.
+**모든 agent를 같은 확신도로 보이게 하면 안 된다.**
 mode와 confidence를 UI에 드러내야 한다.
+
+### 프로바이더 우선순위 전략
+
+v1에서는 **Claude Code 하나를 정확하게 지원**하는 것이 최우선이다.
+다른 프로바이더(Codex, Gemini CLI 등)는 Phase 3에서 각 프로바이더 전용 어댑터를 추가한다.
+범용 추론 엔진은 hook 미지원 프로바이더의 fallback으로만 유지한다.
 
 ---
 
@@ -206,20 +243,41 @@ agent를 클릭하면 다음 액션을 제공한다.
 
 ## 9. 오피스 UI 스펙
 
-v1에서는 자유 배치형보다 **고정 룸 레이아웃**이 낫다.
+### 단일 오피스 공간 (v2 — 4존 그리드에서 변경)
 
-권장 구조:
+기존 4존 고정 그리드(Desk/Library/Kitchen/Alert Corner)를 **단일 오피스 공간**으로 변경한다.
 
-- Desk zone: active coding
-- Library zone: reading / waiting
-- Kitchen zone: idle / cooldown
-- Alert corner: blocked / error / input needed
+변경 이유:
 
-이유는 단순하다.
+- 4존 그리드는 존당 3마리가 한계 → 에이전트 4개 + 서브에이전트면 터짐
+- 상태 변경 시 햄스터가 존 사이를 점프 → 부자연스러움
+- 대부분 1-2칸만 사용되고 나머지는 비어 공간 낭비
 
-- 구현이 쉽고
-- 상태 전달이 명확하고
-- pathfinding/충돌 처리 복잡도를 줄일 수 있다
+새 구조:
+
+- **하나의 넓은 오피스 공간**에 가구를 배치 (책상, 책장, 소파, 경고등)
+- 햄스터는 상태에 따라 **가구 근처에 자연스럽게 배치**
+- 서브에이전트는 부모 근처에 **미니 햄스터**로 클러스터 배치
+- 에이전트 수 증가에 유연하게 대응 가능
+
+가구 기반 영역 암시:
+
+- 책상 앞 = 작업 중 (thinking, running_tool, booting)
+- 책장 앞 = 읽기/분석 (reading)
+- 소파/주방 = 휴식/완료 (idle, sleeping, done)
+- 경고등 근처 = 주의 필요 (error, waiting_input, disconnected)
+
+상태 전달 방식 (존 구분 없이 3가지로 전달):
+
+1. **스프라이트 애니메이션** — typing, reading, thinking, sleeping, celebrating 등
+2. **위치** — 어떤 가구 근처에 있는지
+3. **머리 위 아이콘** — ⚠️ (에러), ❓ (입력 대기), ✅ (완료)
+
+서브에이전트 시각화:
+
+- 부모 햄스터 근처에 작은 미니 햄스터로 표현
+- 내부 상태는 모르므로 "활동 중" 정도의 기본 애니메이션만 표시
+- 생성/소멸은 부모의 Agent tool hook으로 감지
 
 필수 애니메이션 세트:
 
@@ -240,13 +298,13 @@ v1에서는 자유 배치형보다 **고정 룸 레이아웃**이 낫다.
 - `thinking` → 제자리 생각 모션
 - `running_tool` → 빠른 타이핑
 - `reading` → 문서 읽기 모션
-- `waiting_input` → 손들기/느낌표
-- `done` → 작은 점프
-- `error` → 멈춤/경고
+- `waiting_input` → 손들기/느낌표 + 머리 위 ❓
+- `done` → 작은 점프 + 머리 위 ✅
+- `error` → 멈춤/경고 + 머리 위 ⚠️
 - `disconnected` → 회색화
 
-원칙은 하나다.  
-**귀여워도 정보는 숨기지 않는다.**  
+원칙은 하나다.
+**귀여워도 정보는 숨기지 않는다.**
 긴 텍스트는 detail panel과 feed에서 보고, 캔버스는 상태를 직관적으로 보여주는 역할만 맡는다.
 
 ---
@@ -339,6 +397,8 @@ ham status
 ham logs <agent>
 ham doctor
 ham ui
+ham setup                   # Claude Code hooks 등 초기 설정
+ham hook <event> [args...]  # Claude Code hook에서 호출되는 내부 커맨드
 ```
 
 의미 요약:
@@ -406,15 +466,31 @@ v1에서 iTerm2는 1급 통합 대상이다.
 
 ## 15. 상태 추론 엔진
 
+### 1차 경로: Claude Code Hooks (정확)
+
+Claude Code의 hook 시스템을 통해 **추론 없이 사실 기반 상태**를 받는다.
+
 입력 신호:
 
-- structured launch events
+- `PreToolUse` / `PostToolUse` hook 이벤트
+- `Stop` hook 이벤트
+- `Agent` tool 사용 (서브에이전트 생성/종료)
+- process exit
+
+이 경로의 confidence는 항상 1.0이다.
+
+### 2차 경로: Fallback 추론 (hook 미설정 또는 다른 프로바이더)
+
+hook이 설정되지 않았거나 hook을 지원하지 않는 프로바이더에 대한 fallback.
+
+입력 신호:
+
+- PTY 출력 텍스트 키워드 매칭
 - transcript file changes
 - session output tail
 - silence duration
 - known tool markers
 - process exit
-- user keystroke / message send events
 
 전략:
 
@@ -437,6 +513,11 @@ UI 반영 기준:
 - `0.85` 이상: 강한 상태 표현
 - `0.5~0.84`: 중간 표현
 - `0.5` 미만: neutral/unknown 위주
+
+### `ham setup`과 `ham doctor`
+
+- `ham setup`: Claude Code 감지 시 `~/.claude/settings.json`에 hooks 자동 추가 (사용자 확인 후 merge, 기존 설정 보존)
+- `ham doctor`: hook 설정 상태 진단 포함 — hooks 누락 시 fallback 모드임을 안내
 
 ---
 

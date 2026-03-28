@@ -21,35 +21,73 @@
 - [x] Epic 15: Provider Adapter Layer
 - [x] Epic 16: Final Polish and Performance
 - [x] Epic 17: One-Command Bootstrap
+- [ ] **Epic 18: Claude Code Hook 기반 상태 추적 (Phase 1)** ← 현재 활성
+- [ ] Epic 19: 단일 오피스 UI 재설계 (Phase 2)
+- [ ] Epic 20: 멀티 프로바이더 확장 (Phase 3)
 
 ---
 
 ## Active Scope
 
-현재 활성 feature scope는 없다. **Epic 17: One-Command Bootstrap 이 완료**되었다.
+**Epic 18: Claude Code Hook 기반 상태 추적 (Phase 1)**
 
-남은 작업이 생기면 이 섹션은 새로운 사용자 요청 기준으로 다시 갱신한다.
+방향 전환 배경: 기존 PTY 출력 키워드 매칭 방식은 Claude Code에서 대부분 `thinking`으로 분류되어 상태 판별이 사실상 불가능했다. Claude Code의 hook 시스템을 활용해 100% 정확한 상태 추적으로 전환한다.
 
 ### Current Slice Checklist
 
-- [x] daemon 필요 명령(`ham run`, `list`, `status` 등)에서 socket 연결 실패 시 `hamd serve` 자동 부트스트랩
-- [x] daemon bootstrap 시 socket ready 대기 및 타임아웃/에러 메시지 처리
-- [x] `hamd` 실행 파일 경로 해석 헬퍼 추가 및 기존 CLI 경로와 공존
-- [x] `ham run` 성공 직후 menu bar app 자동 launch
-- [x] `ham ui` 와 공유 가능한 menu bar executable 해석/launch 로직 정리
-- [x] menu bar app이 이미 실행 중이면 중복 launch 하지 않음
-- [x] launch 실패는 warning 으로만 처리하고 `ham run` 자체는 계속 진행
-- [x] `go test ./...`
+- [ ] `ham hook` IPC 커맨드 정의 (`hook.tool-start`, `hook.tool-done`, `hook.session-end`, `hook.agent-spawned`, `hook.agent-finished`)
+- [ ] `ipc.go`에 hook 관련 Command 상수 추가
+- [ ] `server.go`에 hook 커맨드 핸들러 구현
+- [ ] `cmd/ham/main.go`에 `hook` 서브커맨드 라우팅
+- [ ] `managed_state.go`에서 hook 이벤트 기반 상태 전환 로직 (기존 키워드 매칭보다 우선)
+- [ ] `ham setup` 커맨드 구현 (Claude Code 감지 + hooks 설정)
+- [ ] `~/.claude/settings.json` 안전한 merge 로직 (기존 설정 보존, 사용자 확인)
+- [ ] 서브에이전트 등록/해제 (Agent tool PreToolUse/PostToolUse 감지)
+- [ ] 기존 PTY 키워드 추론은 hook 미설정 시 fallback 경로로 유지
+- [ ] `ham doctor`에 hook 설정 상태 진단 추가
+- [ ] `go test ./...`
 
 #### Acceptance Criteria
-- [x] daemon이 없을 때 `ham run` / `ham list` / `ham status` 가 자동으로 daemon을 띄우고 원래 명령을 수행함
-- [x] daemon이 이미 떠 있으면 기존 동작과 동일하게 추가 spawn 없이 동작함
-- [x] `ham run` 이후 menu bar app이 없으면 자동 launch 되며, 이미 실행 중이면 그대로 유지됨
-- [x] 기존 `hamd serve` 직접 실행 경로와 `ham ui` 직접 실행 경로가 계속 동작함
+- [ ] Claude Code hooks가 설정된 상태에서 `ham run claude` 실행 시, 에이전트 상태가 hook 이벤트 기반으로 정확하게 전환됨 (booting → thinking → reading → running_tool → waiting_input → done 등)
+- [ ] hook 미설정 시 기존 PTY 키워드 매칭 fallback이 동작함
+- [ ] `ham setup` 실행 시 Claude Code를 감지하고 `~/.claude/settings.json`에 hooks를 안전하게 추가함
+- [ ] 서브에이전트 생성/종료 시 자식 햄스터가 등록/해제됨
+- [ ] `ham doctor`가 hook 설정 여부를 진단하고 미설정 시 안내함
 
 ---
 
 ## Next Epics (순서대로)
+
+### Epic 19: 단일 오피스 UI 재설계 (Phase 2)
+4존 그리드(Desk/Library/Kitchen/Alert Corner) → 단일 오피스 공간으로 변경.
+
+- [ ] 4존 그리드 레이아웃 제거, 단일 오피스 캔버스 구현
+- [ ] 가구 배치 (책상, 책장, 소파, 경고등) 및 영역 암시
+- [ ] 상태 기반 햄스터 위치 배치 로직 (가구 근처 자연 배치)
+- [ ] 미니 햄스터 렌더링 (서브에이전트 시각화)
+- [ ] 머리 위 상태 아이콘 (⚠️ ❓ ✅)
+- [ ] 도구별 스프라이트 분화 (Read → 책 읽기, Bash → 타이핑)
+- [ ] 정확한 상태 기반 알림 개선
+- [ ] Swift tests
+
+#### Acceptance Criteria
+- [ ] 단일 오피스 공간에 햄스터들이 가구 근처에 자연스럽게 배치됨
+- [ ] 서브에이전트가 부모 근처 미니 햄스터로 보임
+- [ ] 상태가 스프라이트 + 위치 + 아이콘 3가지로 전달됨
+- [ ] 에이전트 6개 이상에서도 공간이 부족하지 않음
+
+### Epic 20: 멀티 프로바이더 확장 (Phase 3)
+Claude Code 이외 프로바이더 지원 추가.
+
+- [ ] Codex 전용 어댑터
+- [ ] Gemini CLI 전용 어댑터
+- [ ] `ham setup codex`, `ham setup gemini`
+- [ ] 범용 추론 엔진은 hook 미지원 프로바이더 fallback으로 유지
+- [ ] Go tests
+
+#### Acceptance Criteria
+- [ ] Codex/Gemini CLI로 `ham run` 시 해당 어댑터가 상태를 정확하게 추론함
+- [ ] `ham setup`이 각 프로바이더별 설정을 안내함
 
 ### Epic 10: Team and Workspace
 spec §6 Team/Workspace, §12 `ham team` CLI, §11 팀 요약 알림, §14 team 단위 focus.
@@ -245,6 +283,10 @@ spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
 14. ~~Epic 14: Settings Completeness~~ ✅
 15. ~~Epic 15: Provider Adapter Layer~~ ✅
 16. ~~Epic 16: Final Polish and Performance~~ ✅
+17. ~~Epic 17: One-Command Bootstrap~~ ✅
+18. **Epic 18: Claude Code Hook 기반 상태 추적 (Phase 1)** ← 현재
+19. Epic 19: 단일 오피스 UI 재설계 (Phase 2)
+20. Epic 20: 멀티 프로바이더 확장 (Phase 3)
 
 ---
 
