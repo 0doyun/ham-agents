@@ -681,6 +681,36 @@ func TestFormatAgentListLineIncludesConfidenceAndReason(t *testing.T) {
 	}
 }
 
+func TestFormatAgentListLineShowsSubAgentCount(t *testing.T) {
+	t.Parallel()
+
+	line := formatAgentListLine(core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "claude",
+		Provider:         "claude",
+		Mode:             core.AgentModeManaged,
+		Status:           core.AgentStatusThinking,
+		StatusConfidence: 1.0,
+		SubAgentCount:    3,
+	})
+	if !strings.Contains(line, "+3 sub") {
+		t.Fatalf("expected sub-agent count in line %q", line)
+	}
+
+	lineNoSub := formatAgentListLine(core.Agent{
+		ID:               "agent-2",
+		DisplayName:      "claude",
+		Provider:         "claude",
+		Mode:             core.AgentModeManaged,
+		Status:           core.AgentStatusThinking,
+		StatusConfidence: 1.0,
+		SubAgentCount:    0,
+	})
+	if strings.Contains(lineNoSub, "sub") {
+		t.Fatalf("expected no sub-agent marker when count is 0, got %q", lineNoSub)
+	}
+}
+
 func TestRenderAgentsHumanReadableIncludesConfidenceAndReason(t *testing.T) {
 	t.Parallel()
 

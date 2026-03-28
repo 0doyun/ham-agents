@@ -89,6 +89,9 @@ func formatAgentListLine(agent core.Agent) string {
 	if reason := strings.TrimSpace(agent.StatusReason); reason != "" {
 		parts = append(parts, reason)
 	}
+	if agent.SubAgentCount > 0 {
+		parts = append(parts, fmt.Sprintf("+%d sub", agent.SubAgentCount))
+	}
 	return strings.Join(parts, "\t")
 }
 
