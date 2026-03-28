@@ -65,6 +65,8 @@ func run(args []string) error {
 		return runTeam(ctx, client, args[1:])
 	case "hook":
 		return runHook(ctx, client, args[1:])
+	case "setup":
+		return runSetup(args[1:], os.Stdin, os.Stdout, os.Stderr)
 	case "settings":
 		return runSettings(ctx, client, args[1:])
 	case "list":
@@ -107,6 +109,7 @@ Usage:
   ham settings appearance [--theme=auto|day|night] [--animation-speed=0.25-3] [--reduce-motion=true|false] [--hamster-skin=name] [--hat=name] [--desk-theme=name]
   ham settings integrations [--iterm-enabled=true|false] [--transcript-dirs=dir1,dir2] [--provider-adapter=name=true|false]
   ham settings privacy [--local-only-mode=true|false] [--event-history-retention-days=N] [--transcript-excerpt-storage=true|false]
+  ham setup
   ham hook tool-start <tool-name>
   ham hook tool-done <tool-name>
   ham hook session-end
