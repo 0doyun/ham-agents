@@ -234,6 +234,66 @@ func TestSetupAbortedByUser(t *testing.T) {
 	}
 }
 
+func TestInspectHookStatusConfigured(t *testing.T) {
+	t.Parallel()
+
+	// inspectHookStatus uses real os.UserHomeDir, so we test the underlying
+	// functions directly instead.
+	settings := map[string]interface{}{
+		"hooks": map[string]interface{}{
+			"PreToolUse": []interface{}{
+				map[string]interface{}{"command": "ham hook tool-start \"$TOOL_NAME\""},
+			},
+		},
+	}
+	if !hasHamHooks(settings) {
+		t.Fatal("expected hasHamHooks to return true")
+	}
+}
+
+func TestInspectHookStatusNotConfigured(t *testing.T) {
+	t.Parallel()
+
+	settings := map[string]interface{}{
+		"hooks": map[string]interface{}{
+			"PreToolUse": []interface{}{
+				map[string]interface{}{"command": "other-tool pre"},
+			},
+		},
+	}
+	if hasHamHooks(settings) {
+		t.Fatal("expected hasHamHooks to return false for non-ham hooks")
+	}
+}
+
+func TestInspectHookStatusNoHooksKey(t *testing.T) {
+	t.Parallel()
+
+	settings := map[string]interface{}{"theme": "dark"}
+	if hasHamHooks(settings) {
+		t.Fatal("expected hasHamHooks to return false when no hooks key")
+	}
+}
+
+func TestFormatHookStatusLine(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		status   string
+		contains string
+	}{
+		{"configured", "hooks: configured"},
+		{"not_configured", "not configured — running in fallback mode"},
+		{"settings_unreadable", "unable to read"},
+	}
+	for _, tc := range cases {
+		line := formatHookStatusLine(tc.status)
+		if !strings.Contains(line, tc.contains) {
+			t.Fatalf("formatHookStatusLine(%q) = %q, want substring %q", tc.status, line, tc.contains)
+		}
+	}
+}
+
 func TestSetupLaunchdAdvice(t *testing.T) {
 	t.Parallel()
 

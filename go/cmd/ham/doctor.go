@@ -22,6 +22,7 @@ type doctorReport struct {
 	Events        doctorPathCheck `json:"events"`
 	Settings      doctorPathCheck `json:"settings"`
 	Launchd       string          `json:"launchd"`
+	HookStatus    string          `json:"hook_status"`
 }
 
 type doctorPathCheck struct {
@@ -62,6 +63,7 @@ func gatherDoctorReport(socketPath string) (doctorReport, error) {
 		Events:        inspectRegularPath(eventPath),
 		Settings:      inspectRegularPath(settingsPath),
 		Launchd:       inspectLaunchdStatus(),
+		HookStatus:    inspectHookStatus(),
 	}, nil
 }
 
@@ -85,6 +87,7 @@ func renderDoctorReport(out io.Writer, report doctorReport, asJSON bool) error {
 		formatDoctorPathLine("events", report.Events),
 		formatDoctorPathLine("settings", report.Settings),
 		fmt.Sprintf("launchd: %s", report.Launchd),
+		formatHookStatusLine(report.HookStatus),
 	}
 	for _, line := range lines {
 		if _, err := fmt.Fprintln(out, line); err != nil {
@@ -160,4 +163,36 @@ func inspectSocketPath(path string) doctorPathCheck {
 		_ = conn.Close()
 	}
 	return check
+}
+
+func inspectHookStatus() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "unknown"
+	}
+	settingsPath := filepath.Join(home, ".claude", "settings.json")
+	settings, err := readClaudeSettings(settingsPath, defaultSetupDependencies())
+	if err != nil {
+		return "settings_unreadable"
+	}
+	if len(settings) == 0 {
+		return "not_configured"
+	}
+	if hasHamHooks(settings) {
+		return "configured"
+	}
+	return "not_configured"
+}
+
+func formatHookStatusLine(status string) string {
+	switch status {
+	case "configured":
+		return "hooks: configured"
+	case "not_configured":
+		return "hooks: not configured — running in fallback mode, run 'ham setup' to enable accurate state tracking"
+	case "settings_unreadable":
+		return "hooks: unable to read ~/.claude/settings.json"
+	default:
+		return fmt.Sprintf("hooks: %s", status)
+	}
 }
