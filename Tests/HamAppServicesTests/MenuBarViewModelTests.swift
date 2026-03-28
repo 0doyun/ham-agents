@@ -130,7 +130,7 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.workspaceOptions, ["/tmp/app", "/tmp/other"])
         XCTAssertEqual(viewModel.filteredNonAttentionAgents(teamID: "team-1", workspace: nil).map(\.id), ["agent-1"])
         XCTAssertEqual(viewModel.filteredNonAttentionAgents(teamID: nil, workspace: "/tmp/other").map(\.id), ["agent-2"])
-        XCTAssertEqual(viewModel.filteredOfficeOccupants(teamID: "team-1", workspace: nil).map(\.zone), [.desk])
+        XCTAssertEqual(viewModel.filteredOfficeOccupants(teamID: "team-1", workspace: nil).map(\.area), [.desk])
     }
 
     func testRefreshRecordsNotificationHistory() async {

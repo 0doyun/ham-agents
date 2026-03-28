@@ -31,7 +31,7 @@ struct MenuBarHamsterGlyph: View {
     }
 }
 
-// MARK: - Pixel Office View
+// MARK: - Pixel Office View (Single Office Canvas)
 
 struct PixelOfficeView: View {
     let occupants: [PixelOfficeOccupant]
@@ -41,220 +41,265 @@ struct PixelOfficeView: View {
     let hat: String
     let deskTheme: String
 
+    private let officeWidth: CGFloat = 420
+    private let officeHeight: CGFloat = 220
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .top, spacing: 4) {
-                zoneCard(.desk, icon: "keyboard", title: "Desk")
-                zoneCard(.library, icon: "books.vertical", title: "Library")
+        ZStack(alignment: .topLeading) {
+            // Background: floor + walls + furniture
+            Canvas { context, size in
+                OfficeCanvasRenderer.draw(theme: deskTheme, in: context, size: size)
             }
-            HStack(alignment: .top, spacing: 4) {
-                zoneCard(.kitchen, icon: "cup.and.saucer", title: "Kitchen")
-                zoneCard(.alertCorner, icon: "exclamationmark.triangle", title: "Alert")
+            .frame(width: officeWidth, height: officeHeight)
+
+            // Hamsters placed near their area's furniture
+            ForEach(groupedOccupants, id: \.area) { group in
+                ForEach(Array(group.occupants.enumerated()), id: \.element.id) { index, occupant in
+                    let pos = hamsterPosition(area: group.area, index: index, total: group.occupants.count)
+                    hamsterView(occupant: occupant)
+                        .position(x: pos.x, y: pos.y)
+                }
+            }
+        }
+        .frame(width: officeWidth, height: officeHeight)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: - Hamster Rendering
+
+    @ViewBuilder
+    private func hamsterView(occupant: PixelOfficeOccupant) -> some View {
+        VStack(spacing: 0) {
+            // Status icon above the hamster
+            if let icon = PixelOfficeMapper.statusIcon(for: occupant.agent.status) {
+                statusIconView(icon)
+            }
+
+            // Agent name
+            Text(occupant.agent.displayName)
+                .font(.system(size: 7, weight: .medium, design: .monospaced))
+                .foregroundStyle(.white.opacity(0.85))
+                .lineLimit(1)
+
+            // Hamster sprite + mini hamsters row
+            HStack(alignment: .bottom, spacing: 2) {
+                PixelHamsterSpriteView(
+                    state: occupant.sprite,
+                    variant: occupant.agent.avatarVariant == "default" ? hamsterSkin : occupant.agent.avatarVariant,
+                    hat: hat,
+                    animationSpeedMultiplier: animationSpeedMultiplier,
+                    reduceMotion: reduceMotion
+                )
+                .frame(width: 32, height: 32)
+
+                // Mini hamsters for sub-agents
+                if occupant.subAgentCount > 0 {
+                    ForEach(0..<min(occupant.subAgentCount, 4), id: \.self) { _ in
+                        PixelHamsterSpriteView(
+                            state: .run,
+                            variant: hamsterSkin,
+                            hat: "none",
+                            animationSpeedMultiplier: animationSpeedMultiplier,
+                            reduceMotion: reduceMotion
+                        )
+                        .frame(width: 16, height: 16)
+                    }
+                    if occupant.subAgentCount > 4 {
+                        Text("+\(occupant.subAgentCount - 4)")
+                            .font(.system(size: 7, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.6))
+                    }
+                }
             }
         }
     }
 
     @ViewBuilder
-    private func zoneCard(_ zone: PixelOfficeZone, icon: String, title: String) -> some View {
-        let zoneOccupants = occupants.filter { $0.zone == zone }
-
-        ZStack {
-            // Pixel furniture background
-            Canvas { context, size in
-                PixelFurnitureRenderer.draw(zone: zone, theme: deskTheme, in: context, size: size)
+    private func statusIconView(_ icon: StatusIcon) -> some View {
+        let (symbol, color): (String, Color) = {
+            switch icon {
+            case .question: return ("❓", .yellow)
+            case .warning:  return ("⚠️", .red)
+            case .check:    return ("✅", .green)
             }
-
-            // Room label top-left
-            VStack {
-                HStack {
-                    HStack(spacing: 3) {
-                        Image(systemName: icon)
-                            .font(.system(size: 8))
-                        Text(title)
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    }
-                    .foregroundStyle(.white.opacity(0.7))
-                    .padding(.horizontal, 6)
-                    .padding(.top, 5)
-                    Spacer()
-                }
-                Spacer()
-            }
-
-            // Hamsters anchored to furniture position, left-aligned
-            if !zoneOccupants.isEmpty {
-                VStack(spacing: 0) {
-                    Spacer()
-                    HStack(alignment: .bottom, spacing: 6) {
-                        ForEach(zoneOccupants) { occupant in
-                            VStack(spacing: 1) {
-                                Text(occupant.agent.displayName)
-                                    .font(.system(size: 7, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(.white.opacity(0.85))
-                                    .lineLimit(1)
-
-                                PixelHamsterSpriteView(
-                                    state: occupant.sprite,
-                                    variant: occupant.agent.avatarVariant == "default" ? hamsterSkin : occupant.agent.avatarVariant,
-                                    hat: hat,
-                                    animationSpeedMultiplier: animationSpeedMultiplier,
-                                    reduceMotion: reduceMotion
-                                )
-                                .frame(width: 32, height: 32)
-                            }
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 6)
-                    .padding(.bottom, furnitureBottomPadding(for: zone))
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, minHeight: 100)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        }()
+        Text(symbol)
+            .font(.system(size: 10))
+            .foregroundStyle(color)
     }
 
-    private func furnitureBottomPadding(for zone: PixelOfficeZone) -> CGFloat {
-        switch zone {
-        case .desk:
-            return 26  // sit at desk height
-        case .library:
-            return 6   // stand on floor by bookshelf
-        case .kitchen:
-            return 30  // stand in front of counter (counter is tall)
-        case .alertCorner:
-            return 8   // stand on warning stripes
+    // MARK: - Layout
+
+    /// Furniture anchor points for each area (center of the hamster cluster).
+    private func furnitureAnchor(for area: OfficeArea) -> CGPoint {
+        switch area {
+        case .desk:       return CGPoint(x: 100, y: 155)  // left side, desk area
+        case .bookshelf:  return CGPoint(x: 340, y: 100)  // right side, upper
+        case .sofa:       return CGPoint(x: 330, y: 185)  // right side, lower
+        case .alertLight: return CGPoint(x: 80, y: 80)    // left side, upper (near alert light)
         }
+    }
+
+    private func hamsterPosition(area: OfficeArea, index: Int, total: Int) -> CGPoint {
+        let anchor = furnitureAnchor(for: area)
+        let spacing: CGFloat = 50
+        let offset = CGFloat(index) * spacing - CGFloat(total - 1) * spacing / 2
+        return CGPoint(x: anchor.x + offset, y: anchor.y)
+    }
+
+    private struct AreaGroup: Identifiable {
+        let area: OfficeArea
+        let occupants: [PixelOfficeOccupant]
+        var id: String { area.rawValue }
+    }
+
+    private var groupedOccupants: [AreaGroup] {
+        var dict: [OfficeArea: [PixelOfficeOccupant]] = [:]
+        for occupant in occupants {
+            dict[occupant.area, default: []].append(occupant)
+        }
+        return dict.map { AreaGroup(area: $0.key, occupants: $0.value) }
+            .sorted { $0.area.rawValue < $1.area.rawValue }
     }
 }
 
-// MARK: - Pixel Furniture Renderer
+// MARK: - Office Canvas Renderer (Single Unified Space)
 
-private enum PixelFurnitureRenderer {
-    static func draw(zone: PixelOfficeZone, theme: String, in context: GraphicsContext, size: CGSize) {
-        let p = CGFloat(3) // pixel unit size
+private enum OfficeCanvasRenderer {
+    static func draw(theme: String, in context: GraphicsContext, size: CGSize) {
+        let p = CGFloat(3) // pixel unit
         let palette = themePalette(theme)
 
         // Floor
         context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(palette.floor))
 
-        // Floor grid pattern
+        // Floor grid
         let gridColor = palette.floorGrid
         for x in stride(from: CGFloat(0), through: size.width, by: p * 4) {
-            let line = Path(CGRect(x: x, y: 0, width: 1, height: size.height))
-            context.fill(line, with: .color(gridColor))
+            context.fill(Path(CGRect(x: x, y: 0, width: 1, height: size.height)), with: .color(gridColor))
         }
         for y in stride(from: CGFloat(0), through: size.height, by: p * 4) {
-            let line = Path(CGRect(x: 0, y: y, width: size.width, height: 1))
-            context.fill(line, with: .color(gridColor))
+            context.fill(Path(CGRect(x: 0, y: y, width: size.width, height: 1)), with: .color(gridColor))
         }
 
-        switch zone {
-        case .desk:
-            drawDesk(in: context, size: size, p: p, palette: palette)
-        case .library:
-            drawLibrary(in: context, size: size, p: p, palette: palette)
-        case .kitchen:
-            drawKitchen(in: context, size: size, p: p, palette: palette)
-        case .alertCorner:
-            drawAlertCorner(in: context, size: size, p: p, palette: palette)
-        }
+        // Back wall (top strip)
+        context.fill(Path(CGRect(x: 0, y: 0, width: size.width, height: p * 10)), with: .color(palette.wall))
+        // Wall-floor border
+        context.fill(Path(CGRect(x: 0, y: p * 10, width: size.width, height: p * 1)), with: .color(palette.furnitureDark))
+
+        // Draw furniture
+        drawDesk(in: context, size: size, p: p, palette: palette)
+        drawBookshelf(in: context, size: size, p: p, palette: palette)
+        drawSofa(in: context, size: size, p: p, palette: palette)
+        drawAlertLight(in: context, size: size, p: p, palette: palette)
     }
 
+    // Desk: left side, lower area
     private static func drawDesk(in context: GraphicsContext, size: CGSize, p: CGFloat, palette: ThemePalette) {
-        let w = size.width
-        // Desk surface at bottom
-        let deskY = size.height - p * 8
-        let desk = CGRect(x: p * 2, y: deskY, width: w - p * 4, height: p * 3)
-        context.fill(Path(desk), with: .color(palette.furniture))
+        let deskX = p * 6
+        let deskY = size.height - p * 18
+        let deskW = p * 22
+
+        // Desk surface
+        context.fill(Path(CGRect(x: deskX, y: deskY, width: deskW, height: p * 3)), with: .color(palette.furniture))
         // Desk legs
-        context.fill(Path(CGRect(x: p * 3, y: deskY + p * 3, width: p * 1.5, height: p * 5)), with: .color(palette.furnitureDark))
-        context.fill(Path(CGRect(x: w - p * 5, y: deskY + p * 3, width: p * 1.5, height: p * 5)), with: .color(palette.furnitureDark))
-        // Plant (right area)
-        let plantX = w - p * 16
+        context.fill(Path(CGRect(x: deskX + p * 1, y: deskY + p * 3, width: p * 2, height: p * 6)), with: .color(palette.furnitureDark))
+        context.fill(Path(CGRect(x: deskX + deskW - p * 3, y: deskY + p * 3, width: p * 2, height: p * 6)), with: .color(palette.furnitureDark))
+
+        // Monitor on desk
+        let monX = deskX + p * 6
+        let monY = deskY - p * 7
+        context.fill(Path(CGRect(x: monX, y: monY, width: p * 10, height: p * 6)), with: .color(palette.screen))
+        context.fill(Path(CGRect(x: monX + p, y: monY + p, width: p * 8, height: p * 4)), with: .color(palette.screenGlow))
+        // Monitor stand
+        context.fill(Path(CGRect(x: monX + p * 4, y: monY + p * 6, width: p * 2, height: p * 1)), with: .color(palette.furnitureDark))
+
+        // Plant on desk
+        let plantX = deskX + p * 18
         context.fill(Path(CGRect(x: plantX, y: deskY - p * 3, width: p * 2, height: p * 2)), with: .color(palette.plant))
         context.fill(Path(CGRect(x: plantX, y: deskY - p * 1, width: p * 2, height: p * 1)), with: .color(palette.pot))
-        // Monitor (right side, gap after plant)
-        let monX = w - p * 10
-        context.fill(Path(CGRect(x: monX, y: deskY - p * 6, width: p * 8, height: p * 5)), with: .color(palette.screen))
-        context.fill(Path(CGRect(x: monX + p * 0.5, y: deskY - p * 5.5, width: p * 7, height: p * 4)), with: .color(palette.screenGlow))
-        // Monitor stand
-        context.fill(Path(CGRect(x: monX + p * 3, y: deskY - p * 1, width: p * 2, height: p * 1)), with: .color(palette.furnitureDark))
     }
 
-    private static func drawLibrary(in context: GraphicsContext, size: CGSize, p: CGFloat, palette: ThemePalette) {
-        // Bookshelf against the back wall
-        let shelfX = size.width - p * 14
+    // Bookshelf: right side, upper area (against back wall)
+    private static func drawBookshelf(in context: GraphicsContext, size: CGSize, p: CGFloat, palette: ThemePalette) {
+        let shelfX = size.width - p * 30
         let shelfY = p * 4
-        let shelfW = p * 12
-        // Shelf frame
-        context.fill(Path(CGRect(x: shelfX, y: shelfY, width: shelfW, height: size.height - p * 6)), with: .color(palette.furnitureDark))
-        // Shelf rows with books
+        let shelfW = p * 14
+        let shelfH = p * 24
+
+        // Frame
+        context.fill(Path(CGRect(x: shelfX, y: shelfY, width: shelfW, height: shelfH)), with: .color(palette.furnitureDark))
+
+        // 3 rows of books
         let bookColors: [Color] = [palette.bookRed, palette.bookBlue, palette.bookGreen, palette.bookYellow]
         for row in 0..<3 {
             let rowY = shelfY + p * 2 + CGFloat(row) * p * 7
             // Shelf plank
-            context.fill(Path(CGRect(x: shelfX + p, y: rowY + p * 5, width: shelfW - p * 2, height: p * 1)), with: .color(palette.furniture))
+            context.fill(Path(CGRect(x: shelfX + p, y: rowY + p * 5, width: shelfW - p * 2, height: p)), with: .color(palette.furniture))
             // Books
             for book in 0..<5 {
-                let bx = shelfX + p * 1.5 + CGFloat(book) * p * 2
+                let bx = shelfX + p * 2 + CGFloat(book) * p * 2.2
                 let bh = p * (3 + CGFloat(book % 2))
                 let color = bookColors[(row * 5 + book) % bookColors.count]
                 context.fill(Path(CGRect(x: bx, y: rowY + p * 5 - bh, width: p * 1.5, height: bh)), with: .color(color))
             }
         }
-        // Floor rug
-        context.fill(Path(roundedRect: CGRect(x: p * 2, y: size.height - p * 5, width: p * 10, height: p * 3), cornerRadius: p), with: .color(palette.rug))
     }
 
-    private static func drawKitchen(in context: GraphicsContext, size: CGSize, p: CGFloat, palette: ThemePalette) {
-        // Counter
-        let counterY = size.height - p * 9
-        context.fill(Path(CGRect(x: p * 2, y: counterY, width: size.width - p * 4, height: p * 2)), with: .color(palette.furniture))
-        context.fill(Path(CGRect(x: p * 2, y: counterY + p * 2, width: size.width - p * 4, height: p * 7)), with: .color(palette.furnitureDark))
-        // Cup + Steam (right area)
-        let cupX = size.width - p * 18
-        context.fill(Path(CGRect(x: cupX, y: counterY - p * 2, width: p * 2, height: p * 2)), with: .color(.white.opacity(0.8)))
-        context.fill(Path(CGRect(x: cupX + p * 0.5, y: counterY - p * 3.5, width: p * 0.5, height: p * 1)), with: .color(.white.opacity(0.3)))
-        context.fill(Path(CGRect(x: cupX + p * 1.5, y: counterY - p * 4, width: p * 0.5, height: p * 1)), with: .color(.white.opacity(0.2)))
-        // Coffee machine (gap after cup)
-        let cmX = size.width - p * 14
-        context.fill(Path(CGRect(x: cmX, y: counterY - p * 5, width: p * 4, height: p * 5)), with: .color(palette.appliance))
-        context.fill(Path(CGRect(x: cmX + p, y: counterY - p * 4, width: p * 2, height: p * 2)), with: .color(palette.screen))
-        // Fridge (right side, original position)
-        let fridgeX = size.width - p * 10
-        context.fill(Path(CGRect(x: fridgeX, y: p * 3, width: p * 7, height: size.height - p * 11)), with: .color(palette.appliance))
-        context.fill(Path(CGRect(x: fridgeX + p * 5.5, y: p * 6, width: p * 0.5, height: p * 3)), with: .color(palette.furnitureDark))
+    // Sofa: right side, lower area
+    private static func drawSofa(in context: GraphicsContext, size: CGSize, p: CGFloat, palette: ThemePalette) {
+        let sofaX = size.width - p * 32
+        let sofaY = size.height - p * 12
+        let sofaW = p * 24
+        let sofaH = p * 8
+
+        // Sofa back
+        context.fill(Path(CGRect(x: sofaX, y: sofaY - p * 2, width: sofaW, height: p * 3)), with: .color(palette.furniture))
+        // Sofa seat
+        context.fill(Path(roundedRect: CGRect(x: sofaX, y: sofaY, width: sofaW, height: sofaH), cornerRadius: p), with: .color(palette.rug))
+        // Armrests
+        context.fill(Path(CGRect(x: sofaX - p * 1, y: sofaY, width: p * 2, height: sofaH)), with: .color(palette.furniture))
+        context.fill(Path(CGRect(x: sofaX + sofaW - p, y: sofaY, width: p * 2, height: sofaH)), with: .color(palette.furniture))
+        // Sofa legs
+        context.fill(Path(CGRect(x: sofaX + p * 1, y: sofaY + sofaH, width: p * 2, height: p * 2)), with: .color(palette.furnitureDark))
+        context.fill(Path(CGRect(x: sofaX + sofaW - p * 3, y: sofaY + sofaH, width: p * 2, height: p * 2)), with: .color(palette.furnitureDark))
     }
 
-    private static func drawAlertCorner(in context: GraphicsContext, size: CGSize, p: CGFloat, palette: ThemePalette) {
-        // Warning stripes on floor
-        for i in 0..<Int(size.width / (p * 3)) {
-            let x = CGFloat(i) * p * 3
+    // Alert light: left side, upper area
+    private static func drawAlertLight(in context: GraphicsContext, size: CGSize, p: CGFloat, palette: ThemePalette) {
+        // Warning stripes on floor near alert area
+        for i in 0..<5 {
+            let x = p * 4 + CGFloat(i) * p * 4
             if i % 2 == 0 {
-                context.fill(Path(CGRect(x: x, y: size.height - p * 2, width: p * 3, height: p * 2)), with: .color(palette.alertStripe))
+                context.fill(Path(CGRect(x: x, y: p * 15, width: p * 3, height: p * 2)), with: .color(palette.alertStripe))
             }
         }
-        // Alert board
-        let boardX = size.width - p * 12
-        context.fill(Path(CGRect(x: boardX, y: p * 3, width: p * 10, height: p * 8)), with: .color(palette.alertBoard))
-        context.fill(Path(CGRect(x: boardX + p, y: p * 4, width: p * 8, height: p * 6)), with: .color(palette.alertBoardInner))
-        // Warning triangle
-        let triCenterX = boardX + p * 5
-        let triY = p * 5
+
+        // Alert board on wall
+        let boardX = p * 6
+        let boardY = p * 2
+        context.fill(Path(CGRect(x: boardX, y: boardY, width: p * 10, height: p * 8)), with: .color(palette.alertBoard))
+        context.fill(Path(CGRect(x: boardX + p, y: boardY + p, width: p * 8, height: p * 6)), with: .color(palette.alertBoardInner))
+
+        // Warning triangle on board
+        let triCX = boardX + p * 5
+        let triY = boardY + p * 2
         var tri = Path()
-        tri.move(to: CGPoint(x: triCenterX, y: triY))
-        tri.addLine(to: CGPoint(x: triCenterX - p * 2, y: triY + p * 4))
-        tri.addLine(to: CGPoint(x: triCenterX + p * 2, y: triY + p * 4))
+        tri.move(to: CGPoint(x: triCX, y: triY))
+        tri.addLine(to: CGPoint(x: triCX - p * 2, y: triY + p * 3))
+        tri.addLine(to: CGPoint(x: triCX + p * 2, y: triY + p * 3))
         tri.closeSubpath()
         context.fill(tri, with: .color(palette.alertYellow))
-        // Siren light
-        context.fill(Path(CGRect(x: p * 4, y: p * 4, width: p * 3, height: p * 3)), with: .color(palette.alertRed.opacity(0.6)))
-        context.fill(Path(CGRect(x: p * 4.5, y: p * 4.5, width: p * 2, height: p * 2)), with: .color(palette.alertRed))
+
+        // Siren light (blinking beacon)
+        context.fill(Path(CGRect(x: p * 18, y: p * 3, width: p * 3, height: p * 3)), with: .color(palette.alertRed.opacity(0.6)))
+        context.fill(Path(CGRect(x: p * 18.5, y: p * 3.5, width: p * 2, height: p * 2)), with: .color(palette.alertRed))
     }
 
+    // MARK: - Theme Palette
+
     struct ThemePalette {
-        let floor, floorGrid: Color
+        let floor, floorGrid, wall: Color
         let furniture, furnitureDark: Color
         let screen, screenGlow: Color
         let plant, pot: Color
@@ -270,6 +315,7 @@ private enum PixelFurnitureRenderer {
             return ThemePalette(
                 floor: Color(red: 0.12, green: 0.11, blue: 0.18),
                 floorGrid: Color.white.opacity(0.04),
+                wall: Color(red: 0.15, green: 0.14, blue: 0.22),
                 furniture: Color(red: 0.28, green: 0.22, blue: 0.35),
                 furnitureDark: Color(red: 0.18, green: 0.14, blue: 0.24),
                 screen: Color(red: 0.15, green: 0.15, blue: 0.25),
@@ -292,6 +338,7 @@ private enum PixelFurnitureRenderer {
             return ThemePalette(
                 floor: Color(red: 0.95, green: 0.90, blue: 0.82),
                 floorGrid: Color.black.opacity(0.04),
+                wall: Color(red: 0.92, green: 0.88, blue: 0.80),
                 furniture: Color(red: 0.72, green: 0.58, blue: 0.42),
                 furnitureDark: Color(red: 0.55, green: 0.42, blue: 0.30),
                 screen: Color(red: 0.3, green: 0.3, blue: 0.35),
@@ -314,6 +361,7 @@ private enum PixelFurnitureRenderer {
             return ThemePalette(
                 floor: Color(red: 0.16, green: 0.18, blue: 0.22),
                 floorGrid: Color.white.opacity(0.04),
+                wall: Color(red: 0.20, green: 0.22, blue: 0.28),
                 furniture: Color(red: 0.35, green: 0.28, blue: 0.22),
                 furnitureDark: Color(red: 0.22, green: 0.18, blue: 0.14),
                 screen: Color(red: 0.15, green: 0.18, blue: 0.22),
@@ -369,7 +417,7 @@ enum PixelHamsterLibrary {
     private static let furGolden = Color(red: 0.90, green: 0.75, blue: 0.35)
     private static let furMint = Color(red: 0.56, green: 0.78, blue: 0.68)
     private static let ear = Color(red: 0.95, green: 0.72, blue: 0.76)
-    private static let cheek = Color(red: 0.96, green: 0.68, blue: 0.72)  // blush
+    private static let cheek = Color(red: 0.96, green: 0.68, blue: 0.72)
     private static let belly = Color(red: 0.98, green: 0.95, blue: 0.88)
     private static let nose = Color(red: 0.92, green: 0.58, blue: 0.52)
     private static let eye = Color(red: 0.15, green: 0.12, blue: 0.12)
@@ -378,14 +426,10 @@ enum PixelHamsterLibrary {
     private static let error = Color(red: 0.88, green: 0.30, blue: 0.30)
     private static let success = Color(red: 0.35, green: 0.78, blue: 0.45)
     private static let paw = Color(red: 0.68, green: 0.50, blue: 0.38)
-    private static let jacket = Color(red: 0.32, green: 0.36, blue: 0.48)   // lighter navy suit
-    private static let tie = Color(red: 0.85, green: 0.25, blue: 0.25)      // red tie
-    private static let shirt = Color(red: 0.95, green: 0.95, blue: 0.98)    // white shirt
-    private static let line = Color(red: 0.82, green: 0.80, blue: 0.78)     // subtle border
-
-    // Symbol legend (10x10 grid):
-    // F = fur, E = ear, B = belly, K = eye, W = eye shine, C = cheek/blush
-    // N = nose, P = paw, A = alert/accessory, R = error, S = success, . = transparent
+    private static let jacket = Color(red: 0.32, green: 0.36, blue: 0.48)
+    private static let tie = Color(red: 0.85, green: 0.25, blue: 0.25)
+    private static let shirt = Color(red: 0.95, green: 0.95, blue: 0.98)
+    private static let line = Color(red: 0.82, green: 0.80, blue: 0.78)
 
     static func renderToNSImage(frame: [String], hat: String, variant: String, size: NSSize) -> NSImage {
         let image = NSImage(size: size, flipped: false) { rect in
@@ -530,8 +574,6 @@ enum PixelHamsterLibrary {
     }
 
     // 16x16 chonky hamster — face is 2x scaled original, suit has detail
-    // B=white/cream F=light brown fur E=pink ear K=eye N=nose
-    // J=jacket H=shirt T=tie A=accessory R=error S=success
     private static func framesFor(_ state: HamsterSpriteState) -> [[String]] {
         switch state {
         case .idle:
