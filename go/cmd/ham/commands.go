@@ -302,6 +302,53 @@ func runTeam(ctx context.Context, client *ipc.Client, args []string) error {
 	}
 }
 
+func runHook(ctx context.Context, client *ipc.Client, args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("hook subcommand required: tool-start, tool-done, session-end, agent-spawned, agent-finished")
+	}
+
+	agentID := os.Getenv("HAM_AGENT_ID")
+	if agentID == "" {
+		return fmt.Errorf("HAM_AGENT_ID environment variable is required")
+	}
+
+	switch args[0] {
+	case "tool-start":
+		toolName := ""
+		if len(args) > 1 {
+			toolName = args[1]
+		}
+		return client.HookToolStart(ctx, agentID, toolName)
+	case "tool-done":
+		toolName := ""
+		if len(args) > 1 {
+			toolName = args[1]
+		}
+		return client.HookToolDone(ctx, agentID, toolName)
+	case "session-end":
+		return client.HookSessionEnd(ctx, agentID)
+	case "agent-spawned":
+		description := parseHookDescription(args[1:])
+		return client.HookAgentSpawned(ctx, agentID, description)
+	case "agent-finished":
+		return client.HookAgentFinished(ctx, agentID)
+	default:
+		return fmt.Errorf("unsupported hook subcommand %q", args[0])
+	}
+}
+
+func parseHookDescription(args []string) string {
+	for i, arg := range args {
+		if arg == "--description" && i+1 < len(args) {
+			return strings.Join(args[i+1:], " ")
+		}
+	}
+	if len(args) > 0 {
+		return strings.Join(args, " ")
+	}
+	return ""
+}
+
 func runStop(ctx context.Context, client *ipc.Client, args []string) error {
 	agentID, asJSON, err := parseStopInput(args)
 	if err != nil {
@@ -313,6 +360,26 @@ func runStop(ctx context.Context, client *ipc.Client, args []string) error {
 	}
 
 	return renderStopResult(os.Stdout, agentID, asJSON)
+}
+
+func runDown(_ context.Context, client *ipc.Client, _ []string) error {
+	ctx := context.Background()
+
+	// Kill the menu bar app.
+	if pkillPath, err := exec.LookPath("pkill"); err == nil {
+		_ = exec.Command(pkillPath, "-x", "ham-menubar").Run()
+	}
+
+	// Tell the daemon to stop all agents and shut down.
+	if err := client.Shutdown(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, "ham: daemon shutdown: %v\n", err)
+	}
+
+	// If managed via launchd, unload so it doesn't auto-restart.
+	_ = uninstallDaemonFromLaunchd()
+
+	fmt.Fprintln(os.Stderr, "ham: everything stopped")
+	return nil
 }
 
 func runDetach(ctx context.Context, client *ipc.Client, args []string) error {

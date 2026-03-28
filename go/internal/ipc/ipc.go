@@ -41,6 +41,12 @@ const (
 	CommandRemoveAgent           Command = "agents.remove"
 	CommandGetSettings           Command = "settings.get"
 	CommandUpdateSettings        Command = "settings.update"
+	CommandShutdown              Command = "daemon.shutdown"
+	CommandHookToolStart         Command = "hook.tool-start"
+	CommandHookToolDone          Command = "hook.tool-done"
+	CommandHookSessionEnd        Command = "hook.session-end"
+	CommandHookAgentSpawned      Command = "hook.agent-spawned"
+	CommandHookAgentFinished     Command = "hook.agent-finished"
 )
 
 type Request struct {
@@ -60,6 +66,9 @@ type Request struct {
 	Settings      *core.Settings `json:"settings,omitempty"`
 	ExitError     string         `json:"exit_error,omitempty"`
 	OutputLine    string         `json:"output_line,omitempty"`
+	ToolName      string         `json:"tool_name,omitempty"`
+	HookType      string         `json:"hook_type,omitempty"`
+	Description   string         `json:"description,omitempty"`
 }
 
 type Response struct {
@@ -360,6 +369,36 @@ func (c *Client) StopManaged(ctx context.Context, agentID string) error {
 		Command: CommandStopManaged,
 		AgentID: agentID,
 	})
+	return err
+}
+
+func (c *Client) Shutdown(ctx context.Context) error {
+	_, err := c.request(ctx, Request{Command: CommandShutdown})
+	return err
+}
+
+func (c *Client) HookToolStart(ctx context.Context, agentID string, toolName string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookToolStart, AgentID: agentID, ToolName: toolName})
+	return err
+}
+
+func (c *Client) HookToolDone(ctx context.Context, agentID string, toolName string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookToolDone, AgentID: agentID, ToolName: toolName})
+	return err
+}
+
+func (c *Client) HookSessionEnd(ctx context.Context, agentID string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookSessionEnd, AgentID: agentID})
+	return err
+}
+
+func (c *Client) HookAgentSpawned(ctx context.Context, agentID string, description string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookAgentSpawned, AgentID: agentID, Description: description})
+	return err
+}
+
+func (c *Client) HookAgentFinished(ctx context.Context, agentID string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookAgentFinished, AgentID: agentID})
 	return err
 }
 
