@@ -1119,3 +1119,25 @@ func TestRenderDetachResultJSON(t *testing.T) {
 		t.Fatalf("expected detached field in payload %q", payload)
 	}
 }
+
+func TestParseHookDescriptionRequiresFlag(t *testing.T) {
+	t.Parallel()
+
+	// With --description flag: returns the value.
+	got := parseHookDescription([]string{"--description", "doing", "stuff"})
+	if got != "doing stuff" {
+		t.Fatalf("expected 'doing stuff', got %q", got)
+	}
+
+	// Without --description flag: returns empty, not the raw args.
+	got = parseHookDescription([]string{"some", "random", "args"})
+	if got != "" {
+		t.Fatalf("expected empty without --description flag, got %q", got)
+	}
+
+	// No args at all.
+	got = parseHookDescription(nil)
+	if got != "" {
+		t.Fatalf("expected empty for nil args, got %q", got)
+	}
+}

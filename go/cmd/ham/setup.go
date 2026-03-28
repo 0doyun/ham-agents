@@ -126,41 +126,43 @@ func readClaudeSettings(path string, deps setupDependencies) (map[string]interfa
 	return settings, nil
 }
 
-// hasHamHooks returns true if any hook entry already contains a "ham hook" command.
-func hasHamHooks(settings map[string]interface{}) bool {
-	hooks, ok := settings["hooks"]
-	if !ok {
-		return false
-	}
-	hooksMap, ok := hooks.(map[string]interface{})
-	if !ok {
-		return false
-	}
+var hamHookCategories = []string{"PreToolUse", "PostToolUse", "Stop"}
 
-	for _, key := range []string{"PreToolUse", "PostToolUse", "Stop"} {
-		entries, ok := hooksMap[key]
+// hasHamHooks returns true if ALL three hook categories already contain a "ham hook" command.
+func hasHamHooks(settings map[string]interface{}) bool {
+	hooks, ok := settings["hooks"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	for _, key := range hamHookCategories {
+		if !categoryHasHamHook(hooks, key) {
+			return false
+		}
+	}
+	return true
+}
+
+// categoryHasHamHook checks whether a specific hook category contains a "ham hook" command.
+func categoryHasHamHook(hooksMap map[string]interface{}, key string) bool {
+	arr, ok := hooksMap[key].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, entry := range arr {
+		entryMap, ok := entry.(map[string]interface{})
 		if !ok {
 			continue
 		}
-		arr, ok := entries.([]interface{})
-		if !ok {
-			continue
-		}
-		for _, entry := range arr {
-			entryMap, ok := entry.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			cmd, _ := entryMap["command"].(string)
-			if strings.Contains(cmd, "ham hook") {
-				return true
-			}
+		cmd, _ := entryMap["command"].(string)
+		if strings.Contains(cmd, "ham hook") {
+			return true
 		}
 	}
 	return false
 }
 
 // mergeHamHooks adds ham hook entries to the settings map, preserving existing hooks.
+// Skips categories that already contain a ham hook command.
 func mergeHamHooks(settings map[string]interface{}) {
 	hooks, ok := settings["hooks"].(map[string]interface{})
 	if !ok {
@@ -168,13 +170,16 @@ func mergeHamHooks(settings map[string]interface{}) {
 		settings["hooks"] = hooks
 	}
 
-	hamHooks := map[string]map[string]interface{}{
+	hamHookEntries := map[string]map[string]interface{}{
 		"PreToolUse":  {"command": "ham hook tool-start \"$TOOL_NAME\"", "timeout": float64(5000)},
 		"PostToolUse": {"command": "ham hook tool-done \"$TOOL_NAME\"", "timeout": float64(5000)},
 		"Stop":        {"command": "ham hook session-end", "timeout": float64(5000)},
 	}
 
-	for key, hookEntry := range hamHooks {
+	for key, hookEntry := range hamHookEntries {
+		if categoryHasHamHook(hooks, key) {
+			continue
+		}
 		existing, ok := hooks[key].([]interface{})
 		if !ok {
 			existing = []interface{}{}

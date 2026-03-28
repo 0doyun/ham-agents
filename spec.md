@@ -131,7 +131,7 @@ Hook 기반 상태 매핑:
 | `PreToolUse` Edit/Write/Bash | `running_tool` | 1.0 |
 | `PostToolUse` (any) | `thinking` | 1.0 |
 | assistant 응답 중 | `thinking` | 1.0 |
-| 프롬프트 대기 (stop_reason: end_turn) | `waiting_input` | 1.0 |
+| 프롬프트 대기 (stop_reason: end_turn) | `waiting_input` | 1.0 | ※ Claude Code hook API는 이 이벤트를 직접 emit하지 않음. PTY silence 감지 fallback으로 추론. |
 | `Stop` 정상 | `done` | 1.0 |
 | `Stop` 에러 | `error` | 1.0 |
 

@@ -451,3 +451,138 @@ func TestClientServerStopManagedStopsProcess(t *testing.T) {
 
 	t.Fatal("managed process did not transition to stopped state before timeout")
 }
+
+func TestClientServerRoundTripForHookCommands(t *testing.T) {
+	t.Parallel()
+
+	root, err := os.MkdirTemp("/tmp", "hamd-ipc-hook-")
+	if err != nil {
+		t.Fatalf("create temp dir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+
+	socketPath := filepath.Join(root, "s.sock")
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+	managedService := runtime.NewManagedService(registry)
+	settingsService := runtime.NewSettingsService(
+		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
+	)
+	teamService := runtime.NewTeamService(
+		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
+	)
+
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, stubSessionLister{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- server.Serve(ctx)
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if _, err := os.Stat(socketPath); err == nil {
+			break
+		}
+		select {
+		case err := <-serverErrors:
+			if err != nil && strings.Contains(err.Error(), "operation not permitted") {
+				t.Skipf("unix socket binding unavailable in sandbox: %v", err)
+			}
+			t.Fatalf("server exited before socket became ready: %v", err)
+		default:
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("socket did not appear: %s", socketPath)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	client := ipc.NewClient(socketPath)
+
+	// Register a managed agent to use as hook target.
+	agent, err := client.RunManaged(context.Background(), runtime.RegisterManagedInput{
+		Provider:    "claude",
+		DisplayName: "hook-test",
+		ProjectPath: "/tmp/project",
+	})
+	if err != nil {
+		t.Fatalf("register managed agent: %v", err)
+	}
+
+	// HookToolStart should transition agent to a tool-related status.
+	if err := client.HookToolStart(context.Background(), agent.ID, "Read"); err != nil {
+		t.Fatalf("hook tool-start: %v", err)
+	}
+	snapshot, err := client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status after tool-start: %v", err)
+	}
+	if len(snapshot.Agents) == 0 {
+		t.Fatal("expected at least one agent after tool-start")
+	}
+	agentAfterToolStart := snapshot.Agents[0]
+	if agentAfterToolStart.Status != core.AgentStatusReading {
+		t.Fatalf("expected reading status after Read tool-start, got %q", agentAfterToolStart.Status)
+	}
+	if agentAfterToolStart.StatusConfidence != 1.0 {
+		t.Fatalf("expected confidence 1.0, got %f", agentAfterToolStart.StatusConfidence)
+	}
+
+	// HookToolDone should transition back to thinking.
+	if err := client.HookToolDone(context.Background(), agent.ID, "Read"); err != nil {
+		t.Fatalf("hook tool-done: %v", err)
+	}
+	snapshot, err = client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status after tool-done: %v", err)
+	}
+	if snapshot.Agents[0].Status != core.AgentStatusThinking {
+		t.Fatalf("expected thinking status after tool-done, got %q", snapshot.Agents[0].Status)
+	}
+
+	// HookAgentSpawned should increment SubAgentCount.
+	if err := client.HookAgentSpawned(context.Background(), agent.ID, "sub-task"); err != nil {
+		t.Fatalf("hook agent-spawned: %v", err)
+	}
+	snapshot, err = client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status after agent-spawned: %v", err)
+	}
+	if snapshot.Agents[0].SubAgentCount != 1 {
+		t.Fatalf("expected SubAgentCount 1, got %d", snapshot.Agents[0].SubAgentCount)
+	}
+
+	// HookAgentFinished should decrement SubAgentCount.
+	if err := client.HookAgentFinished(context.Background(), agent.ID); err != nil {
+		t.Fatalf("hook agent-finished: %v", err)
+	}
+	snapshot, err = client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status after agent-finished: %v", err)
+	}
+	if snapshot.Agents[0].SubAgentCount != 0 {
+		t.Fatalf("expected SubAgentCount 0, got %d", snapshot.Agents[0].SubAgentCount)
+	}
+
+	// HookSessionEnd should transition to done.
+	if err := client.HookSessionEnd(context.Background(), agent.ID); err != nil {
+		t.Fatalf("hook session-end: %v", err)
+	}
+	snapshot, err = client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status after session-end: %v", err)
+	}
+	if snapshot.Agents[0].Status != core.AgentStatusDone {
+		t.Fatalf("expected done status after session-end, got %q", snapshot.Agents[0].Status)
+	}
+
+	cancel()
+	if err := <-serverErrors; err != nil && !errors.Is(err, context.Canceled) {
+		t.Fatalf("server shutdown: %v", err)
+	}
+}

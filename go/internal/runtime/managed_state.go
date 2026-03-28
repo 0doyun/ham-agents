@@ -117,6 +117,11 @@ func (r *Registry) RecordManagedExit(ctx context.Context, agentID string, exitEr
 	return err
 }
 
+// Hook-based state tracking: Claude Code emits PreToolUse, PostToolUse, and Stop hooks.
+// There is no hook for waiting_input (prompt idle / end_turn). That state is inferred
+// via the PTY fallback path (silence detection). This is a Claude Code API limitation,
+// not an omission — the hook system does not expose assistant turn boundaries.
+
 func (r *Registry) RecordHookToolStart(ctx context.Context, agentID string, toolName string) error {
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
 		status := core.AgentStatusRunningTool
