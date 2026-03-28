@@ -21,7 +21,7 @@
 - [x] Epic 15: Provider Adapter Layer
 - [x] Epic 16: Final Polish and Performance
 - [x] Epic 17: One-Command Bootstrap
-- [ ] **Epic 18: Claude Code Hook 기반 상태 추적 (Phase 1)** ← 현재 활성
+- [x] **Epic 18: Claude Code Hook 기반 상태 추적 (Phase 1)** ✅
 - [ ] Epic 19: 단일 오피스 UI 재설계 (Phase 2)
 - [ ] Epic 20: 멀티 프로바이더 확장 (Phase 3)
 
@@ -35,24 +35,24 @@
 
 ### Current Slice Checklist
 
-- [ ] `ham hook` IPC 커맨드 정의 (`hook.tool-start`, `hook.tool-done`, `hook.session-end`, `hook.agent-spawned`, `hook.agent-finished`)
-- [ ] `ipc.go`에 hook 관련 Command 상수 추가
-- [ ] `server.go`에 hook 커맨드 핸들러 구현
-- [ ] `cmd/ham/main.go`에 `hook` 서브커맨드 라우팅
-- [ ] `managed_state.go`에서 hook 이벤트 기반 상태 전환 로직 (기존 키워드 매칭보다 우선)
-- [ ] `ham setup` 커맨드 구현 (Claude Code 감지 + hooks 설정)
-- [ ] `~/.claude/settings.json` 안전한 merge 로직 (기존 설정 보존, 사용자 확인)
-- [ ] 서브에이전트 등록/해제 (Agent tool PreToolUse/PostToolUse 감지)
-- [ ] 기존 PTY 키워드 추론은 hook 미설정 시 fallback 경로로 유지
-- [ ] `ham doctor`에 hook 설정 상태 진단 추가
-- [ ] `go test ./...`
+- [x] `ham hook` IPC 커맨드 정의 (`hook.tool-start`, `hook.tool-done`, `hook.session-end`, `hook.agent-spawned`, `hook.agent-finished`)
+- [x] `ipc.go`에 hook 관련 Command 상수 추가
+- [x] `server.go`에 hook 커맨드 핸들러 구현
+- [x] `cmd/ham/main.go`에 `hook` 서브커맨드 라우팅
+- [x] `managed_state.go`에서 hook 이벤트 기반 상태 전환 로직 (기존 키워드 매칭보다 우선)
+- [x] `ham setup` 커맨드 구현 (Claude Code 감지 + hooks 설정)
+- [x] `~/.claude/settings.json` 안전한 merge 로직 (기존 설정 보존, 사용자 확인)
+- [x] 서브에이전트 등록/해제 (Agent tool PreToolUse/PostToolUse 감지)
+- [x] 기존 PTY 키워드 추론은 hook 미설정 시 fallback 경로로 유지
+- [x] `ham doctor`에 hook 설정 상태 진단 추가
+- [x] `go test ./...`
 
 #### Acceptance Criteria
-- [ ] Claude Code hooks가 설정된 상태에서 `ham run claude` 실행 시, 에이전트 상태가 hook 이벤트 기반으로 정확하게 전환됨 (booting → thinking → reading → running_tool → waiting_input → done 등)
-- [ ] hook 미설정 시 기존 PTY 키워드 매칭 fallback이 동작함
-- [ ] `ham setup` 실행 시 Claude Code를 감지하고 `~/.claude/settings.json`에 hooks를 안전하게 추가함
-- [ ] 서브에이전트 생성/종료 시 자식 햄스터가 등록/해제됨
-- [ ] `ham doctor`가 hook 설정 여부를 진단하고 미설정 시 안내함
+- [x] Claude Code hooks가 설정된 상태에서 `ham run claude` 실행 시, 에이전트 상태가 hook 이벤트 기반으로 정확하게 전환됨 (booting → thinking → reading → running_tool → waiting_input → done 등)
+- [x] hook 미설정 시 기존 PTY 키워드 매칭 fallback이 동작함
+- [x] `ham setup` 실행 시 Claude Code를 감지하고 `~/.claude/settings.json`에 hooks를 안전하게 추가함
+- [x] 서브에이전트 생성/종료 시 자식 햄스터가 등록/해제됨
+- [x] `ham doctor`가 hook 설정 여부를 진단하고 미설정 시 안내함
 
 ---
 
@@ -284,7 +284,7 @@ spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
 15. ~~Epic 15: Provider Adapter Layer~~ ✅
 16. ~~Epic 16: Final Polish and Performance~~ ✅
 17. ~~Epic 17: One-Command Bootstrap~~ ✅
-18. **Epic 18: Claude Code Hook 기반 상태 추적 (Phase 1)** ← 현재
+18. ~~Epic 18: Claude Code Hook 기반 상태 추적 (Phase 1)~~ ✅
 19. Epic 19: 단일 오피스 UI 재설계 (Phase 2)
 20. Epic 20: 멀티 프로바이더 확장 (Phase 3)
 
