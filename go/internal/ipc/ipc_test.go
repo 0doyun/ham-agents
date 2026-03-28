@@ -170,23 +170,35 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		t.Fatalf("expected total count 3, got %d", snapshot.TotalCount())
 	}
 
-	events, err := client.Events(context.Background(), 10)
+	events, err := client.Events(context.Background(), 20)
 	if err != nil {
 		t.Fatalf("events via client: %v", err)
 	}
-	if len(events) != 3 {
-		t.Fatalf("expected 3 events, got %d", len(events))
+	registrationEvents := make([]core.Event, 0, 3)
+	for _, e := range events {
+		if e.Type == core.EventTypeAgentRegistered {
+			registrationEvents = append(registrationEvents, e)
+		}
 	}
-	if events[0].AgentID != agent.ID {
-		t.Fatalf("unexpected event agent id %q", events[0].AgentID)
+	if len(registrationEvents) != 3 {
+		t.Fatalf("expected 3 registration events, got %d", len(registrationEvents))
+	}
+	if registrationEvents[0].AgentID != agent.ID {
+		t.Fatalf("unexpected event agent id %q", registrationEvents[0].AgentID)
 	}
 
-	followedEvents, err := client.FollowEvents(context.Background(), events[0].ID, 10, 0)
+	followedEvents, err := client.FollowEvents(context.Background(), registrationEvents[0].ID, 10, 0)
 	if err != nil {
 		t.Fatalf("follow events via client: %v", err)
 	}
-	if len(followedEvents) != 2 {
-		t.Fatalf("expected 2 newer events, got %d", len(followedEvents))
+	followedRegistrationEvents := make([]core.Event, 0, 2)
+	for _, e := range followedEvents {
+		if e.Type == core.EventTypeAgentRegistered {
+			followedRegistrationEvents = append(followedRegistrationEvents, e)
+		}
+	}
+	if len(followedRegistrationEvents) != 2 {
+		t.Fatalf("expected 2 newer registration events, got %d", len(followedRegistrationEvents))
 	}
 
 	updated, err := client.UpdateNotificationPolicy(context.Background(), agent.ID, core.NotificationPolicyMuted)
