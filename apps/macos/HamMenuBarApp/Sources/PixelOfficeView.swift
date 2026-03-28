@@ -374,10 +374,14 @@ enum PixelHamsterLibrary {
     private static let nose = Color(red: 0.92, green: 0.58, blue: 0.52)
     private static let eye = Color(red: 0.15, green: 0.12, blue: 0.12)
     private static let eyeShine = Color(red: 1.0, green: 1.0, blue: 1.0)
-    private static let alert = Color(red: 0.98, green: 0.72, blue: 0.22)
+    private static let alert = Color(red: 1.0, green: 0.85, blue: 0.2)
     private static let error = Color(red: 0.88, green: 0.30, blue: 0.30)
     private static let success = Color(red: 0.35, green: 0.78, blue: 0.45)
     private static let paw = Color(red: 0.68, green: 0.50, blue: 0.38)
+    private static let jacket = Color(red: 0.32, green: 0.36, blue: 0.48)   // lighter navy suit
+    private static let tie = Color(red: 0.85, green: 0.25, blue: 0.25)      // red tie
+    private static let shirt = Color(red: 0.95, green: 0.95, blue: 0.98)    // white shirt
+    private static let line = Color(red: 0.82, green: 0.80, blue: 0.78)     // subtle border
 
     // Symbol legend (10x10 grid):
     // F = fur, E = ear, B = belly, K = eye, W = eye shine, C = cheek/blush
@@ -386,20 +390,23 @@ enum PixelHamsterLibrary {
     static func renderToNSImage(frame: [String], hat: String, variant: String, size: NSSize) -> NSImage {
         let image = NSImage(size: size, flipped: false) { rect in
             guard let cgContext = NSGraphicsContext.current?.cgContext else { return false }
+            cgContext.setShouldAntialias(false)
+            cgContext.setAllowsAntialiasing(false)
+            cgContext.interpolationQuality = .none
             let rows = frame.count
             let columns = frame.isEmpty ? 0 : frame[0].count
             guard rows > 0, columns > 0 else { return true }
-            let pixelSize = min(rect.width / CGFloat(columns), rect.height / CGFloat(rows))
-            let xOffset = (rect.width - pixelSize * CGFloat(columns)) / 2
-            let yOffset = (rect.height - pixelSize * CGFloat(rows)) / 2
+            let pixelSize = floor(min(rect.width / CGFloat(columns), rect.height / CGFloat(rows)))
+            let xOffset = floor((rect.width - pixelSize * CGFloat(columns)) / 2)
+            let yOffset = floor((rect.height - pixelSize * CGFloat(rows)) / 2)
 
             for (rowIndex, row) in frame.enumerated() {
                 for (columnIndex, symbol) in row.enumerated() {
                     guard let nsColor = nsColor(for: symbol, variant: variant) else { continue }
                     cgContext.setFillColor(nsColor)
-                    let y = rect.height - yOffset - CGFloat(rowIndex + 1) * pixelSize
+                    let y = floor(rect.height - yOffset - CGFloat(rowIndex + 1) * pixelSize)
                     let pixelRect = CGRect(
-                        x: xOffset + CGFloat(columnIndex) * pixelSize,
+                        x: floor(xOffset + CGFloat(columnIndex) * pixelSize),
                         y: y,
                         width: pixelSize,
                         height: pixelSize
@@ -429,9 +436,13 @@ enum PixelHamsterLibrary {
         case "C": return CGColor(red: 0.96, green: 0.68, blue: 0.72, alpha: 1)
         case "N": return CGColor(red: 0.92, green: 0.58, blue: 0.52, alpha: 1)
         case "P": return CGColor(red: 0.68, green: 0.50, blue: 0.38, alpha: 1)
-        case "A": return CGColor(red: 0.98, green: 0.72, blue: 0.22, alpha: 1)
+        case "A": return CGColor(red: 1.0, green: 0.85, blue: 0.2, alpha: 1)
         case "R": return CGColor(red: 0.88, green: 0.30, blue: 0.30, alpha: 1)
         case "S": return CGColor(red: 0.35, green: 0.78, blue: 0.45, alpha: 1)
+        case "J": return CGColor(red: 0.32, green: 0.36, blue: 0.48, alpha: 1)
+        case "T": return CGColor(red: 0.85, green: 0.25, blue: 0.25, alpha: 1)
+        case "H": return CGColor(red: 0.95, green: 0.95, blue: 0.98, alpha: 1)
+        case "L": return CGColor(red: 0.82, green: 0.80, blue: 0.78, alpha: 1)
         default:  return nil
         }
     }
@@ -453,16 +464,16 @@ enum PixelHamsterLibrary {
         guard !frame.isEmpty else { return }
         let rows = frame.count
         let columns = frame[0].count
-        let pixelSize = min(size.width / CGFloat(columns), size.height / CGFloat(rows))
-        let xOffset = (size.width - pixelSize * CGFloat(columns)) / 2
-        let yOffset = (size.height - pixelSize * CGFloat(rows)) / 2
+        let pixelSize = floor(min(size.width / CGFloat(columns), size.height / CGFloat(rows)))
+        let xOffset = floor((size.width - pixelSize * CGFloat(columns)) / 2)
+        let yOffset = floor((size.height - pixelSize * CGFloat(rows)) / 2)
 
         for (rowIndex, row) in frame.enumerated() {
             for (columnIndex, symbol) in row.enumerated() {
                 guard let color = color(for: symbol, variant: variant) else { continue }
                 let rect = CGRect(
-                    x: xOffset + CGFloat(columnIndex) * pixelSize,
-                    y: yOffset + CGFloat(rowIndex) * pixelSize,
+                    x: floor(xOffset + CGFloat(columnIndex) * pixelSize),
+                    y: floor(yOffset + CGFloat(rowIndex) * pixelSize),
                     width: pixelSize,
                     height: pixelSize
                 )
@@ -491,6 +502,10 @@ enum PixelHamsterLibrary {
         case "A": return alert
         case "R": return error
         case "S": return success
+        case "J": return jacket
+        case "T": return tie
+        case "H": return shirt
+        case "L": return line
         default:  return nil
         }
     }
@@ -514,163 +529,353 @@ enum PixelHamsterLibrary {
         framesFor(state)
     }
 
-    // 8x8 chonky hamster bust shot — no legs, brown cap on head, white face+belly
+    // 16x16 chonky hamster — face is 2x scaled original, suit has detail
     // B=white/cream F=light brown fur E=pink ear K=eye N=nose
-    // A=accessory R=error S=success
+    // J=jacket H=shirt T=tie A=accessory R=error S=success
     private static func framesFor(_ state: HamsterSpriteState) -> [[String]] {
         switch state {
         case .idle:
             return [[
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                "BBBBBBBB",
+                "....EE....EE....",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ], [
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                "BBBBBBB.",
+                "....EE....EE....",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "JJJJJJJJJJJJJJ..",
             ]]
         case .walk:
             return [[
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                "BBBBBBBB",
+                "....EE....EE....",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ], [
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                ".BBBBBBB",
+                "....EE....EE....",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "..JJJJJJJJJJJJJJ",
             ]]
         case .run:
             return [[
-                "........",
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
+                "................",
+                "................",
+                "....EE....EE....",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ], [
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                "BBBBBBBB",
+                "....EE....EE....",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ]]
         case .type:
             return [[
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                ".AAAAAA.",
+                "....EE....EE....",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "..AAAAAAAAAAAA..",
+                "..AAAAAAAAAAAA..",
             ], [
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                "A.AAAA.A",
+                "....EE....EE....",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "AA..AAAAAAAA..AA",
+                "AA..AAAAAAAA..AA",
             ]]
         case .read:
             return [[
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBAABBBB",
-                ".AAAAAA.",
+                "....EE....EE....",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJAAAAAAJJJJJ",
+                "JJAAAAAAAAAAJJJ",
+                "..AAAAAAAAAAAA..",
+                "..AAAAAAAAAAAA..",
+                "................",
             ]]
         case .think:
             return [[
-                "..E..E.A",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                "BBBBBBBB",
+                "....EE....EE...A",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ], [
-                "..E..EA.",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                "BBBBBBBB",
+                "....EE....EE....",
+                "....EE....EE...A",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ]]
         case .sleep:
             return [[
-                "..E..E..",
-                ".FFFFFF.",
-                "FBFBBFBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                "BBBBBBBB",
+                "....EE....EE....",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBFFBBBBFFBBFF",
+                "FFBBFFBBBBFFBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ], [
-                "..E..E.A",
-                ".FFFFFF.",
-                "FBFBBFBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                "BBBBBBBB",
+                "....EE....EE...A",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBFFBBBBFFBBFF",
+                "FFBBFFBBBBFFBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ]]
         case .celebrate:
             return [[
-                "S.E..E.S",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                "BBBBBBBB",
+                "SS..EE......EE.S",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "S.JJJJJJJJJJJJ.S",
             ], [
-                ".SE..ES.",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
-                "BBBBBBBB",
+                "..S.EE......EES.",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                ".SJJJJJJJJJJJJS.",
             ]]
         case .alert:
             return [[
-                "...AA...",
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
+                "....EE....EE...R",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ], [
-                "..AAAA..",
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
+                "....EE....EE....",
+                "....EE....EE...R",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ]]
         case .error:
             return [[
-                "...RR...",
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
+                "......RRRR......",
+                "......RRRR......",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ], [
-                "..RRRR..",
-                "..E..E..",
-                ".FFFFFF.",
-                "FBKBBKBF",
-                "BBBNNBBB",
-                "BBBBBBBB",
+                ".....RRRRRR.....",
+                ".....RRRRRR.....",
+                "....EE....EE....",
+                "..FFFFFFFFFFFF..",
+                "..FFFFFFFFFFFF..",
+                "FFBBKKBBBBKKBBFF",
+                "FFBBKKBBBBKKBBFF",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBNNNNBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "BBBBBBBBBBBBBBBB",
+                "JJJLLLLTLLLLLJJJ",
+                "JJJJHHHTTHHHJJJJ",
+                "JJJJJHHTTHHJJJJJ",
+                "JJJJJJJTTJJJJJJJ",
+                "JJJJJJJJJJJJJJJJ",
             ]]
         }
     }
