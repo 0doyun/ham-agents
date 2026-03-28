@@ -48,6 +48,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
     public var sessionProcessID: Int?
     public var sessionCommand: String?
     public var avatarVariant: String
+    public var subAgentCount: Int
 
     public init(
         id: String,
@@ -71,7 +72,8 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         sessionActivity: String? = nil,
         sessionProcessID: Int? = nil,
         sessionCommand: String? = nil,
-        avatarVariant: String = "default"
+        avatarVariant: String = "default",
+        subAgentCount: Int = 0
     ) {
         self.id = id
         self.displayName = displayName
@@ -95,6 +97,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         self.sessionProcessID = sessionProcessID
         self.sessionCommand = sessionCommand
         self.avatarVariant = avatarVariant
+        self.subAgentCount = subAgentCount
     }
 
     enum CodingKeys: String, CodingKey {
@@ -120,6 +123,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         case sessionProcessID = "session_process_id"
         case sessionCommand = "session_command"
         case avatarVariant = "avatar_variant"
+        case subAgentCount = "sub_agent_count"
     }
 
     public init(from decoder: Decoder) throws {
@@ -146,5 +150,6 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         sessionProcessID = try c.decodeIfPresent(Int.self, forKey: .sessionProcessID)
         sessionCommand = try c.decodeIfPresent(String.self, forKey: .sessionCommand)
         avatarVariant = try c.decodeIfPresent(String.self, forKey: .avatarVariant) ?? "default"
+        subAgentCount = try c.decodeIfPresent(Int.self, forKey: .subAgentCount) ?? 0
     }
 }

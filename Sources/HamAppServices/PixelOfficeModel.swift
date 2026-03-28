@@ -1,10 +1,10 @@
 import HamCore
 
-public enum PixelOfficeZone: String, CaseIterable, Sendable {
+public enum OfficeArea: String, CaseIterable, Sendable {
     case desk
-    case library
-    case kitchen
-    case alertCorner
+    case bookshelf
+    case sofa
+    case alertLight
 }
 
 public enum HamsterSpriteState: String, CaseIterable, Sendable {
@@ -22,16 +22,25 @@ public enum HamsterSpriteState: String, CaseIterable, Sendable {
 
 public struct PixelOfficeOccupant: Equatable, Identifiable, Sendable {
     public let agent: Agent
-    public let zone: PixelOfficeZone
+    public let area: OfficeArea
     public let sprite: HamsterSpriteState
+    public let subAgentCount: Int
 
     public var id: String { agent.id }
 
-    public init(agent: Agent, zone: PixelOfficeZone, sprite: HamsterSpriteState) {
+    public init(agent: Agent, area: OfficeArea, sprite: HamsterSpriteState, subAgentCount: Int = 0) {
         self.agent = agent
-        self.zone = zone
+        self.area = area
         self.sprite = sprite
+        self.subAgentCount = subAgentCount
     }
+}
+
+/// Icon overlay shown above a hamster sprite to communicate status at a glance.
+public enum StatusIcon: String, Sendable {
+    case question  // ❓ waiting_input
+    case warning   // ⚠️ error / disconnected
+    case check     // ✅ done
 }
 
 public enum MenuBarHamsterState: Equatable, Sendable {
@@ -44,23 +53,28 @@ public enum MenuBarHamsterState: Equatable, Sendable {
 
 public enum PixelOfficeMapper {
     public static func occupant(for agent: Agent) -> PixelOfficeOccupant {
-        PixelOfficeOccupant(agent: agent, zone: zone(for: agent.status), sprite: sprite(for: agent.status))
+        PixelOfficeOccupant(
+            agent: agent,
+            area: area(for: agent.status),
+            sprite: sprite(for: agent.status),
+            subAgentCount: agent.subAgentCount
+        )
     }
 
     public static func occupants(from agents: [Agent]) -> [PixelOfficeOccupant] {
         agents.map(occupant(for:))
     }
 
-    public static func zone(for status: AgentStatus) -> PixelOfficeZone {
+    public static func area(for status: AgentStatus) -> OfficeArea {
         switch status {
         case .booting, .thinking, .runningTool:
             return .desk
         case .reading:
-            return .library
+            return .bookshelf
         case .error, .waitingInput, .disconnected:
-            return .alertCorner
+            return .alertLight
         case .idle, .sleeping, .done:
-            return .kitchen
+            return .sofa
         }
     }
 
@@ -84,6 +98,19 @@ public enum PixelOfficeMapper {
             return .sleep
         case .idle:
             return .idle
+        }
+    }
+
+    public static func statusIcon(for status: AgentStatus) -> StatusIcon? {
+        switch status {
+        case .waitingInput:
+            return .question
+        case .error, .disconnected:
+            return .warning
+        case .done:
+            return .check
+        default:
+            return nil
         }
     }
 
