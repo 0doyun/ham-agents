@@ -116,3 +116,105 @@ func (r *Registry) RecordManagedExit(ctx context.Context, agentID string, exitEr
 	})
 	return err
 }
+
+func (r *Registry) RecordHookToolStart(ctx context.Context, agentID string, toolName string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		status := core.AgentStatusRunningTool
+		lower := strings.ToLower(strings.TrimSpace(toolName))
+		if lower == "read" || lower == "grep" || lower == "glob" {
+			status = core.AgentStatusReading
+		}
+		agent.Status = status
+		agent.StatusConfidence = 1
+		agent.StatusReason = fmt.Sprintf("Hook: tool started: %s", toolName)
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             fmt.Sprintf("Tool started: %s", toolName),
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookToolDone(ctx context.Context, agentID string, toolName string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		agent.Status = core.AgentStatusThinking
+		agent.StatusConfidence = 1
+		agent.StatusReason = fmt.Sprintf("Hook: tool completed: %s", toolName)
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             fmt.Sprintf("Tool completed: %s", toolName),
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookSessionEnd(ctx context.Context, agentID string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		agent.Status = core.AgentStatusDone
+		agent.StatusConfidence = 1
+		agent.StatusReason = "Hook: session ended."
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessExited,
+			Summary:             "Session ended via hook.",
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookAgentSpawned(ctx context.Context, agentID string, description string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		agent.SubAgentCount++
+		agent.LastEventAt = now
+		summary := "Sub-agent spawned."
+		if description != "" {
+			summary = fmt.Sprintf("Sub-agent spawned: %s", description)
+		}
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookAgentFinished(ctx context.Context, agentID string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		if agent.SubAgentCount > 0 {
+			agent.SubAgentCount--
+		}
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             "Sub-agent finished.",
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}

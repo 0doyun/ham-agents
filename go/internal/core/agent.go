@@ -58,6 +58,7 @@ type Agent struct {
 	SessionProcessID        int                `json:"session_process_id,omitempty"`
 	SessionCommand          string             `json:"session_command,omitempty"`
 	AvatarVariant           string             `json:"avatar_variant"`
+	SubAgentCount           int                `json:"sub_agent_count,omitempty"`
 }
 
 type RuntimeSnapshot struct {

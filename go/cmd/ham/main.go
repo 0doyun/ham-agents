@@ -63,6 +63,8 @@ func run(args []string) error {
 		return runUI(args[1:])
 	case "team":
 		return runTeam(ctx, client, args[1:])
+	case "hook":
+		return runHook(ctx, client, args[1:])
 	case "settings":
 		return runSettings(ctx, client, args[1:])
 	case "list":
@@ -71,6 +73,8 @@ func run(args []string) error {
 		return runStatus(ctx, client, args[1:])
 	case "events":
 		return runEvents(ctx, client, args[1:])
+	case "down":
+		return runDown(ctx, client, args[1:])
 	default:
 		return fmt.Errorf("unsupported command %q", args[0])
 	}
@@ -103,9 +107,15 @@ Usage:
   ham settings appearance [--theme=auto|day|night] [--animation-speed=0.25-3] [--reduce-motion=true|false] [--hamster-skin=name] [--hat=name] [--desk-theme=name]
   ham settings integrations [--iterm-enabled=true|false] [--transcript-dirs=dir1,dir2] [--provider-adapter=name=true|false]
   ham settings privacy [--local-only-mode=true|false] [--event-history-retention-days=N] [--transcript-excerpt-storage=true|false]
+  ham hook tool-start <tool-name>
+  ham hook tool-done <tool-name>
+  ham hook session-end
+  ham hook agent-spawned [--description ...]
+  ham hook agent-finished
   ham list [--json] [--team ref] [--workspace ref]
   ham status [--json] [--team ref] [--workspace ref]
   ham events [--json] [--limit N] [--follow] [--after-id ID] [--wait-ms N]
+  ham down
 
 Daemon socket:
   %s

@@ -26,7 +26,8 @@ type Server struct {
 	teams         *hamruntime.TeamService
 	sessionLister SessionLister
 
-	listener net.Listener
+	listener   net.Listener
+	cancelFunc context.CancelFunc
 }
 
 func NewServer(socketPath string, registry *hamruntime.Registry, managed *hamruntime.ManagedService, settings *hamruntime.SettingsService, teams *hamruntime.TeamService, sessionLister SessionLister) *Server {
@@ -41,6 +42,9 @@ func NewServer(socketPath string, registry *hamruntime.Registry, managed *hamrun
 }
 
 func (s *Server) Serve(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	s.cancelFunc = cancel
+
 	if err := os.MkdirAll(filepath.Dir(s.socketPath), 0o755); err != nil {
 		return fmt.Errorf("create socket directory: %w", err)
 	}
@@ -284,6 +288,43 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{Settings: &settings}, nil
+	case CommandHookToolStart:
+		if err := s.registry.RecordHookToolStart(ctx, request.AgentID, request.ToolName); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookToolDone:
+		if err := s.registry.RecordHookToolDone(ctx, request.AgentID, request.ToolName); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookSessionEnd:
+		if err := s.registry.RecordHookSessionEnd(ctx, request.AgentID); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookAgentSpawned:
+		if err := s.registry.RecordHookAgentSpawned(ctx, request.AgentID, request.Description); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookAgentFinished:
+		if err := s.registry.RecordHookAgentFinished(ctx, request.AgentID); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandShutdown:
+		if s.managed != nil {
+			s.managed.StopAll(ctx)
+		}
+		go func() {
+			// Small delay so the response can be sent before the server shuts down.
+			time.Sleep(100 * time.Millisecond)
+			if s.cancelFunc != nil {
+				s.cancelFunc()
+			}
+		}()
+		return Response{}, nil
 	default:
 		return Response{}, fmt.Errorf("unsupported command %q", request.Command)
 	}

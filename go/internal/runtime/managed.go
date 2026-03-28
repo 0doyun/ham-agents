@@ -115,6 +115,19 @@ func (s *ManagedService) Stop(ctx context.Context, agentID string) error {
 	return nil
 }
 
+func (s *ManagedService) StopAll(ctx context.Context) {
+	s.mu.Lock()
+	ids := make([]string, 0, len(s.processes))
+	for id := range s.processes {
+		ids = append(ids, id)
+	}
+	s.mu.Unlock()
+
+	for _, id := range ids {
+		_ = s.Stop(ctx, id)
+	}
+}
+
 func (s *ManagedService) consumeOutput(agentID string, reader io.Reader, isStderr bool) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
