@@ -234,11 +234,25 @@ func TestSetupAbortedByUser(t *testing.T) {
 	}
 }
 
-func TestInspectHookStatusConfigured(t *testing.T) {
+func TestHasHamHooksAllThreeConfigured(t *testing.T) {
 	t.Parallel()
 
-	// inspectHookStatus uses real os.UserHomeDir, so we test the underlying
-	// functions directly instead.
+	settings := map[string]interface{}{
+		"hooks": map[string]interface{}{
+			"PreToolUse":  []interface{}{map[string]interface{}{"command": "ham hook tool-start \"$TOOL_NAME\""}},
+			"PostToolUse": []interface{}{map[string]interface{}{"command": "ham hook tool-done \"$TOOL_NAME\""}},
+			"Stop":        []interface{}{map[string]interface{}{"command": "ham hook session-end"}},
+		},
+	}
+	if !hasHamHooks(settings) {
+		t.Fatal("expected hasHamHooks to return true when all 3 categories present")
+	}
+}
+
+func TestHasHamHooksPartialReturnsFalse(t *testing.T) {
+	t.Parallel()
+
+	// Only 1 of 3 categories — should be false (incomplete setup).
 	settings := map[string]interface{}{
 		"hooks": map[string]interface{}{
 			"PreToolUse": []interface{}{
@@ -246,12 +260,12 @@ func TestInspectHookStatusConfigured(t *testing.T) {
 			},
 		},
 	}
-	if !hasHamHooks(settings) {
-		t.Fatal("expected hasHamHooks to return true")
+	if hasHamHooks(settings) {
+		t.Fatal("expected hasHamHooks to return false when only 1 of 3 categories present")
 	}
 }
 
-func TestInspectHookStatusNotConfigured(t *testing.T) {
+func TestHasHamHooksNotConfigured(t *testing.T) {
 	t.Parallel()
 
 	settings := map[string]interface{}{
@@ -266,12 +280,47 @@ func TestInspectHookStatusNotConfigured(t *testing.T) {
 	}
 }
 
-func TestInspectHookStatusNoHooksKey(t *testing.T) {
+func TestHasHamHooksNoHooksKey(t *testing.T) {
 	t.Parallel()
 
 	settings := map[string]interface{}{"theme": "dark"}
 	if hasHamHooks(settings) {
 		t.Fatal("expected hasHamHooks to return false when no hooks key")
+	}
+}
+
+func TestMergeHamHooksSkipsExistingCategories(t *testing.T) {
+	t.Parallel()
+
+	settings := map[string]interface{}{
+		"hooks": map[string]interface{}{
+			"PreToolUse": []interface{}{
+				map[string]interface{}{"command": "ham hook tool-start \"$TOOL_NAME\"", "timeout": float64(5000)},
+			},
+			// PostToolUse and Stop missing — should be added.
+		},
+	}
+
+	mergeHamHooks(settings)
+
+	hooks := settings["hooks"].(map[string]interface{})
+
+	// PreToolUse should still have only 1 entry (no duplicate).
+	preArr := hooks["PreToolUse"].([]interface{})
+	if len(preArr) != 1 {
+		t.Fatalf("expected 1 PreToolUse entry (existing), got %d", len(preArr))
+	}
+
+	// PostToolUse and Stop should each have 1 new entry.
+	for _, key := range []string{"PostToolUse", "Stop"} {
+		arr := hooks[key].([]interface{})
+		if len(arr) != 1 {
+			t.Fatalf("expected 1 %s entry (newly added), got %d", key, len(arr))
+		}
+		cmd := arr[0].(map[string]interface{})["command"].(string)
+		if !strings.Contains(cmd, "ham hook") {
+			t.Fatalf("expected ham hook command for %s, got %q", key, cmd)
+		}
 	}
 }
 
@@ -319,9 +368,9 @@ func TestSetupLaunchdAdvice(t *testing.T) {
 			_ = os.MkdirAll(claudeDir, 0o755)
 			existing := map[string]interface{}{
 				"hooks": map[string]interface{}{
-					"PreToolUse": []interface{}{
-						map[string]interface{}{"command": "ham hook tool-start \"$TOOL_NAME\""},
-					},
+					"PreToolUse":  []interface{}{map[string]interface{}{"command": "ham hook tool-start \"$TOOL_NAME\""}},
+					"PostToolUse": []interface{}{map[string]interface{}{"command": "ham hook tool-done \"$TOOL_NAME\""}},
+					"Stop":        []interface{}{map[string]interface{}{"command": "ham hook session-end"}},
 				},
 			}
 			data, _ := json.MarshalIndent(existing, "", "  ")

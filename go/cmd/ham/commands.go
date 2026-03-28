@@ -343,9 +343,6 @@ func parseHookDescription(args []string) string {
 			return strings.Join(args[i+1:], " ")
 		}
 	}
-	if len(args) > 0 {
-		return strings.Join(args, " ")
-	}
 	return ""
 }
 
