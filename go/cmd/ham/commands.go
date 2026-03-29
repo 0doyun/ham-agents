@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -331,20 +332,20 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 		if len(args) > 1 {
 			toolName = args[1]
 		}
-		return client.HookToolStart(ctx, agentID, toolName)
+		return client.HookToolStart(ctx, agentID, toolName, hookToolInputPreview(os.Stdin, toolName), detectOmcMode())
 	case "tool-done":
 		toolName := ""
 		if len(args) > 1 {
 			toolName = args[1]
 		}
-		return client.HookToolDone(ctx, agentID, toolName)
+		return client.HookToolDone(ctx, agentID, toolName, hookToolInputPreview(os.Stdin, toolName), detectOmcMode())
 	case "session-end":
-		return client.HookSessionEnd(ctx, agentID)
+		return client.HookSessionEnd(ctx, agentID, detectOmcMode())
 	case "agent-spawned":
 		description := parseHookDescription(args[1:])
-		return client.HookAgentSpawned(ctx, agentID, description)
+		return client.HookAgentSpawned(ctx, agentID, description, detectOmcMode())
 	case "agent-finished":
-		return client.HookAgentFinished(ctx, agentID)
+		return client.HookAgentFinished(ctx, agentID, detectOmcMode())
 	default:
 		return fmt.Errorf("unsupported hook subcommand %q", args[0])
 	}
@@ -357,6 +358,70 @@ func parseHookDescription(args []string) string {
 		}
 	}
 	return ""
+}
+
+func hookToolInputPreview(in io.Reader, toolName string) string {
+	if file, ok := in.(*os.File); ok {
+		if info, err := file.Stat(); err == nil && info.Mode()&os.ModeCharDevice != 0 {
+			return ""
+		}
+	}
+
+	var payload struct {
+		ToolInput map[string]any `json:"tool_input"`
+	}
+	if err := json.NewDecoder(in).Decode(&payload); err != nil || len(payload.ToolInput) == 0 {
+		return ""
+	}
+	return summarizeToolInput(toolName, payload.ToolInput)
+}
+
+func summarizeToolInput(toolName string, input map[string]any) string {
+	tool := strings.ToLower(strings.TrimSpace(toolName))
+	switch tool {
+	case "read", "edit", "write", "multiedit":
+		return firstToolInputString(input, "file_path")
+	case "bash":
+		return compactToolPreview(firstToolInputString(input, "command", "cmd"))
+	case "grep":
+		if preview := firstToolInputString(input, "pattern"); preview != "" {
+			return compactToolPreview(preview)
+		}
+		return firstToolInputString(input, "path", "file_path")
+	case "glob":
+		return compactToolPreview(firstToolInputString(input, "pattern"))
+	case "webfetch":
+		return firstToolInputString(input, "url")
+	case "websearch":
+		return compactToolPreview(firstToolInputString(input, "query"))
+	case "agent", "task":
+		return compactToolPreview(firstToolInputString(input, "description", "prompt"))
+	default:
+		return compactToolPreview(firstToolInputString(input, "file_path", "path", "command", "pattern", "url", "description", "prompt"))
+	}
+}
+
+func firstToolInputString(input map[string]any, keys ...string) string {
+	for _, key := range keys {
+		value, ok := input[key]
+		if !ok {
+			continue
+		}
+		if text, ok := value.(string); ok {
+			return strings.TrimSpace(text)
+		}
+	}
+	return ""
+}
+
+func compactToolPreview(value string) string {
+	trimmed := strings.TrimSpace(value)
+	trimmed = strings.ReplaceAll(trimmed, "\n", " ")
+	trimmed = strings.Join(strings.Fields(trimmed), " ")
+	if len(trimmed) > 80 {
+		return trimmed[:77] + "..."
+	}
+	return trimmed
 }
 
 func runStop(ctx context.Context, client *ipc.Client, args []string) error {

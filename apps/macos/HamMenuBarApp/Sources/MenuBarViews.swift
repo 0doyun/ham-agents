@@ -114,8 +114,13 @@ struct MenuBarContentView: View {
                                 selectedAgentID = agent.id
                             } label: {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(agent.displayName)
-                                        .font(.body.weight(.medium))
+                                    HStack(spacing: 6) {
+                                        Text(agent.displayName)
+                                            .font(.body.weight(.medium))
+                                        if let omcMode = agent.omcMode, !omcMode.isEmpty {
+                                            OmcModeBadge(mode: omcMode)
+                                        }
+                                    }
                                     Text("\(viewModel.statusDisplayText(for: agent)) · \(agent.mode.rawValue) · \(viewModel.confidenceLevelText(for: agent)) \(viewModel.confidenceText(for: agent))")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -685,6 +690,9 @@ private struct AgentDetailView: View {
                 HStack(alignment: .center, spacing: 8) {
                     Text(agent.displayName)
                         .font(.headline)
+                    if let omcMode = agent.omcMode, !omcMode.isEmpty {
+                        OmcModeBadge(mode: omcMode)
+                    }
                     StatusBadge(status: agent.status)
                     Spacer()
                 }
@@ -759,6 +767,20 @@ private struct AgentDetailView: View {
                 }
 
                 // Recent Events (compact)
+                if !agent.recentTools.isEmpty {
+                    Text("Recent Activity")
+                        .font(.caption.weight(.semibold))
+                        .padding(.top, 2)
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(Array(agent.recentTools.prefix(5).enumerated()), id: \.offset) { _, entry in
+                            Text(entry)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                    }
+                }
+
                 Text("Recent")
                     .font(.caption.weight(.semibold))
                     .padding(.top, 2)
@@ -794,6 +816,20 @@ private struct AgentDetailView: View {
 
             Spacer()
         }
+    }
+}
+
+private struct OmcModeBadge: View {
+    let mode: String
+
+    var body: some View {
+        Text("[\(mode)]")
+            .font(.caption2.monospaced())
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .background(Color.accentColor.opacity(0.12))
+            .foregroundStyle(Color.accentColor)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 }
 

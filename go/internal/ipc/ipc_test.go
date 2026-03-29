@@ -527,7 +527,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookToolStart should transition agent to a tool-related status.
-	if err := client.HookToolStart(context.Background(), agent.ID, "Read"); err != nil {
+	if err := client.HookToolStart(context.Background(), agent.ID, "Read", "go/internal/ipc/server.go", "ralph"); err != nil {
 		t.Fatalf("hook tool-start: %v", err)
 	}
 	snapshot, err := client.Status(context.Background())
@@ -541,12 +541,21 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	if agentAfterToolStart.Status != core.AgentStatusReading {
 		t.Fatalf("expected reading status after Read tool-start, got %q", agentAfterToolStart.Status)
 	}
+	if agentAfterToolStart.LastUserVisibleSummary != "Read: go/internal/ipc/server.go" {
+		t.Fatalf("unexpected structured summary %q", agentAfterToolStart.LastUserVisibleSummary)
+	}
+	if len(agentAfterToolStart.RecentTools) == 0 || agentAfterToolStart.RecentTools[0] != "Read: go/internal/ipc/server.go" {
+		t.Fatalf("unexpected recent tools %#v", agentAfterToolStart.RecentTools)
+	}
+	if agentAfterToolStart.OmcMode != "ralph" {
+		t.Fatalf("expected omc mode ralph, got %q", agentAfterToolStart.OmcMode)
+	}
 	if agentAfterToolStart.StatusConfidence != 1.0 {
 		t.Fatalf("expected confidence 1.0, got %f", agentAfterToolStart.StatusConfidence)
 	}
 
 	// HookToolDone should transition back to thinking.
-	if err := client.HookToolDone(context.Background(), agent.ID, "Read"); err != nil {
+	if err := client.HookToolDone(context.Background(), agent.ID, "Read", "go/internal/ipc/server.go", "ralph"); err != nil {
 		t.Fatalf("hook tool-done: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -558,7 +567,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookAgentSpawned should increment SubAgentCount.
-	if err := client.HookAgentSpawned(context.Background(), agent.ID, "sub-task"); err != nil {
+	if err := client.HookAgentSpawned(context.Background(), agent.ID, "sub-task", "ralph"); err != nil {
 		t.Fatalf("hook agent-spawned: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -570,7 +579,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookAgentFinished should decrement SubAgentCount.
-	if err := client.HookAgentFinished(context.Background(), agent.ID); err != nil {
+	if err := client.HookAgentFinished(context.Background(), agent.ID, "ralph"); err != nil {
 		t.Fatalf("hook agent-finished: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -582,7 +591,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookSessionEnd should transition to done.
-	if err := client.HookSessionEnd(context.Background(), agent.ID); err != nil {
+	if err := client.HookSessionEnd(context.Background(), agent.ID, "ralph"); err != nil {
 		t.Fatalf("hook session-end: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())

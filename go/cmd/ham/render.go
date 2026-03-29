@@ -80,7 +80,7 @@ func formatAgentListSummary(agents []core.Agent) string {
 func formatAgentListLine(agent core.Agent) string {
 	parts := []string{
 		agent.ID,
-		agent.DisplayName,
+		displayNameWithOmcMode(agent),
 		agent.Provider,
 		string(agent.Mode),
 		formatAgentStatusLabel(agent),
@@ -89,10 +89,20 @@ func formatAgentListLine(agent core.Agent) string {
 	if reason := strings.TrimSpace(agent.StatusReason); reason != "" {
 		parts = append(parts, reason)
 	}
+	if summary := strings.TrimSpace(agent.LastUserVisibleSummary); summary != "" {
+		parts = append(parts, summary)
+	}
 	if agent.SubAgentCount > 0 {
 		parts = append(parts, fmt.Sprintf("+%d sub", agent.SubAgentCount))
 	}
 	return strings.Join(parts, "\t")
+}
+
+func displayNameWithOmcMode(agent core.Agent) string {
+	if mode := strings.TrimSpace(agent.OmcMode); mode != "" {
+		return fmt.Sprintf("%s [%s]", agent.DisplayName, mode)
+	}
+	return agent.DisplayName
 }
 
 func formatAgentStatusLabel(agent core.Agent) string {

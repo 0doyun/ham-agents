@@ -38,6 +38,8 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
     public var statusReason: String?
     public var lastEventAt: Date
     public var lastUserVisibleSummary: String?
+    public var recentTools: [String]
+    public var omcMode: String?
     public var notificationPolicy: NotificationPolicy
     public var sessionRef: String?
     public var sessionTitle: String?
@@ -63,6 +65,8 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         statusReason: String? = nil,
         lastEventAt: Date,
         lastUserVisibleSummary: String? = nil,
+        recentTools: [String] = [],
+        omcMode: String? = nil,
         notificationPolicy: NotificationPolicy = .default,
         sessionRef: String? = nil,
         sessionTitle: String? = nil,
@@ -87,6 +91,8 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         self.statusReason = statusReason
         self.lastEventAt = lastEventAt
         self.lastUserVisibleSummary = lastUserVisibleSummary
+        self.recentTools = recentTools
+        self.omcMode = omcMode
         self.notificationPolicy = notificationPolicy
         self.sessionRef = sessionRef
         self.sessionTitle = sessionTitle
@@ -113,6 +119,8 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         case statusReason = "status_reason"
         case lastEventAt = "last_event_at"
         case lastUserVisibleSummary = "last_user_visible_summary"
+        case recentTools = "recent_tools"
+        case omcMode = "omc_mode"
         case notificationPolicy = "notification_policy"
         case sessionRef = "session_ref"
         case sessionTitle = "session_title"
@@ -140,6 +148,8 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         statusReason = try c.decodeIfPresent(String.self, forKey: .statusReason)
         lastEventAt = try c.decodeIfPresent(Date.self, forKey: .lastEventAt) ?? Date()
         lastUserVisibleSummary = try c.decodeIfPresent(String.self, forKey: .lastUserVisibleSummary)
+        recentTools = try c.decodeIfPresent([String].self, forKey: .recentTools) ?? []
+        omcMode = try c.decodeIfPresent(String.self, forKey: .omcMode)
         notificationPolicy = try c.decodeIfPresent(NotificationPolicy.self, forKey: .notificationPolicy) ?? .default
         sessionRef = try c.decodeIfPresent(String.self, forKey: .sessionRef)
         sessionTitle = try c.decodeIfPresent(String.self, forKey: .sessionTitle)

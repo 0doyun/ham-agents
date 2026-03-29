@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
 	"github.com/ham-agents/ham-agents/go/internal/inference"
@@ -33,7 +34,7 @@ func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agen
 		}
 
 		updated := inference.RefreshObservedAgent(agent, now)
-		if updated != agent {
+		if !reflect.DeepEqual(updated, agent) {
 			if updated.Status != agent.Status {
 				events = append(events, core.Event{
 					AgentID:             agent.ID,

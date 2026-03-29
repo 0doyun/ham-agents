@@ -217,7 +217,8 @@ public final class MenuBarViewModel: ObservableObject {
 
     public func openSession(forAgentID id: Agent.ID?) {
         guard let agent = agent(withID: id) else { return }
-        guard settings.integrations.itermEnabled else {
+        let needsItermFallback = (agent.sessionRef?.isEmpty ?? true)
+        guard !needsItermFallback || settings.integrations.itermEnabled else {
             errorMessage = "Enable iTerm integration in Settings to open sessions."
             return
         }

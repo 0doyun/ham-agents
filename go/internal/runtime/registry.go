@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -166,7 +167,7 @@ func (r *Registry) mutateAgent(
 		if event != nil {
 			events = append(events, *event)
 		}
-		if event == nil && agents[index] == before {
+		if event == nil && reflect.DeepEqual(agents[index], before) {
 			return agents[index], nil
 		}
 		if err := r.saveAgentsAndEvents(ctx, agents, events); err != nil {
@@ -250,7 +251,7 @@ func agentsEqual(lhs []core.Agent, rhs []core.Agent) bool {
 		return false
 	}
 	for index := range lhs {
-		if lhs[index] != rhs[index] {
+		if !reflect.DeepEqual(lhs[index], rhs[index]) {
 			return false
 		}
 	}
