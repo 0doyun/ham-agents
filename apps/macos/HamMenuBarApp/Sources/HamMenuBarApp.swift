@@ -18,7 +18,7 @@ struct HamMenuBarApp: App {
     var body: some Scene {
         MenuBarExtra {
             MenuBarContentView(viewModel: viewModel)
-                .frame(minWidth: 480, minHeight: 400)
+                .frame(minWidth: 380, minHeight: 400)
                 .task {
                     await viewModel.refresh()
                 }
