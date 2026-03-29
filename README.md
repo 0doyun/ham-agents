@@ -2,7 +2,7 @@
 
 **Terminal AI sessions as a hamster team.**
 
-ham-agents is a macOS menu bar app that lets you manage multiple AI coding agents (Claude Code, Codex, etc.) from one place. Run them, watch pixel hamsters work at their desks, get notified when they need you, and send messages — all without leaving your workflow.
+ham-agents is a macOS menu bar app that manages your Claude Code sessions from one place. Run them, watch pixel hamsters work at their desks, get notified when they need you, and send messages — all without leaving your workflow.
 
 <p align="center">
   <img src="assets/image.png" alt="ham-agents pixel office" width="420">
@@ -11,11 +11,12 @@ ham-agents is a macOS menu bar app that lets you manage multiple AI coding agent
 ## What it does
 
 - `ham run claude` — starts Claude Code and registers a hamster in the office
-- `ham run codex` — same for Codex (or any CLI-based AI agent)
+- `ham setup` — auto-configures Claude Code hooks for accurate state tracking
 - Menu bar shows a pixel office where each hamster represents a running agent
-- Hamsters move between zones based on agent state (desk = working, kitchen = idle, alert = needs input)
+- Hamsters sit at individual workstations with status-specific furniture (monitor, books, coffee)
+- Sub-agents appear as mini hamsters surrounding their parent in an arc
 - Click a hamster to see what it's doing, send it a message, or jump to its terminal
-- macOS notifications when an agent finishes, errors, or needs input
+- macOS notifications when an agent errors or needs input
 - All state tracked locally — nothing leaves your machine
 
 ## Quick start
@@ -25,6 +26,7 @@ ham-agents is a macOS menu bar app that lets you manage multiple AI coding agent
 - macOS 13+
 - Go 1.21+
 - Swift 5.10+
+- Claude Code
 - iTerm2 (recommended, for session targeting)
 
 ### Build and install
@@ -43,6 +45,14 @@ swift build --disable-sandbox
 
 Make sure `~/go/bin` is in your PATH.
 
+### Setup
+
+```bash
+ham setup
+```
+
+This detects Claude Code and adds hooks to `~/.claude/settings.json` for accurate state tracking. Your existing settings are preserved.
+
 ### Run
 
 ```bash
@@ -54,13 +64,15 @@ That's it. The daemon starts automatically via launchd, the menu bar app launche
 ## CLI
 
 ```
-ham run <provider>              # start an agent (claude, codex, etc.)
+ham run <provider>              # start an agent
+ham setup                       # configure Claude Code hooks
 ham list                        # list all tracked agents
 ham status                      # summary with attention counts
 ham ask <agent> "message"       # send a message to an agent
 ham stop <agent>                # stop a managed agent
 ham attach --pick-iterm-session # attach to an existing iTerm session
-ham doctor                      # check daemon, socket, launchd status
+ham hook <event> [args]         # (internal) called by Claude Code hooks
+ham doctor                      # check daemon, hooks, socket, launchd status
 ham ui                          # launch the menu bar app manually
 ```
 
@@ -69,40 +81,62 @@ ham ui                          # launch the menu bar app manually
 ```
 ham (Go CLI) ──── IPC ────► hamd (Go daemon)
      │                          │
-     │ PTY                      │ state inference
+     │ PTY + hooks              │ state tracking
      ▼                          ▼
-  provider               agent registry
-  (claude, codex)        event log
-                         settings
-                              │
-                              ▼
-                    ham-menubar (Swift)
-                    pixel office UI
-                    notifications
+  Claude Code              agent registry
+  (hooks → ham hook)       event log
+                           settings
+                                │
+                                ▼
+                      ham-menubar (Swift)
+                      pixel office UI
+                      notifications
 ```
 
-- **ham** — CLI that wraps providers in a PTY, forwarding output to the daemon for state inference
+- **ham** — CLI that wraps Claude Code in a PTY, forwarding hook events to the daemon
 - **hamd** — background daemon managed by launchd, tracks agent state, serves IPC
 - **ham-menubar** — SwiftUI menu bar app with pixel hamster office, notifications, quick actions
 
+### State tracking
+
+With `ham setup`, Claude Code hooks fire on every tool use:
+
+| Hook event | Agent status | Office visual |
+|---|---|---|
+| `PreToolUse Read/Grep/Glob` | reading | Book stack on desk |
+| `PreToolUse Edit/Write/Bash` | running_tool | iMac monitor (green glow) |
+| `PostToolUse` | thinking | iMac monitor |
+| `PreToolUse Agent` | sub-agent spawned | Mini hamster appears |
+| `PostToolUse Agent` | sub-agent finished | Mini hamster disappears |
+| `Stop` | session end | Hamster removed |
+| Process error exit | error | Red glow monitor + red dot |
+
+Without hooks (fallback): PTY output keyword matching with lower confidence.
+
 ## Menu bar app
 
-The popover shows a pixel office with four zones:
+The popover shows a pixel office with a multi-row grid:
 
-| Zone | Meaning |
-|------|---------|
-| Desk | Agent is actively working (thinking, typing, running tools) |
-| Library | Agent is reading files or code |
-| Kitchen | Agent is idle or done |
-| Alert | Agent has an error or needs your input |
+- Each hamster has their own workstation (desk + status furniture)
+- Rows expand automatically: 1–3 agents → 1 row, 4–6 → 2 rows, 7–9 → 3 rows
+- Sub-agents surround their parent in an arc formation
+- Background: office wall with window, clock, whiteboard, poster
+
+Status furniture (behind hamster, back-view perspective):
+
+| Status | Furniture | Indicator |
+|---|---|---|
+| thinking / running_tool | iMac back + coffee mug | Yellow dot animation |
+| reading | Book stack | — |
+| error / disconnected | Red glow monitor | Red dot animation |
+| waiting_input | Orange glow monitor | ❓ above hamster |
+| idle / sleeping | Closed laptop | Zzz animation |
 
 From the popover you can:
-- See each agent's current status and last output
-- Send a quick message directly to the agent's terminal session
-- Open the agent's iTerm tab
-- Pause/resume notifications per agent
-- Edit agent roles
-- Stop tracking an agent
+- Click a hamster to see its details
+- Send a quick message directly to the agent's terminal
+- Open the agent's iTerm tab or project folder
+- Pause/resume notifications, edit role, stop tracking (via ⋯ menu)
 
 ## Development
 
@@ -117,22 +151,27 @@ go run ./go/cmd/ham run claude
 
 ## Status
 
-Early alpha. Core flow works end-to-end:
+Alpha. Claude Code–first, with accurate hook-based state tracking.
 
-- [x] `ham run claude` / `ham run codex` with interactive PTY
+- [x] `ham run claude` with interactive PTY
+- [x] Claude Code hooks integration (`ham setup`)
+- [x] Accurate state tracking via PreToolUse/PostToolUse/Stop hooks
+- [x] Sub-agent detection and mini hamster visualization
+- [x] Auto multi-row grid office with individual workstations
 - [x] Automatic daemon bootstrap via launchd
 - [x] Automatic menu bar app launch
-- [x] Real-time state inference from provider output
-- [x] Pixel hamster office with status-based zone placement
 - [x] iTerm2 session targeting (open tab, send message)
-- [x] macOS notifications (done, error, waiting input)
+- [x] macOS notifications (error, waiting input)
 - [x] Agent lifecycle (register, track, stop, remove)
+- [x] Detail panel with quick message, actions, recent events
 
-Not yet done:
+Planned:
+
+- [ ] tmux support (alongside iTerm2)
+- [ ] OMC mode recognition (autopilot, ralph, team badges)
+- [ ] Autonomous mode heartbeat notifications
 - [ ] Homebrew formula
-- [ ] Team/workspace grouping
-- [ ] Multiple hamster skins and office customization in the wild
-- [ ] Broader provider support beyond Claude Code and Codex
+- [ ] Multi-provider support (Codex, Gemini CLI)
 
 ## License
 
