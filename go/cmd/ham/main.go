@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/ham-agents/ham-agents/go/internal/adapters"
 	"github.com/ham-agents/ham-agents/go/internal/core"
 	"github.com/ham-agents/ham-agents/go/internal/ipc"
 )
@@ -90,7 +91,9 @@ Usage:
   ham run <provider> [name] [--project path] [--role role]
   ham attach <session-ref> [name] [--project path] [--role role] [--provider provider]
   ham attach --pick-iterm-session [--json] [--project path] [--role role] [--provider provider]
+  ham attach --pick-tmux-session [--json] [--project path] [--role role] [--provider provider]
   ham attach --list-iterm-sessions [--json]
+  ham attach --list-tmux-sessions [--json]
   ham observe <source-ref> [name] [--project path] [--role role] [--provider provider]
   ham open <agent-id> [--json] [--print]
   ham ask <agent-or-team> <message>
@@ -130,6 +133,15 @@ var openTarget = func(target core.OpenTarget) error {
 	case core.OpenTargetKindExternalURL, core.OpenTargetKindItermSession, core.OpenTargetKindWorkspace:
 		command := exec.Command("open", target.Value)
 		return command.Run()
+	case core.OpenTargetKindTmuxPane:
+		ref, err := adapters.ParseTmuxSessionRef(target.Value)
+		if err != nil {
+			return err
+		}
+		if err := exec.Command("tmux", "select-window", "-t", ref.WindowTarget()).Run(); err != nil {
+			return err
+		}
+		return exec.Command("tmux", "select-pane", "-t", ref.PaneTarget()).Run()
 	default:
 		return fmt.Errorf("unsupported open target kind %q", target.Kind)
 	}

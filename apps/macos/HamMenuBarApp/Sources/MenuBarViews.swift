@@ -138,14 +138,15 @@ struct MenuBarContentView: View {
                 }
 
                 if selectedAgentID != nil {
+                    let selectedAgent = viewModel.agent(withID: selectedAgentID)
                     Divider()
                     AgentDetailView(
-                        agent: viewModel.agent(withID: selectedAgentID),
+                        agent: selectedAgent,
                         recentEvents: viewModel.recentEvents(forAgentID: selectedAgentID),
                         recentEventSummaryChips: viewModel.recentEventSummaryChips(forAgentID: selectedAgentID),
                         notificationsMuted: viewModel.isNotificationsMuted(forAgentID: selectedAgentID),
                         quickMessageFeedback: viewModel.quickMessageFeedback,
-                        confidenceText: viewModel.confidenceSummaryText(for: viewModel.agent(withID: selectedAgentID)),
+                        confidenceText: viewModel.confidenceSummaryText(for: selectedAgent),
                         roleDraft: Binding(
                             get: { viewModel.roleDraft },
                             set: { viewModel.roleDraft = $0 }
@@ -157,7 +158,8 @@ struct MenuBarContentView: View {
                         openSession: {
                             viewModel.openSession(forAgentID: selectedAgentID)
                         },
-                        canOpenSession: viewModel.settings.integrations.itermEnabled,
+                        openSessionLabel: sessionOpenLabel(for: selectedAgent),
+                        canOpenSession: canOpenSession(for: selectedAgent, itermEnabled: viewModel.settings.integrations.itermEnabled),
                         toggleNotifications: {
                             viewModel.toggleNotificationPause(forAgentID: selectedAgentID)
                         },
@@ -294,6 +296,24 @@ struct MenuBarContentView: View {
             .padding(.bottom, 14)
         }
     }
+}
+
+private func sessionOpenLabel(for agent: Agent?) -> String {
+    guard let sessionRef = agent?.sessionRef else {
+        return "Open in iTerm"
+    }
+    if sessionRef.hasPrefix("tmux://") {
+        return "Open in tmux"
+    }
+    return "Open in iTerm"
+}
+
+private func canOpenSession(for agent: Agent?, itermEnabled: Bool) -> Bool {
+    guard let agent else { return false }
+    if let sessionRef = agent.sessionRef, !sessionRef.isEmpty {
+        return true
+    }
+    return itermEnabled
 }
 
 private struct AttentionAgentRow: View {
@@ -651,6 +671,7 @@ private struct AgentDetailView: View {
     @Binding var quickMessage: String
     let openProject: () -> Void
     let openSession: () -> Void
+    let openSessionLabel: String
     let canOpenSession: Bool
     let toggleNotifications: () -> Void
     let saveRole: () async -> Void
@@ -692,7 +713,7 @@ private struct AgentDetailView: View {
 
                 // Action buttons row
                 HStack(spacing: 6) {
-                    Button("Open in iTerm") {
+                    Button(openSessionLabel) {
                         openSession()
                     }
                     .buttonStyle(.borderedProminent)

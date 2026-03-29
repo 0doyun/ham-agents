@@ -53,6 +53,7 @@ func run(args []string) error {
 	settingsService := runtime.NewSettingsService(store.NewFileSettingsStore(settingsPath))
 	teamService := runtime.NewTeamService(store.NewFileTeamStore(teamPath))
 	itermAdapter := adapters.NewIterm2Adapter(nil)
+	tmuxAdapter := adapters.NewTmuxAdapter(nil)
 	transcriptAdapter := adapters.NewTranscriptAdapter()
 
 	command := "serve"
@@ -89,8 +90,8 @@ func run(args []string) error {
 			cancel()
 		}()
 
-		server := ipc.NewServer(ipcConfig.SocketPath, registry, managedService, settingsService, teamService, itermAdapter)
-		go pollRuntimeState(ctx, registry, settingsService, itermAdapter, transcriptAdapter, 2*time.Second)
+		server := ipc.NewServer(ipcConfig.SocketPath, registry, managedService, settingsService, teamService, itermAdapter, tmuxAdapter)
+		go pollRuntimeState(ctx, registry, settingsService, itermAdapter, tmuxAdapter, transcriptAdapter, 2*time.Second)
 		fmt.Printf("hamd serving on %s\n", ipcConfig.SocketPath)
 		return server.Serve(ctx)
 	case "snapshot":
@@ -109,7 +110,7 @@ func run(args []string) error {
 	}
 }
 
-func pollRuntimeState(ctx context.Context, registry *runtime.Registry, settings *runtime.SettingsService, itermAdapter adapters.Iterm2Adapter, transcriptAdapter adapters.TranscriptAdapter, interval time.Duration) {
+func pollRuntimeState(ctx context.Context, registry *runtime.Registry, settings *runtime.SettingsService, itermAdapter adapters.Iterm2Adapter, tmuxAdapter adapters.TmuxAdapter, transcriptAdapter adapters.TranscriptAdapter, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
@@ -122,9 +123,11 @@ func pollRuntimeState(ctx context.Context, registry *runtime.Registry, settings 
 			if settingsSnapshot, err := settings.Get(ctx); err == nil && settingsSnapshot.Integrations.ProviderAdapters["transcript"] {
 				_ = ensureObservedTranscripts(ctx, registry, transcriptAdapter, settingsSnapshot.Integrations.TranscriptDirs)
 			}
-			sessions, err := itermAdapter.ListSessions()
-			if err == nil {
-				_ = registry.RefreshAttached(ctx, sessions)
+			if sessions, err := itermAdapter.ListSessions(); err == nil {
+				_ = registry.RefreshAttachedByScheme(ctx, "iterm2", sessions)
+			}
+			if sessions, err := tmuxAdapter.ListSessions(); err == nil {
+				_ = registry.RefreshAttachedByScheme(ctx, "tmux", sessions)
 			}
 		}
 	}

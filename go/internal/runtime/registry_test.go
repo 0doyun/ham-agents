@@ -672,6 +672,38 @@ func TestOpenTargetPrefersSessionRefURL(t *testing.T) {
 	}
 }
 
+func TestOpenTargetRecognizesTmuxSessionRef(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterAttached(ctx, runtime.RegisterAttachedInput{
+		Provider:    "tmux",
+		DisplayName: "ops",
+		ProjectPath: "/tmp/project",
+		SessionRef:  "tmux://demo:1.0",
+	})
+	if err != nil {
+		t.Fatalf("register attached: %v", err)
+	}
+
+	target, err := registry.OpenTarget(ctx, agent.ID)
+	if err != nil {
+		t.Fatalf("open target: %v", err)
+	}
+	if target.Kind != core.OpenTargetKindTmuxPane {
+		t.Fatalf("expected tmux_pane, got %q", target.Kind)
+	}
+	if target.Value != "tmux://demo:1.0" {
+		t.Fatalf("unexpected target value %q", target.Value)
+	}
+}
+
 type countingAgentStore struct {
 	store.AgentStore
 	saveCalls int

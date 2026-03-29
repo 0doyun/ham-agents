@@ -112,6 +112,7 @@ type OpenTargetKind string
 const (
 	OpenTargetKindExternalURL  OpenTargetKind = "external_url"
 	OpenTargetKindItermSession OpenTargetKind = "iterm_session"
+	OpenTargetKindTmuxPane     OpenTargetKind = "tmux_pane"
 	OpenTargetKindWorkspace    OpenTargetKind = "workspace"
 )
 

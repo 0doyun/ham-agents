@@ -53,7 +53,7 @@ func parseAttachInput(args []string) (runtime.RegisterAttachedInput, error) {
 	}
 
 	input := runtime.RegisterAttachedInput{
-		Provider:   "iterm2",
+		Provider:   providerForSessionRef(args[0]),
 		SessionRef: args[0],
 	}
 	remainder := args[1:]
@@ -106,7 +106,7 @@ type attachPickerOptions struct {
 }
 
 func parseAttachPickerOptions(args []string) (attachPickerOptions, error) {
-	options := attachPickerOptions{provider: "iterm2"}
+	options := attachPickerOptions{}
 
 	for index := 0; index < len(args); index++ {
 		argument := args[index]
@@ -144,6 +144,18 @@ func parseAttachPickerOptions(args []string) (attachPickerOptions, error) {
 	}
 
 	return options, nil
+}
+
+func providerForSessionRef(sessionRef string) string {
+	trimmed := strings.TrimSpace(sessionRef)
+	switch {
+	case strings.HasPrefix(trimmed, "tmux://"):
+		return "tmux"
+	case strings.HasPrefix(trimmed, "iterm2://"):
+		return "iterm2"
+	default:
+		return "iterm2"
+	}
 }
 
 func parseObserveInput(args []string) (runtime.RegisterObservedInput, error) {

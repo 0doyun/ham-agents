@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ham-agents/ham-agents/go/internal/adapters"
 	"github.com/ham-agents/ham-agents/go/internal/core"
 )
 
@@ -35,13 +36,21 @@ func (r *Registry) OpenTarget(ctx context.Context, agentID string) (core.OpenTar
 }
 
 func (r *Registry) RefreshAttached(ctx context.Context, sessions []core.AttachableSession) error {
+	return r.refreshAttachedWithScheme(ctx, "", sessions)
+}
+
+func (r *Registry) RefreshAttachedByScheme(ctx context.Context, scheme string, sessions []core.AttachableSession) error {
+	return r.refreshAttachedWithScheme(ctx, scheme, sessions)
+}
+
+func (r *Registry) refreshAttachedWithScheme(ctx context.Context, scheme string, sessions []core.AttachableSession) error {
 	agents, err := r.store.LoadAgents(ctx)
 	if err != nil {
 		return err
 	}
 
 	now := r.clock().UTC()
-	refreshed, changed, changedEvents := refreshAttachedAgents(agents, sessions, now)
+	refreshed, changed, changedEvents := refreshAttachedAgents(agents, sessions, now, scheme)
 	if !changed {
 		return nil
 	}
@@ -51,6 +60,13 @@ func (r *Registry) RefreshAttached(ctx context.Context, sessions []core.Attachab
 }
 
 func openTargetFromSessionRef(sessionRef string) (core.OpenTarget, bool) {
+	if _, err := adapters.ParseTmuxSessionRef(sessionRef); err == nil {
+		return core.OpenTarget{
+			Kind:  core.OpenTargetKindTmuxPane,
+			Value: sessionRef,
+		}, true
+	}
+
 	parsed, err := url.Parse(sessionRef)
 	if err != nil || parsed.Scheme == "" {
 		return core.OpenTarget{}, false
@@ -74,7 +90,7 @@ func openTargetFromSessionRef(sessionRef string) (core.OpenTarget, bool) {
 	}, true
 }
 
-func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSession, now time.Time) ([]core.Agent, bool, []core.Event) {
+func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSession, now time.Time, schemeFilter string) ([]core.Agent, bool, []core.Event) {
 	if len(agents) == 0 {
 		return agents, false, nil
 	}
@@ -95,6 +111,9 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 
 		sessionRef := strings.TrimSpace(agent.SessionRef)
 		if sessionRef == "" {
+			continue
+		}
+		if schemeFilter != "" && sessionRefScheme(sessionRef) != schemeFilter {
 			continue
 		}
 
@@ -220,6 +239,17 @@ func refreshAttachedAgents(agents []core.Agent, sessions []core.AttachableSessio
 	}
 
 	return refreshed, changed, events
+}
+
+func sessionRefScheme(sessionRef string) string {
+	if strings.HasPrefix(strings.TrimSpace(sessionRef), "tmux://") {
+		return "tmux"
+	}
+	parsed, err := url.Parse(sessionRef)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(parsed.Scheme)
 }
 
 func clearAttachedShellState(agent *core.Agent) {

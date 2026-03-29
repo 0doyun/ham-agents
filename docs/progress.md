@@ -12,6 +12,28 @@
 
 ## Log
 
+### 2026-03-30 (Epic 22 tmux support complete)
+- Re-ran the Epic 22 baseline verification and confirmed the starting point was already green:
+  - `go test ./...` ✅
+  - `swift build --disable-sandbox` ✅
+  - existing hook command coverage remained green in Go IPC tests (`tool-start`, `tool-done`, `session-end`, `agent-spawned`, `agent-finished`) ✅
+- Added first-class tmux support across the Go runtime/CLI stack:
+  - new tmux adapter with `list-sessions` / `list-windows` / `list-panes` parsing
+  - canonical tmux session refs: `tmux://<session>:<window>.<pane>`
+  - `ham run` now prefers the current tmux pane when `$TMUX` is set and falls back to iTerm session detection otherwise
+  - `ham attach --pick-tmux-session` and `ham attach --list-tmux-sessions`
+  - `ham open` and `ham ask` now target tmux panes via `tmux select-window` / `select-pane` / `send-keys`
+  - daemon polling now refreshes attached iTerm and tmux agents independently so mixed environments keep working
+  - `ham doctor` now reports tmux installation/session visibility
+- Added tmux-aware menu bar behavior:
+  - session targeting now recognizes tmux refs
+  - detail panel open button automatically changes between iTerm and tmux
+  - quick message sending can target tmux panes from the menu bar path too
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift build --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 23 per Progression policy.
+
 ### 2026-03-26 (Epic 17 one-command bootstrap complete)
 - Added CLI-side daemon auto-bootstrap for daemon-backed commands by probing the socket first, spawning `hamd serve` only when unreachable, and waiting briefly for the socket to become reachable before continuing.
 - Added CLI-side daemon executable resolution with the following precedence:

@@ -24,9 +24,9 @@ func runRegister(ctx context.Context, client *ipc.Client, args []string) error {
 		return err
 	}
 
-	// Capture the current iTerm session ID so Open/Message can target it.
-	if sessionID := detectItermSessionID(); sessionID != "" {
-		input.SessionRef = "iterm2://session/" + sessionID
+	// Capture the current terminal session so Open/Message can target it.
+	if sessionRef := detectSessionRef(); sessionRef != "" {
+		input.SessionRef = sessionRef
 	}
 
 	agent, err := client.RegisterManaged(ctx, input)
@@ -64,9 +64,13 @@ func runAttach(ctx context.Context, client *ipc.Client, args []string) error {
 	if len(args) > 0 {
 		switch args[0] {
 		case "--pick-iterm-session":
-			return runAttachPicker(ctx, client, args[1:], os.Stdin, os.Stdout)
+			return runAttachPicker(ctx, client, args[1:], os.Stdin, os.Stdout, "iTerm session", "iterm2")
+		case "--pick-tmux-session":
+			return runAttachPicker(ctx, client, args[1:], os.Stdin, os.Stdout, "tmux pane", "tmux")
 		case "--list-iterm-sessions":
-			return runListItermSessions(ctx, client, args[1:])
+			return runListAttachableSessions(ctx, args[1:], "iTerm sessions", client.ListItermSessions)
+		case "--list-tmux-sessions":
+			return runListAttachableSessions(ctx, args[1:], "tmux panes", client.ListTmuxSessions)
 		}
 	}
 
@@ -84,7 +88,7 @@ func runAttach(ctx context.Context, client *ipc.Client, args []string) error {
 	return nil
 }
 
-func runListItermSessions(ctx context.Context, client *ipc.Client, args []string) error {
+func runListAttachableSessions(ctx context.Context, args []string, emptyLabel string, list func(context.Context) ([]core.AttachableSession, error)) error {
 	asJSON := false
 	for _, argument := range args {
 		switch argument {
@@ -95,7 +99,7 @@ func runListItermSessions(ctx context.Context, client *ipc.Client, args []string
 		}
 	}
 
-	sessions, err := client.ListItermSessions(ctx)
+	sessions, err := list(ctx)
 	if err != nil {
 		return err
 	}
@@ -104,7 +108,7 @@ func runListItermSessions(ctx context.Context, client *ipc.Client, args []string
 		return writeJSON(sessions)
 	}
 	if len(sessions) == 0 {
-		fmt.Println("no attachable iTerm sessions")
+		fmt.Printf("no attachable %s\n", emptyLabel)
 		return nil
 	}
 
@@ -118,31 +122,40 @@ func runListItermSessions(ctx context.Context, client *ipc.Client, args []string
 	return nil
 }
 
-func runAttachPicker(ctx context.Context, client *ipc.Client, args []string, in io.Reader, out io.Writer) error {
+func runAttachPicker(ctx context.Context, client *ipc.Client, args []string, in io.Reader, out io.Writer, promptLabel string, defaultProvider string) error {
 	options, err := parseAttachPickerOptions(args)
 	if err != nil {
 		return err
 	}
 
-	sessions, err := client.ListItermSessions(ctx)
+	list := client.ListItermSessions
+	if defaultProvider == "tmux" {
+		list = client.ListTmuxSessions
+	}
+	sessions, err := list(ctx)
 	if err != nil {
 		return err
 	}
 	if len(sessions) == 0 {
-		return fmt.Errorf("no attachable iTerm sessions")
+		return fmt.Errorf("no attachable %s", promptLabel)
 	}
 
 	if options.asJSON {
 		return writeJSON(sessions)
 	}
 
-	selected, err := chooseAttachableSession(in, out, sessions)
+	selected, err := chooseAttachableSessionWithPrompt(in, out, sessions, promptLabel)
 	if err != nil {
 		return err
 	}
 
+	provider := options.provider
+	if provider == "" {
+		provider = defaultProvider
+	}
+
 	agent, err := client.AttachSession(ctx, runtime.RegisterAttachedInput{
-		Provider:    options.provider,
+		Provider:    provider,
 		DisplayName: selected.Title,
 		ProjectPath: options.projectPath,
 		Role:        options.role,
@@ -765,6 +778,10 @@ func runEvents(ctx context.Context, client *ipc.Client, args []string) error {
 }
 
 func chooseAttachableSession(in io.Reader, out io.Writer, sessions []core.AttachableSession) (core.AttachableSession, error) {
+	return chooseAttachableSessionWithPrompt(in, out, sessions, "iTerm session")
+}
+
+func chooseAttachableSessionWithPrompt(in io.Reader, out io.Writer, sessions []core.AttachableSession, promptLabel string) (core.AttachableSession, error) {
 	if len(sessions) == 0 {
 		return core.AttachableSession{}, fmt.Errorf("no attachable sessions")
 	}
@@ -781,7 +798,7 @@ func chooseAttachableSession(in io.Reader, out io.Writer, sessions []core.Attach
 			return core.AttachableSession{}, err
 		}
 	}
-	if _, err := fmt.Fprint(out, "Select iTerm session: "); err != nil {
+	if _, err := fmt.Fprintf(out, "Select %s: ", promptLabel); err != nil {
 		return core.AttachableSession{}, err
 	}
 

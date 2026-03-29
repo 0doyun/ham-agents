@@ -24,8 +24,8 @@
 - [x] **Epic 18: Claude Code Hook 기반 상태 추적 (Phase 1)** ✅
 - [x] Epic 19: 단일 오피스 UI 재설계 (Phase 2) ✅
 - [x] **Epic 21: 오피스 사이드뷰 전환 + 상태 정리** ✅
-- [ ] **Epic 22: 테스트 안정화 + tmux 지원** ← 현재 활성
-- [ ] Epic 23: 에이전트 출력 요약
+- [x] **Epic 22: 테스트 안정화 + tmux 지원** ✅
+- [ ] **Epic 23: 에이전트 출력 요약** ← 현재 활성
 - [ ] Epic 24: OMC 모드 인식
 - [ ] Epic 25: 알림 고도화
 - [ ] Epic 26: 자율 모드 heartbeat 알림
@@ -35,51 +35,26 @@
 
 ## Active Scope
 
-**Epic 22: 테스트 안정화 + tmux 지원**
+**Epic 23: 에이전트 출력 요약**
 
-Claude Code + OMC 사용자의 핵심 갭 해소. 테스트 안정화 후 tmux 지원 추가.
+터미널을 안 열어보고도 에이전트가 뭘 하는지 파악할 수 있게.
 
 ### Current Slice Checklist
 
-**Phase 0: 테스트 안정화**
-- [ ] `go test ./...` 전체 통과 확인 — Epic 21에서 상태 모델 변경(done 제거, sleeping 통합 등)으로 깨진 테스트 수정
-- [ ] `swift build --disable-sandbox` 빌드 확인
-- [ ] 기존 hook 커맨드 동작 확인 (tool-start, tool-done, session-end, agent-spawned, agent-finished)
-
-**Phase 1: tmux 어댑터 (Go)**
-- [ ] tmux 세션/윈도우/pane 목록 조회 어댑터 (`go/internal/adapters/tmux.go`)
-  - `tmux list-sessions`, `tmux list-windows -t <session>`, `tmux list-panes -t <window>` 파싱
-  - 각 pane의 현재 command, pid, tty 수집
-- [ ] tmux session_ref 형식 정의: `tmux://<session>:<window>.<pane>`
-- [ ] `ham run` 실행 시 tmux 환경 자동 감지 (`$TMUX` 환경변수)
-  - tmux 내에서 실행 시 현재 pane의 session_ref 자동 등록
-  - iTerm이면 기존 로직 유지
-- [ ] Go tests for tmux adapter
-
-**Phase 2: tmux CLI 통합**
-- [ ] `ham attach --pick-tmux-session` — tmux pane 목록에서 선택해서 attach
-- [ ] `ham open` — session_ref가 tmux://이면 `tmux select-window`, `tmux select-pane`으로 포커스
-- [ ] `ham ask` — session_ref가 tmux://이면 `tmux send-keys`로 메시지 전송
-- [ ] `ham doctor`에 tmux 상태 진단 추가 (tmux 설치 여부, 세션 목록)
-- [ ] Go tests
-
-**Phase 3: tmux 메뉴바 통합**
-- [ ] 메뉴바 디테일 패널에서 "Open in tmux" 버튼 추가 (session_ref 종류에 따라 iTerm/tmux 자동 선택)
-- [ ] Swift build 확인
-
-**커밋 + 테스트:**
-- [ ] Phase 0 완료 후 커밋 (테스트 안정화)
-- [ ] Phase 1~2 완료 후 커밋 (tmux 지원 코어)
-- [ ] Phase 3 완료 후 커밋 (tmux UI 통합)
-- [ ] `go test ./...` + `swift build --disable-sandbox` 최종 통과
+- [ ] hook 이벤트에서 구조화된 정보 수집 (도구 이름, 파일 경로 등)
+- [ ] `lastUserVisibleSummary`를 구조화된 요약으로 교체
+  - "Read: go/internal/ipc/server.go"
+  - "Edit: go/cmd/ham/main.go"
+  - "Bash: go test ./..."
+  - "Agent spawned: test-runner"
+- [ ] 디테일 패널에 최근 도구 사용 히스토리 표시 (최근 5개)
+- [ ] `ham list`에서 마지막 활동 요약 표시 개선
+- [ ] Go/Swift 모델 업데이트 + tests
 
 #### Acceptance Criteria
-- [ ] tmux 내에서 `ham run claude` 실행 시 tmux session_ref가 자동 등록됨
-- [ ] `ham open`으로 해당 tmux pane에 포커스 가능
-- [ ] `ham ask`로 tmux pane에 메시지 전송 가능
-- [ ] `ham attach --pick-tmux-session`으로 기존 tmux pane 연결 가능
-- [ ] iTerm과 tmux 혼용 환경에서 정상 동작
-- [ ] 기존 iTerm 기능이 깨지지 않음
+- [ ] 디테일 패널에서 에이전트의 최근 활동이 구조화된 형태로 보임
+- [ ] PTY 원시 출력 대신 "Read: file.go", "Bash: command" 형태의 요약
+- [ ] ham list에서도 마지막 활동 요약이 읽기 좋게 표시됨
 
 ---
 

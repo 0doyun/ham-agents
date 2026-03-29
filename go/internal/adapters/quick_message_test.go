@@ -57,6 +57,30 @@ func TestQuickMessageSenderFallsBackToClipboardWhenTerminalWriteFails(t *testing
 	}
 }
 
+func TestQuickMessageSenderUsesTmuxSendKeysForTmuxTargets(t *testing.T) {
+	t.Parallel()
+
+	runner := &recordingRunner{}
+	sender := NewQuickMessageSender(runner)
+
+	result, err := sender.Send(core.OpenTarget{
+		Kind:  core.OpenTargetKindTmuxPane,
+		Value: "tmux://demo:1.0",
+	}, "hello world")
+	if err != nil {
+		t.Fatalf("send message: %v", err)
+	}
+	if result != "sent via tmux" {
+		t.Fatalf("unexpected result %q", result)
+	}
+	if len(runner.calls) != 2 {
+		t.Fatalf("expected 2 tmux calls, got %#v", runner.calls)
+	}
+	if runner.calls[0].name != "tmux" || runner.calls[1].name != "tmux" {
+		t.Fatalf("expected tmux commands, got %#v", runner.calls)
+	}
+}
+
 type commandCall struct {
 	name string
 	args []string
