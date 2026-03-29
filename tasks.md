@@ -29,91 +29,103 @@
 - [x] **Epic 24: OMC 모드 인식** ✅
 - [x] **Epic 25: 알림 고도화** ✅
 - [x] **Epic 26: 자율 모드 heartbeat 알림** ✅
-- [ ] **Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)** ← 현재 활성
+- [ ] **Epic 27: Hook 확장 + 정확도 향상** ← 현재 활성
+- [ ] Epic 28: Agent Teams 연동
+- [ ] Epic 29: Worktree 시각화
+- [ ] Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
 
 ---
 
 ## Active Scope
 
-**Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)**
+**Epic 27: Hook 확장 + 정확도 향상**
 
-Claude Code 이외 프로바이더 지원 추가.
+Claude Code의 공식 hook 25종 중 추가 활용 가능한 이벤트를 연동하여 상태 추적 정확도를 높인다.
 
 ### Current Slice Checklist
 
-- [ ] Codex 전용 어댑터
-- [ ] Gemini CLI 전용 어댑터
-- [ ] `ham setup codex`, `ham setup gemini`
-- [ ] 범용 추론 엔진은 hook 미지원 프로바이더 fallback으로 유지
+**Phase 1: Notification hook → waiting_input 정확 감지**
+- [ ] `ham hook notification` 서브커맨드 추가
+- [ ] `Notification` hook 이벤트 처리 — stdin JSON에서 `notification_type` 파싱
+  - `idle_prompt` → AgentStatusWaitingInput (confidence=1.0)
+  - `permission_prompt` → AgentStatusWaitingInput (confidence=1.0)
+- [ ] `ham setup`에서 `Notification` hook 자동 추가
+- [ ] spec.md의 "waiting_input PTY fallback" 주석 제거, hook 기반으로 갱신
 - [ ] Go tests
 
+**Phase 2: SubagentStart/SubagentStop hook**
+- [ ] 현재 `PreToolUse "Agent"` / `PostToolUse "Agent"`로 감지하는 서브에이전트를 전용 hook으로 교체
+- [ ] `SubagentStart` hook 처리 — stdin에서 `agent_id`, `agent_type` 파싱
+- [ ] `SubagentStop` hook 처리 — `agent_transcript_path`로 서브에이전트 작업 결과 요약 가능
+- [ ] `ham setup`에서 `SubagentStart`, `SubagentStop` hook 추가
+- [ ] Go tests
+
+**Phase 3: StopFailure hook → 에러 분류**
+- [ ] `ham hook stop-failure` 서브커맨드 추가
+- [ ] `StopFailure` hook 처리 — error type 파싱 (rate_limit, billing_error, server_error 등)
+- [ ] Agent에 `error_type` 필드 추가, 디테일 패널에 에러 유형 표시
+- [ ] `ham setup`에서 `StopFailure` hook 추가
+- [ ] Go tests
+
+**Phase 4: SessionStart/SessionEnd hook**
+- [ ] `SessionStart` hook — 세션 시작 시 정확한 session_id 수신 (stdin JSON의 session_id 필드)
+- [ ] `SessionEnd` hook — Stop 외에 세션 종료 케이스 추가 커버 (clear, logout, prompt_input_exit 등)
+- [ ] `ham setup`에서 `SessionStart`, `SessionEnd` hook 추가
+- [ ] Go tests
+
+**Phase 5: hook stdin JSON 파싱 인프라**
+- [ ] `ham hook` 커맨드에서 stdin JSON 파싱 지원 (현재는 CLI args만 사용)
+- [ ] session_id를 stdin에서 직접 읽어 HAM_AGENT_ID 환경변수 보조/대체 가능하게
+- [ ] Go tests
+
+**커밋 + 테스트:**
+- [ ] Phase 1~2 완료 후 커밋 (핵심 hook 확장)
+- [ ] Phase 3~5 완료 후 커밋 (에러 분류 + 세션 + stdin 파싱)
+- [ ] `go test ./...` + `swift build --disable-sandbox` 최종 통과
+
 #### Acceptance Criteria
-- [ ] Codex/Gemini CLI로 `ham run` 시 해당 어댑터가 상태를 정확하게 추론함
-- [ ] `ham setup`이 각 프로바이더별 설정을 안내함
+- [ ] waiting_input이 Notification hook으로 confidence=1.0 감지됨
+- [ ] 서브에이전트가 SubagentStart/Stop hook으로 정확하게 추적됨
+- [ ] 에러 유형(rate_limit, server_error 등)이 디테일 패널에 표시됨
+- [ ] ham setup이 확장된 hook 전체를 자동 설정함
+- [ ] 기존 PreToolUse/PostToolUse/Stop 동작이 깨지지 않음
 
 ---
 
 ## Next Epics (순서대로)
 
-### Epic 23: 에이전트 출력 요약
-터미널을 안 열어보고도 에이전트가 뭘 하는지 파악할 수 있게.
+### Epic 28: Agent Teams 연동
+Claude Code 내장 Agent Teams 기능과 연동하여 팀 작업을 오피스에서 시각화.
 
-- [ ] hook 이벤트에서 구조화된 정보 수집 (도구 이름, 파일 경로 등)
-- [ ] `lastUserVisibleSummary`를 구조화된 요약으로 교체
-  - "Read: go/internal/ipc/server.go"
-  - "Edit: go/cmd/ham/main.go"
-  - "Bash: go test ./..."
-  - "Agent spawned: test-runner"
-- [ ] 디테일 패널에 최근 도구 사용 히스토리 표시 (최근 5개)
-- [ ] `ham list`에서 마지막 활동 요약 표시 개선
-- [ ] Go/Swift 모델 업데이트 + tests
-
-#### Acceptance Criteria
-- [ ] 디테일 패널에서 에이전트의 최근 활동이 구조화된 형태로 보임
-- [ ] PTY 원시 출력 대신 "Read: file.go", "Bash: command" 형태의 요약
-- [ ] ham list에서도 마지막 활동 요약이 읽기 좋게 표시됨
-
-### Epic 24: OMC 모드 인식
-Claude Code + OMC 사용 시 어떤 모드(autopilot, ralph, team 등)로 실행 중인지 표시.
-
-- [ ] OMC 환경변수 감지 방법 조사 (OMC가 어떤 변수를 세팅하는지 확인)
-- [ ] Agent 모델에 `omc_mode` 필드 추가 (Go core + Swift)
-- [ ] hook command에 OMC 모드 전달 경로 구현 (환경변수 → hook → IPC)
-- [ ] UI: 햄스터 이름 옆에 모드 뱃지 (`[autopilot]`, `[ralph]`, `[team]`)
-- [ ] `ham list`/`ham status`에서 OMC 모드 표시
+- [ ] `TeammateIdle` hook 처리 — teammate가 idle 전환 시 해당 햄스터 상태 반영
+- [ ] `TaskCreated` hook 처리 — 팀 task 생성 시 이벤트 로그 + UI 표시
+- [ ] `TaskCompleted` hook 처리 — 팀 task 완료 시 알림 + 이벤트
+- [ ] Agent 모델에 `team_role` 필드 추가 (lead/teammate)
+- [ ] 팀 리드 햄스터에 왕관/리더 표시, teammate는 팀 뱃지
+- [ ] `ham setup`에서 Agent Teams hook 추가 (TeammateIdle, TaskCreated, TaskCompleted)
+- [ ] 디테일 패널에 팀 task 진행 상황 표시
 - [ ] Go/Swift tests
 
 #### Acceptance Criteria
-- [ ] OMC autopilot/ralph/team 실행 시 해당 모드가 UI에 표시됨
-- [ ] OMC 없이 실행 시 모드 필드 미표시 (기존 동작 유지)
+- [ ] Agent Teams 모드에서 teammate들이 각각 별도 햄스터로 표시됨
+- [ ] 팀 리드와 teammate 구분이 시각적으로 보임
+- [ ] task 완료 시 알림이 발송됨
 
-### Epic 25: 알림 고도화
-waiting_input/error 시 터미널 안 열고도 판단할 수 있도록 알림에 컨텍스트 추가.
+### Epic 29: Worktree 시각화
+Claude Code의 git worktree 연동으로 병렬 개발을 오피스에서 표현.
 
-- [ ] waiting_input 알림에 마지막 요약 포함 (뭘 물어보는지 미리보기)
-- [ ] error 알림에 에러 메시지 요약 포함
-- [ ] 알림 클릭 시 해당 에이전트 디테일로 이동 (메뉴바 팝오버 열림)
-- [ ] 알림 액션 버튼: "Open Terminal" / "Dismiss"
+- [ ] `WorktreeCreate` hook 처리 — worktree 생성 시 에이전트에 worktree 정보 연결
+- [ ] `WorktreeRemove` hook 처리 — worktree 삭제 시 정리
+- [ ] Agent 모델에 `worktree_branch` 필드 추가
+- [ ] 디테일 패널에 worktree 브랜치명 표시
+- [ ] 오피스에서 같은 프로젝트의 다른 worktree 에이전트를 시각적으로 그루핑
+- [ ] `ham setup`에서 WorktreeCreate/Remove hook 추가
 - [ ] Go/Swift tests
 
 #### Acceptance Criteria
-- [ ] waiting_input 알림에 컨텍스트가 포함되어 터미널 안 열고 판단 가능
-- [ ] error 알림에 에러 메시지가 보임
-- [ ] 알림 클릭 시 해당 에이전트가 선택된 상태로 팝오버 열림
-
-### Epic 26: 자율 모드 heartbeat 알림
-autopilot/ralph 같은 장시간 자율 실행에 대한 주기적 상태 알림.
-
-- [ ] heartbeat 알림 설정 (간격: 10분/30분/1시간, 기본 off)
-- [ ] 장시간 실행 중 "N분째 실행 중, 현재 상태: thinking" 알림
-- [ ] 에러 발생 시 즉시 알림 (기존)
-- [ ] settings에 heartbeat 간격 설정 추가 (CLI + UI)
-- [ ] Go/Swift tests
-
-#### Acceptance Criteria
-- [ ] heartbeat 설정 시 주기적 알림이 발송됨
-- [ ] 에러 시 heartbeat 간격과 관계없이 즉시 알림
-- [ ] 기본값 off로 기존 사용자에게 영향 없음
+- [ ] worktree 기반 병렬 개발 시 각 worktree가 별도 햄스터로 보임
+- [ ] 브랜치명이 디테일에 표시됨
+- [ ] worktree 삭제 시 정리됨
 
 ### Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
 Claude Code 이외 프로바이더 지원 추가.
@@ -210,7 +222,10 @@ Claude Code 이외 프로바이더 지원 추가.
 23. Epic 23: 에이전트 출력 요약
 24. Epic 24: OMC 모드 인식
 25. Epic 25: 알림 고도화
-26. Epic 26: 자율 모드 heartbeat 알림
+26. ~~Epic 26: 자율 모드 heartbeat 알림~~ ✅
+27. **Epic 27: Hook 확장 + 정확도 향상** ← 현재
+28. Epic 28: Agent Teams 연동
+29. Epic 29: Worktree 시각화
 20. Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
 
 ---

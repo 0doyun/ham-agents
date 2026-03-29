@@ -131,16 +131,23 @@ Hook 기반 상태 매핑:
 | `PreToolUse` Edit/Write/Bash | `running_tool` | 1.0 |
 | `PostToolUse` (any) | `thinking` | 1.0 |
 | assistant 응답 중 | `thinking` | 1.0 |
-| 프롬프트 대기 (stop_reason: end_turn) | `waiting_input` | 1.0 | ※ Claude Code hook API는 이 이벤트를 직접 emit하지 않음. PTY silence 감지 fallback으로 추론. |
-| `Stop` 정상 | `done` | 1.0 |
-| `Stop` 에러 | `error` | 1.0 |
+| `Notification` (idle_prompt/permission_prompt) | `waiting_input` | 1.0 |
+| `Stop` 정상 | 세션 종료 → RemoveAgent | 1.0 |
+| `StopFailure` | `error` (rate_limit/billing_error/server_error 분류) | 1.0 |
+| `SessionStart` | `booting` + session_id 수신 | 1.0 |
+| `SessionEnd` | 세션 종료 → RemoveAgent | 1.0 |
 
 서브에이전트 지원:
 
-- 부모의 `PreToolUse "Agent"` → 자식 햄스터 등록 (존재 표시만)
-- 부모의 `PostToolUse "Agent"` → 자식 햄스터 제거/완료
-- 서브에이전트 내부 상태는 추적 불가 (Claude Code가 subagent에 고유 ID를 넘기지 않음)
-- UI에서 미니 햄스터로 부모 근처에 시각적 표현
+- `SubagentStart` hook → 자식 햄스터 등록 (agent_id, agent_type 포함)
+- `SubagentStop` hook → 자식 햄스터 제거 (agent_transcript_path로 결과 요약 가능)
+- UI에서 미니 햄스터로 부모 뒤쪽에 아크 형태로 배치
+
+Agent Teams 지원 (예정):
+
+- `TeammateIdle` hook → teammate 상태 전환
+- `TaskCreated` / `TaskCompleted` hook → 팀 task 시각화
+- 팀 리드/teammate 구분 표시
 
 예시:
 
@@ -480,13 +487,18 @@ v1에서 iTerm2는 1급 통합 대상이다.
 
 Claude Code의 hook 시스템을 통해 **추론 없이 사실 기반 상태**를 받는다.
 
-입력 신호:
+입력 신호 (Claude Code hook 25종 중 활용):
 
-- `PreToolUse` / `PostToolUse` hook 이벤트
-- `Stop` hook 이벤트
-- `Agent` tool 사용 (서브에이전트 생성/종료)
-- process exit
+- `PreToolUse` / `PostToolUse` — 도구 실행 전후 상태 전환
+- `Notification` (idle_prompt, permission_prompt) — waiting_input 정확 감지
+- `SubagentStart` / `SubagentStop` — 서브에이전트 라이프사이클 (agent_id, transcript_path 포함)
+- `StopFailure` — 에러 유형 분류 (rate_limit, billing_error, server_error)
+- `SessionStart` / `SessionEnd` — 세션 라이프사이클 + session_id 수신
+- `Stop` — 정상 턴 종료
+- `TeammateIdle` / `TaskCreated` / `TaskCompleted` — Agent Teams 연동 (예정)
+- `WorktreeCreate` / `WorktreeRemove` — Worktree 시각화 (예정)
 
+모든 hook의 stdin JSON에 `session_id`가 포함되어 에이전트 식별에 활용.
 이 경로의 confidence는 항상 1.0이다.
 
 ### 2차 경로: Fallback 추론 (hook 미설정 또는 다른 프로바이더)
