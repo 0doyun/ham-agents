@@ -25,9 +25,9 @@
 - [x] Epic 19: 단일 오피스 UI 재설계 (Phase 2) ✅
 - [x] **Epic 21: 오피스 사이드뷰 전환 + 상태 정리** ✅
 - [x] **Epic 22: 테스트 안정화 + tmux 지원** ✅
-- [ ] **Epic 23: 에이전트 출력 요약** ← 현재 활성
-- [ ] Epic 24: OMC 모드 인식
-- [ ] Epic 25: 알림 고도화
+- [x] **Epic 23: 에이전트 출력 요약** ✅
+- [x] **Epic 24: OMC 모드 인식** ✅
+- [ ] **Epic 25: 알림 고도화** ← 현재 활성
 - [ ] Epic 26: 자율 모드 heartbeat 알림
 - [ ] Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
 
@@ -35,26 +35,22 @@
 
 ## Active Scope
 
-**Epic 23: 에이전트 출력 요약**
+**Epic 25: 알림 고도화**
 
-터미널을 안 열어보고도 에이전트가 뭘 하는지 파악할 수 있게.
+waiting_input/error 시 터미널 안 열고도 판단할 수 있도록 알림에 컨텍스트 추가.
 
 ### Current Slice Checklist
 
-- [ ] hook 이벤트에서 구조화된 정보 수집 (도구 이름, 파일 경로 등)
-- [ ] `lastUserVisibleSummary`를 구조화된 요약으로 교체
-  - "Read: go/internal/ipc/server.go"
-  - "Edit: go/cmd/ham/main.go"
-  - "Bash: go test ./..."
-  - "Agent spawned: test-runner"
-- [ ] 디테일 패널에 최근 도구 사용 히스토리 표시 (최근 5개)
-- [ ] `ham list`에서 마지막 활동 요약 표시 개선
-- [ ] Go/Swift 모델 업데이트 + tests
+- [ ] waiting_input 알림에 마지막 요약 포함 (뭘 물어보는지 미리보기)
+- [ ] error 알림에 에러 메시지 요약 포함
+- [ ] 알림 클릭 시 해당 에이전트 디테일로 이동 (메뉴바 팝오버 열림)
+- [ ] 알림 액션 버튼: "Open Terminal" / "Dismiss"
+- [ ] Go/Swift tests
 
 #### Acceptance Criteria
-- [ ] 디테일 패널에서 에이전트의 최근 활동이 구조화된 형태로 보임
-- [ ] PTY 원시 출력 대신 "Read: file.go", "Bash: command" 형태의 요약
-- [ ] ham list에서도 마지막 활동 요약이 읽기 좋게 표시됨
+- [ ] waiting_input 알림에 컨텍스트가 포함되어 터미널 안 열고 판단 가능
+- [ ] error 알림에 에러 메시지가 보임
+- [ ] 알림 클릭 시 해당 에이전트가 선택된 상태로 팝오버 열림
 
 ---
 

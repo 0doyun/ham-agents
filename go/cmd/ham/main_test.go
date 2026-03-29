@@ -370,6 +370,66 @@ func TestChooseAttachableSessionWithPromptUsesProvidedLabel(t *testing.T) {
 	}
 }
 
+func TestSummarizeToolInputPrefersKnownFields(t *testing.T) {
+	t.Parallel()
+
+	if got := summarizeToolInput("Read", map[string]any{"file_path": "go/internal/ipc/server.go"}); got != "go/internal/ipc/server.go" {
+		t.Fatalf("unexpected read preview %q", got)
+	}
+	if got := summarizeToolInput("Bash", map[string]any{"command": "go test ./..."}); got != "go test ./..." {
+		t.Fatalf("unexpected bash preview %q", got)
+	}
+}
+
+func TestDisplayNameWithOmcModeAppendsBadge(t *testing.T) {
+	t.Parallel()
+
+	line := formatAgentListLine(core.Agent{
+		ID:               "agent-1",
+		DisplayName:      "builder",
+		Provider:         "claude",
+		Mode:             core.AgentModeManaged,
+		Status:           core.AgentStatusThinking,
+		StatusConfidence: 1,
+		OmcMode:          "ralph",
+	})
+	if !strings.Contains(line, "builder [ralph]") {
+		t.Fatalf("expected omc badge in line %q", line)
+	}
+}
+
+func TestDetectSkillModeReadsActiveSkillState(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	path := filepath.Join(root, "skill-active-state.json")
+	if err := os.WriteFile(path, []byte(`{"active":true,"skill":"autopilot"}`), 0o644); err != nil {
+		t.Fatalf("write skill state: %v", err)
+	}
+	if mode := detectSkillMode(path); mode != "autopilot" {
+		t.Fatalf("expected autopilot, got %q", mode)
+	}
+}
+
+func TestDetectActiveModeFromStateRootPrefersSessionScopedState(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	stateRoot := filepath.Join(root, ".omx", "state")
+	if err := os.MkdirAll(filepath.Join(stateRoot, "sessions", "session-1"), 0o755); err != nil {
+		t.Fatalf("mkdir state root: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(stateRoot, "session.json"), []byte(`{"session_id":"session-1"}`), 0o644); err != nil {
+		t.Fatalf("write session json: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(stateRoot, "sessions", "session-1", "ralph-state.json"), []byte(`{"active":true}`), 0o644); err != nil {
+		t.Fatalf("write ralph state: %v", err)
+	}
+	if mode := detectActiveModeFromStateRoot(stateRoot); mode != "ralph" {
+		t.Fatalf("expected ralph, got %q", mode)
+	}
+}
+
 func TestChooseAttachableSessionReturnsOnlySessionWithoutPrompt(t *testing.T) {
 	t.Parallel()
 

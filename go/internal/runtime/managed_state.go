@@ -122,21 +122,25 @@ func (r *Registry) RecordManagedExit(ctx context.Context, agentID string, exitEr
 // via the PTY fallback path (silence detection). This is a Claude Code API limitation,
 // not an omission — the hook system does not expose assistant turn boundaries.
 
-func (r *Registry) RecordHookToolStart(ctx context.Context, agentID string, toolName string) error {
+func (r *Registry) RecordHookToolStart(ctx context.Context, agentID string, toolName string, toolInputPreview string, omcMode string) error {
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
 		status := core.AgentStatusRunningTool
 		lower := strings.ToLower(strings.TrimSpace(toolName))
 		if lower == "read" || lower == "grep" || lower == "glob" {
 			status = core.AgentStatusReading
 		}
+		summary := structuredToolSummary(toolName, toolInputPreview)
+		applyOmcMode(agent, omcMode)
 		agent.Status = status
 		agent.StatusConfidence = 1
 		agent.StatusReason = fmt.Sprintf("Hook: tool started: %s", toolName)
+		agent.LastUserVisibleSummary = summary
+		pushRecentTool(agent, summary)
 		agent.LastEventAt = now
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeAgentProcessOutput,
-			Summary:             fmt.Sprintf("Tool started: %s", toolName),
+			Summary:             summary,
 			LifecycleStatus:     string(agent.Status),
 			LifecycleMode:       string(agent.Mode),
 			LifecycleReason:     agent.StatusReason,
@@ -146,16 +150,21 @@ func (r *Registry) RecordHookToolStart(ctx context.Context, agentID string, tool
 	return err
 }
 
-func (r *Registry) RecordHookToolDone(ctx context.Context, agentID string, toolName string) error {
+func (r *Registry) RecordHookToolDone(ctx context.Context, agentID string, toolName string, toolInputPreview string, omcMode string) error {
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		summary := structuredToolSummary(toolName, toolInputPreview)
+		applyOmcMode(agent, omcMode)
 		agent.Status = core.AgentStatusThinking
 		agent.StatusConfidence = 1
 		agent.StatusReason = fmt.Sprintf("Hook: tool completed: %s", toolName)
+		if summary != "" {
+			agent.LastUserVisibleSummary = summary
+		}
 		agent.LastEventAt = now
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeAgentProcessOutput,
-			Summary:             fmt.Sprintf("Tool completed: %s", toolName),
+			Summary:             "Completed " + summary,
 			LifecycleStatus:     string(agent.Status),
 			LifecycleMode:       string(agent.Mode),
 			LifecycleReason:     agent.StatusReason,
@@ -165,8 +174,9 @@ func (r *Registry) RecordHookToolDone(ctx context.Context, agentID string, toolN
 	return err
 }
 
-func (r *Registry) RecordHookSessionEnd(ctx context.Context, agentID string) error {
+func (r *Registry) RecordHookSessionEnd(ctx context.Context, agentID string, omcMode string) error {
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
 		agent.Status = core.AgentStatusDone
 		agent.StatusConfidence = 1
 		agent.StatusReason = "Hook: session ended."
@@ -184,14 +194,17 @@ func (r *Registry) RecordHookSessionEnd(ctx context.Context, agentID string) err
 	return err
 }
 
-func (r *Registry) RecordHookAgentSpawned(ctx context.Context, agentID string, description string) error {
+func (r *Registry) RecordHookAgentSpawned(ctx context.Context, agentID string, description string, omcMode string) error {
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
 		agent.SubAgentCount++
 		agent.LastEventAt = now
-		summary := "Sub-agent spawned."
+		summary := "Agent spawned"
 		if description != "" {
-			summary = fmt.Sprintf("Sub-agent spawned: %s", description)
+			summary = fmt.Sprintf("Agent spawned: %s", description)
 		}
+		agent.LastUserVisibleSummary = summary
+		pushRecentTool(agent, summary)
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeAgentProcessOutput,
@@ -205,16 +218,18 @@ func (r *Registry) RecordHookAgentSpawned(ctx context.Context, agentID string, d
 	return err
 }
 
-func (r *Registry) RecordHookAgentFinished(ctx context.Context, agentID string) error {
+func (r *Registry) RecordHookAgentFinished(ctx context.Context, agentID string, omcMode string) error {
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
 		if agent.SubAgentCount > 0 {
 			agent.SubAgentCount--
 		}
 		agent.LastEventAt = now
+		agent.LastUserVisibleSummary = "Agent finished"
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeAgentProcessOutput,
-			Summary:             "Sub-agent finished.",
+			Summary:             "Agent finished",
 			LifecycleStatus:     string(agent.Status),
 			LifecycleMode:       string(agent.Mode),
 			LifecycleReason:     agent.StatusReason,
@@ -222,4 +237,40 @@ func (r *Registry) RecordHookAgentFinished(ctx context.Context, agentID string) 
 		}, nil
 	})
 	return err
+}
+
+func structuredToolSummary(toolName string, toolInputPreview string) string {
+	label := strings.TrimSpace(toolName)
+	if label == "" {
+		label = "Tool"
+	}
+	if preview := strings.TrimSpace(toolInputPreview); preview != "" {
+		return fmt.Sprintf("%s: %s", label, preview)
+	}
+	return label
+}
+
+func pushRecentTool(agent *core.Agent, summary string) {
+	trimmed := strings.TrimSpace(summary)
+	if trimmed == "" {
+		return
+	}
+
+	recent := []string{trimmed}
+	for _, existing := range agent.RecentTools {
+		if strings.TrimSpace(existing) == "" || existing == trimmed {
+			continue
+		}
+		recent = append(recent, existing)
+		if len(recent) >= 5 {
+			break
+		}
+	}
+	agent.RecentTools = recent
+}
+
+func applyOmcMode(agent *core.Agent, omcMode string) {
+	if normalized := strings.TrimSpace(omcMode); normalized != "" {
+		agent.OmcMode = normalized
+	}
 }

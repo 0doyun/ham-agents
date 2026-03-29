@@ -34,6 +34,34 @@
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift build --disable-sandbox` ✅
 - `tasks.md` Active Scope advanced to Epic 23 per Progression policy.
 
+### 2026-03-30 (Epic 23 structured activity summaries complete)
+- Claude hook ingestion now reads structured JSON from stdin and extracts lightweight tool-input previews for supported tools (`Read`, `Edit`, `Write`, `MultiEdit`, `Bash`, `Grep`, `Glob`, `WebFetch`, `WebSearch`, `Agent/Task` fallback fields).
+- Managed hook state tracking now writes structured user-facing summaries instead of generic `Tool started/completed` text:
+  - `Read: go/internal/ipc/server.go`
+  - `Bash: go test ./...`
+  - `Agent spawned: test-runner`
+- Added `recent_tools` to the shared Go/Swift `Agent` model and keep the latest five structured activity entries on the daemon side.
+- Menu bar detail panels now show a compact recent-activity history derived from `recent_tools`.
+- `ham list` human output now includes the latest structured activity summary, making the last action readable without opening the terminal.
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift build --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 24 per Progression policy.
+
+### 2026-03-30 (Epic 24 OMC mode recognition complete)
+- Investigated the local OMC/OMX contract:
+  - explicit team worker env is available via `OMX_TEAM_WORKER`, `OMX_TEAM_STATE_ROOT`, and `OMX_TEAM_LEADER_CWD`
+  - general orchestration modes in this workspace are primarily discoverable from `.omx/state/...` files (`session.json`, session-scoped `*-state.json`, and `skill-active-state.json`)
+- Added `omc_mode` to the shared Go/Swift `Agent` model.
+- `ham hook` now resolves the active OMC mode from env/state and forwards it through IPC so managed agents keep the current orchestration mode on hook updates.
+- CLI and UI now surface the mode badge:
+  - `ham list` / `ham status` human output shows `display-name [ralph]`
+  - menu bar rows and detail headers show `[autopilot]`, `[ralph]`, `[team]` badges when present
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift build --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 25 per Progression policy.
+
 ### 2026-03-26 (Epic 17 one-command bootstrap complete)
 - Added CLI-side daemon auto-bootstrap for daemon-backed commands by probing the socket first, spawning `hamd serve` only when unreachable, and waiting briefly for the socket to become reachable before continuing.
 - Added CLI-side daemon executable resolution with the following precedence:

@@ -300,27 +300,27 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		}
 		return Response{Settings: &settings}, nil
 	case CommandHookToolStart:
-		if err := s.registry.RecordHookToolStart(ctx, request.AgentID, request.ToolName); err != nil {
+		if err := s.registry.RecordHookToolStart(ctx, request.AgentID, request.ToolName, request.ToolInputPreview, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
 	case CommandHookToolDone:
-		if err := s.registry.RecordHookToolDone(ctx, request.AgentID, request.ToolName); err != nil {
+		if err := s.registry.RecordHookToolDone(ctx, request.AgentID, request.ToolName, request.ToolInputPreview, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
 	case CommandHookSessionEnd:
-		if err := s.registry.RecordHookSessionEnd(ctx, request.AgentID); err != nil {
+		if err := s.registry.RecordHookSessionEnd(ctx, request.AgentID, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
 	case CommandHookAgentSpawned:
-		if err := s.registry.RecordHookAgentSpawned(ctx, request.AgentID, request.Description); err != nil {
+		if err := s.registry.RecordHookAgentSpawned(ctx, request.AgentID, request.Description, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
 	case CommandHookAgentFinished:
-		if err := s.registry.RecordHookAgentFinished(ctx, request.AgentID); err != nil {
+		if err := s.registry.RecordHookAgentFinished(ctx, request.AgentID, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
