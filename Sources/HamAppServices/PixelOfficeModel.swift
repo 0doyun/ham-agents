@@ -3,7 +3,6 @@ import HamCore
 public enum OfficeArea: String, CaseIterable, Sendable {
     case desk
     case bookshelf
-    case sofa
     case alertLight
 }
 
@@ -15,7 +14,6 @@ public enum HamsterSpriteState: String, CaseIterable, Sendable {
     case read
     case think
     case sleep
-    case celebrate
     case alert
     case error
 }
@@ -40,7 +38,6 @@ public struct PixelOfficeOccupant: Equatable, Identifiable, Sendable {
 public enum StatusIcon: String, Sendable {
     case question  // ❓ waiting_input
     case warning   // ⚠️ error / disconnected
-    case check     // ✅ done
 }
 
 public enum MenuBarHamsterState: Equatable, Sendable {
@@ -61,8 +58,11 @@ public enum PixelOfficeMapper {
         )
     }
 
+    /// Maps agents to office occupants, filtering out done agents (they are removed on clean exit).
     public static func occupants(from agents: [Agent]) -> [PixelOfficeOccupant] {
-        agents.map(occupant(for:))
+        agents
+            .filter { $0.status != .done }
+            .map(occupant(for:))
     }
 
     public static func area(for status: AgentStatus) -> OfficeArea {
@@ -74,7 +74,7 @@ public enum PixelOfficeMapper {
         case .error, .waitingInput, .disconnected:
             return .alertLight
         case .idle, .sleeping, .done:
-            return .sofa
+            return .desk  // idle/sleeping stay at desk with sleep sprite
         }
     }
 
@@ -93,7 +93,7 @@ public enum PixelOfficeMapper {
         case .error, .disconnected:
             return .error
         case .done:
-            return .celebrate
+            return .idle  // done agents are filtered out, but fallback to idle
         case .sleeping:
             return .sleep
         case .idle:
@@ -107,8 +107,6 @@ public enum PixelOfficeMapper {
             return .question
         case .error, .disconnected:
             return .warning
-        case .done:
-            return .check
         default:
             return nil
         }
