@@ -9,6 +9,12 @@ public enum NotificationEvent: Equatable, Sendable {
     case teamDigest(String)
 }
 
+public enum NotificationInteraction: Equatable, Sendable {
+    case focusAgent(String)
+    case openTerminal(String)
+    case dismiss(String?)
+}
+
 public struct HamNotificationService {
     public init() {}
 
@@ -31,6 +37,24 @@ public struct NotificationCandidate: Equatable, Sendable {
         self.event = event
         self.title = title
         self.body = body
+    }
+
+    public var agentID: String? {
+        switch event {
+        case .done(let agent), .waitingInput(let agent), .error(let agent), .silence(let agent):
+            return agent.id
+        case .teamDigest:
+            return nil
+        }
+    }
+
+    public var supportsAttentionActions: Bool {
+        switch event {
+        case .waitingInput, .error:
+            return true
+        default:
+            return false
+        }
     }
 }
 

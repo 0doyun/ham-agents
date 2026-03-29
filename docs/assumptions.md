@@ -122,6 +122,7 @@
 - 2026-03-30: attached-session polling now refreshes iTerm and tmux independently by session-ref scheme so a transient failure in one adapter does not force disconnects for the other host type.
 - 2026-03-30: Claude Code hook payloads provide event JSON on stdin, so structured activity summaries now derive from `tool_name` plus a small `tool_input` preview rather than from raw PTY text.
 - 2026-03-30: OMC mode detection in this workspace is hybrid — explicit team worker env vars exist, but ralph/autopilot are more reliably inferred from `.omx/state/session.json`, session-scoped `*-state.json`, and `skill-active-state.json`.
+- 2026-03-30: notification-click handling currently guarantees agent selection state + app activation, while `Open Terminal` is the explicit route for taking the user directly back to the terminal session.
 - 2026-03-25: notification fallback humanization baseline keeps notification bodies human-readable when no summary exists by reusing the same status wording (`needs input`, `running tool`) instead of raw underscore forms.
 - 2026-03-25: human attention breakdown wording baseline only changes the human `ham status` summary line (`needs_input`) and leaves the JSON `attention_breakdown.waiting_input` contract untouched.
 - 2026-03-25: observed thinking phrase inference baseline adds a lightweight phrase layer for explicit `thinking` / `planning` / `investigating` text before the generic recent-output fallback, but still keeps that path lower-confidence than managed structured state.

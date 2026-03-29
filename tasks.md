@@ -27,30 +27,30 @@
 - [x] **Epic 22: 테스트 안정화 + tmux 지원** ✅
 - [x] **Epic 23: 에이전트 출력 요약** ✅
 - [x] **Epic 24: OMC 모드 인식** ✅
-- [ ] **Epic 25: 알림 고도화** ← 현재 활성
-- [ ] Epic 26: 자율 모드 heartbeat 알림
+- [x] **Epic 25: 알림 고도화** ✅
+- [ ] **Epic 26: 자율 모드 heartbeat 알림** ← 현재 활성
 - [ ] Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
 
 ---
 
 ## Active Scope
 
-**Epic 25: 알림 고도화**
+**Epic 26: 자율 모드 heartbeat 알림**
 
-waiting_input/error 시 터미널 안 열고도 판단할 수 있도록 알림에 컨텍스트 추가.
+autopilot/ralph 같은 장시간 자율 실행에 대한 주기적 상태 알림.
 
 ### Current Slice Checklist
 
-- [ ] waiting_input 알림에 마지막 요약 포함 (뭘 물어보는지 미리보기)
-- [ ] error 알림에 에러 메시지 요약 포함
-- [ ] 알림 클릭 시 해당 에이전트 디테일로 이동 (메뉴바 팝오버 열림)
-- [ ] 알림 액션 버튼: "Open Terminal" / "Dismiss"
+- [ ] heartbeat 알림 설정 (간격: 10분/30분/1시간, 기본 off)
+- [ ] 장시간 실행 중 "N분째 실행 중, 현재 상태: thinking" 알림
+- [ ] 에러 발생 시 즉시 알림 (기존)
+- [ ] settings에 heartbeat 간격 설정 추가 (CLI + UI)
 - [ ] Go/Swift tests
 
 #### Acceptance Criteria
-- [ ] waiting_input 알림에 컨텍스트가 포함되어 터미널 안 열고 판단 가능
-- [ ] error 알림에 에러 메시지가 보임
-- [ ] 알림 클릭 시 해당 에이전트가 선택된 상태로 팝오버 열림
+- [ ] heartbeat 설정 시 주기적 알림이 발송됨
+- [ ] 에러 시 heartbeat 간격과 관계없이 즉시 알림
+- [ ] 기본값 off로 기존 사용자에게 영향 없음
 
 ---
 

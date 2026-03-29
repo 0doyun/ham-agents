@@ -5,6 +5,8 @@ public protocol UserNotificationCentering: Sendable {
     func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
     func add(_ request: UNNotificationRequest) async throws
     func authorizationStatus() async -> NotificationPermissionStatus
+    func setNotificationCategories(_ categories: Set<UNNotificationCategory>)
+    func setDelegate(_ delegate: UNUserNotificationCenterDelegate?)
 }
 
 public enum NotificationPermissionStatus: String, Equatable, Sendable {
@@ -57,6 +59,14 @@ public final class LiveUserNotificationCenter: UserNotificationCentering, @unche
             }
         }
     }
+
+    public func setNotificationCategories(_ categories: Set<UNNotificationCategory>) {
+        center.setNotificationCategories(categories)
+    }
+
+    public func setDelegate(_ delegate: UNUserNotificationCenterDelegate?) {
+        center.delegate = delegate
+    }
 }
 
 /// Silent no-op center for environments without an app bundle.
@@ -65,6 +75,8 @@ public struct NoopUserNotificationCenter: UserNotificationCentering {
     public func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool { false }
     public func add(_ request: UNNotificationRequest) async throws {}
     public func authorizationStatus() async -> NotificationPermissionStatus { .notDetermined }
+    public func setNotificationCategories(_ categories: Set<UNNotificationCategory>) { _ = categories }
+    public func setDelegate(_ delegate: UNUserNotificationCenterDelegate?) { _ = delegate }
 }
 
 public struct NoopNotificationPermissionController: NotificationPermissionControlling {
@@ -79,14 +91,23 @@ public struct NoopNotificationPermissionController: NotificationPermissionContro
     }
 }
 
-public final class UserNotificationSink: NotificationSink, NotificationPermissionControlling, @unchecked Sendable {
+public final class UserNotificationSink: NSObject, NotificationSink, NotificationPermissionControlling, UNUserNotificationCenterDelegate, @unchecked Sendable {
     private let center: UserNotificationCentering
     private let authorizationState = AuthorizationState()
+    private var interactionHandler: (@Sendable (NotificationInteraction) -> Void)?
 
-    public init(center: UserNotificationCentering? = nil) {
+    private static let attentionCategoryIdentifier = "ham.agent.attention"
+    private static let openTerminalActionIdentifier = "ham.open_terminal"
+    private static let dismissActionIdentifier = "ham.dismiss"
+
+    public init(center: UserNotificationCentering? = nil, interactionHandler: (@Sendable (NotificationInteraction) -> Void)? = nil) {
         self.center = center
             ?? LiveUserNotificationCenter.makeIfAvailable()
             ?? NoopUserNotificationCenter()
+        self.interactionHandler = interactionHandler
+        super.init()
+        self.center.setNotificationCategories(Self.notificationCategories)
+        self.center.setDelegate(self)
     }
 
     public func send(_ candidate: NotificationCandidate) {
@@ -118,11 +139,21 @@ public final class UserNotificationSink: NotificationSink, NotificationPermissio
         try await authorizationState.ensureAuthorization(center: center)
     }
 
+    public func setInteractionHandler(_ handler: (@Sendable (NotificationInteraction) -> Void)?) {
+        interactionHandler = handler
+    }
+
     private func makeRequest(for candidate: NotificationCandidate) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.title = candidate.title
         content.body = candidate.body
         content.sound = .default
+        if candidate.supportsAttentionActions {
+            content.categoryIdentifier = Self.attentionCategoryIdentifier
+        }
+        if let agentID = candidate.agentID {
+            content.userInfo = ["agent_id": agentID]
+        }
 
         return UNNotificationRequest(
             identifier: identifier(for: candidate),
@@ -143,6 +174,50 @@ public final class UserNotificationSink: NotificationSink, NotificationPermissio
             return "\(agent.id).silence"
         case .teamDigest(let teamName):
             return "\(teamName).team_digest"
+        }
+    }
+
+    private static var notificationCategories: Set<UNNotificationCategory> {
+        let openTerminal = UNNotificationAction(
+            identifier: openTerminalActionIdentifier,
+            title: "Open Terminal",
+            options: [.foreground]
+        )
+        let dismiss = UNNotificationAction(
+            identifier: dismissActionIdentifier,
+            title: "Dismiss",
+            options: []
+        )
+        return [
+            UNNotificationCategory(
+                identifier: attentionCategoryIdentifier,
+                actions: [openTerminal, dismiss],
+                intentIdentifiers: [],
+                options: []
+            )
+        ]
+    }
+    public func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+        _ = center
+        handleResponse(actionIdentifier: response.actionIdentifier, userInfo: response.notification.request.content.userInfo)
+    }
+
+    func handleResponse(actionIdentifier: String, userInfo: [AnyHashable: Any]) {
+        guard let handler = interactionHandler else { return }
+        let agentID = userInfo["agent_id"] as? String
+        switch actionIdentifier {
+        case UNNotificationDefaultActionIdentifier:
+            if let agentID {
+                handler(.focusAgent(agentID))
+            }
+        case Self.openTerminalActionIdentifier:
+            if let agentID {
+                handler(.openTerminal(agentID))
+            }
+        case Self.dismissActionIdentifier, UNNotificationDismissActionIdentifier:
+            handler(.dismiss(agentID))
+        default:
+            break
         }
     }
 }

@@ -808,6 +808,68 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(opener.openedAgentIDs, ["agent-1"])
     }
 
+    func testHandleNotificationInteractionSelectsAgent() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        viewModel.handleNotificationInteraction(.focusAgent("agent-1"))
+
+        XCTAssertEqual(viewModel.selectedAgentID, "agent-1")
+    }
+
+    func testHandleNotificationInteractionCanOpenTerminal() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .waitingInput,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1),
+            sessionRef: "iterm2://session/abc"
+        )
+        let opener = RecordingSessionOpener()
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            ),
+            sessionOpener: opener
+        )
+
+        await viewModel.refresh()
+        viewModel.handleNotificationInteraction(.openTerminal("agent-1"))
+
+        XCTAssertEqual(viewModel.selectedAgentID, "agent-1")
+        XCTAssertEqual(opener.openedAgentIDs, ["agent-1"])
+    }
+
     func testOpenSessionDoesNotUseOpenerWhenItermIntegrationDisabled() async {
         let agent = Agent(
             id: "agent-1",

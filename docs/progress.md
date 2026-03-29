@@ -62,6 +62,19 @@
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift build --disable-sandbox` ✅
 - `tasks.md` Active Scope advanced to Epic 25 per Progression policy.
 
+### 2026-03-30 (Epic 25 notification context + actions complete)
+- Waiting-input and error notifications now keep their contextual preview bodies when preview text is enabled, so the notification itself can explain what the agent needs or what failed.
+- Attention notifications now carry actionable metadata:
+  - local notification category with `Open Terminal` / `Dismiss`
+  - stable `agent_id` payload on attention notifications
+  - response handling that selects the target agent on default click and opens the terminal on the action button path
+- Menu bar state now exposes a selected-agent binding so notification interactions can move focus to the relevant agent detail state before the user resumes.
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift build --disable-sandbox` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 26 per Progression policy.
+
 ### 2026-03-26 (Epic 17 one-command bootstrap complete)
 - Added CLI-side daemon auto-bootstrap for daemon-backed commands by probing the socket first, spawning `hamd serve` only when unreachable, and waiting briefly for the socket to become reachable before continuing.
 - Added CLI-side daemon executable resolution with the following precedence:

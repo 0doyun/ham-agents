@@ -47,16 +47,19 @@ struct MenuBarContentView: View {
         }
         .onAppear {
             if selectedAgentID == nil {
-                selectedAgentID = viewModel.agents.first?.id
+                selectedAgentID = viewModel.selectedAgentID ?? viewModel.agents.first?.id
             }
+            viewModel.selectedAgentID = selectedAgentID
             viewModel.setRoleDraft(from: selectedAgentID)
         }
         .onChange(of: viewModel.agents.map(\.id)) { ids in
             if selectedAgentID == nil || !ids.contains(selectedAgentID ?? "") {
-                selectedAgentID = ids.first
+                selectedAgentID = viewModel.selectedAgentID ?? ids.first
             }
+            viewModel.selectedAgentID = selectedAgentID
             viewModel.setRoleDraft(from: selectedAgentID)
         }
+        .onChange(of: viewModel.selectedAgentID) { selectedAgentID = $0 }
     }
 
     private var officeContent: some View {
@@ -88,7 +91,10 @@ struct MenuBarContentView: View {
                     hamsterSkin: viewModel.settings.appearance.hamsterSkin,
                     hat: viewModel.settings.appearance.hat,
                     deskTheme: viewModel.settings.appearance.deskTheme,
-                    onSelectAgent: { id in selectedAgentID = id }
+                    onSelectAgent: { id in
+                        selectedAgentID = id
+                        viewModel.selectedAgentID = id
+                    }
                 )
 
                 if !filteredAttentionAgents.isEmpty {
@@ -112,6 +118,7 @@ struct MenuBarContentView: View {
                         ForEach(filteredNonAttentionAgents) { agent in
                             Button {
                                 selectedAgentID = agent.id
+                                viewModel.selectedAgentID = agent.id
                             } label: {
                                 VStack(alignment: .leading, spacing: 2) {
                                     HStack(spacing: 6) {
@@ -174,6 +181,7 @@ struct MenuBarContentView: View {
                         stopTracking: {
                             await viewModel.stopTracking(forAgentID: selectedAgentID)
                             selectedAgentID = viewModel.agents.first?.id
+                            viewModel.selectedAgentID = selectedAgentID
                         },
                         sendQuickMessage: {
                             viewModel.sendQuickMessage(quickMessage, forAgentID: selectedAgentID)
