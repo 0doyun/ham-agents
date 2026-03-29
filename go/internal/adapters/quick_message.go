@@ -89,7 +89,8 @@ func (s QuickMessageSender) tryTerminalWrite(target core.OpenTarget, message str
 		if err != nil {
 			return err
 		}
-		if err := s.runner.Run("tmux", "send-keys", "-t", ref.PaneTarget(), "-l", message); err != nil {
+		safe := strings.ReplaceAll(strings.ReplaceAll(message, "\n", " "), "\r", "")
+		if err := s.runner.Run("tmux", "send-keys", "-t", ref.PaneTarget(), "-l", safe); err != nil {
 			return err
 		}
 		return s.runner.Run("tmux", "send-keys", "-t", ref.PaneTarget(), "Enter")
