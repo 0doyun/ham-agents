@@ -217,66 +217,72 @@ v1에서는 **Claude Code 하나를 정확하게 지원**하는 것이 최우선
 
 메뉴바 햄스터를 클릭하면 `Ham Office` 팝오버가 열린다.
 
-구성은 네 영역이다.
+구성:
 
-1. 상단 헤더  
-   현재 workspace, 총 agent 수, running/waiting/done 수 표시
-2. 중앙 픽셀 오피스 캔버스  
-   햄스터들이 책상/도서관/휴게공간/경고구역에 배치됨
-3. 우측 또는 하단 상세 패널  
-   선택된 agent의 최근 상태, role, 프로젝트, 액션 버튼
-4. activity feed  
-   “리뷰 시작”, “파일 수정”, “질문 필요”, “완료”, “세션 종료” 등 이벤트 흐름
+1. 상단 헤더
+   “Ham Office” 타이틀 + 새로고침/설정 버튼
+2. Summary badges
+   Total / Active / Wait 카운트
+3. 픽셀 오피스 캔버스
+   멀티 행 그리드로 햄스터 배치 (행당 3마리, 에이전트 수에 따라 자동 확장)
+4. 에이전트 리스트
+   Needs Attention 섹션 (error/waiting_input) + 일반 에이전트 리스트
+5. 디테일 패널 (에이전트 선택 시)
+   상단: 이름 + 상태 뱃지 + 메타 정보
+   Quick Message (가장 위, 자주 쓰는 액션)
+   액션 버튼: [Open in iTerm] [Open Folder] [⋯] 가로 배치
+   ⋯ 메뉴: Role 편집, 알림 토글, Stop Tracking
+   Recent Events: 컴팩트 한 줄 리스트
 
 ### 세부 보기
 
-agent를 클릭하면 다음 액션을 제공한다.
+햄스터 클릭 또는 에이전트 리스트에서 선택 시 디테일 패널이 열린다.
 
-- Focus in iTerm2
+액션:
+
+- Open in iTerm / Open in tmux
 - Open project folder
 - Send quick message
-- Pause notifications
-- Rename role
-- Stop tracking / kill session
+- Pause/Resume notifications (⋯ 메뉴)
+- Edit role (⋯ 메뉴)
+- Stop tracking (⋯ 메뉴, 빨간색)
 
 ---
 
 ## 9. 오피스 UI 스펙
 
-### 단일 오피스 공간 (v2 — 4존 그리드에서 변경)
+### 햄스터 중심 개인 워크스테이션 (v3 — 그리드 기반)
 
-기존 4존 고정 그리드(Desk/Library/Kitchen/Alert Corner)를 **단일 오피스 공간**으로 변경한다.
+기존 4존 그리드 → 단일 오피스 → **햄스터 중심 멀티 행 그리드**로 변경.
 
 변경 이유:
 
-- 4존 그리드는 존당 3마리가 한계 → 에이전트 4개 + 서브에이전트면 터짐
-- 상태 변경 시 햄스터가 존 사이를 점프 → 부자연스러움
-- 대부분 1-2칸만 사용되고 나머지는 비어 공간 낭비
+- 가구 먼저 배치하고 햄스터를 맞추는 방식은 공간 경쟁 발생
+- 에이전트 수에 따라 오피스가 자동으로 확장되어야 함
+- 각 햄스터가 자기 워크스테이션을 가지는 것이 자연스러움
 
-새 구조:
+구조:
 
-- **하나의 넓은 오피스 공간**에 가구를 배치 (책상, 책장, 소파, 경고등)
-- 햄스터는 상태에 따라 **가구 근처에 자연스럽게 배치**
-- 서브에이전트는 부모 근처에 **미니 햄스터**로 클러스터 배치
-- 에이전트 수 증가에 유연하게 대응 가능
+- **멀티 행 그리드**: 행당 최대 3마리, 에이전트 수에 따라 행 자동 확장
+  - 1~3마리 → 1행, 4~6마리 → 2행, 7~9마리 → 3행
+- **오피스 높이 동적**: 벽(50px) + 행 수 × 110px
+- **배경**: Canvas로 벽(블루그레이) + 바닥(다크 타일) + 벽 장식(창문, 시계, 화이트보드, 포스터)
+- **각 셀**: 상태 아이콘 → 햄스터 스프라이트 → 상태별 가구(앞에 배치) → 이름
 
-가구 기반 영역 암시:
+상태별 가구 (햄스터 앞, 뒤에서 보는 시점):
 
-- 책상 앞 = 작업 중 (thinking, running_tool, booting)
-- 책장 앞 = 읽기/분석 (reading)
-- 소파/주방 = 휴식/완료 (idle, sleeping, done)
-- 경고등 근처 = 주의 필요 (error, waiting_input, disconnected)
-
-상태 전달 방식 (존 구분 없이 3가지로 전달):
-
-1. **스프라이트 애니메이션** — typing, reading, thinking, sleeping, celebrating 등
-2. **위치** — 어떤 가구 근처에 있는지
-3. **머리 위 아이콘** — ⚠️ (에러), ❓ (입력 대기), ✅ (완료)
+- thinking, running_tool, booting → iMac 뒷면 (실버 패널 + 스탠드) + 커피잔 + 책상
+- reading → 책 더미 (책등이 보이는 형태) + 책상
+- error, disconnected → 빨간 글로우 모니터 + 책상
+- waiting_input → 주황 글로우 모니터 + 책상
+- idle, sleeping → 닫힌 노트북 + 책상
 
 서브에이전트 시각화:
 
-- 부모 햄스터 근처에 작은 미니 햄스터로 표현
-- 내부 상태는 모르므로 "활동 중" 정도의 기본 애니메이션만 표시
+- 부모 햄스터 **뒤쪽에서 반원형(아크) 배치**로 둘러싸는 형태
+- 바깥쪽 미니 햄스터가 앞(zIndex 높음), 중앙이 뒤
+- 최대 6마리 표시, 7마리+ 는 "+N" 텍스트
+- 내부 상태는 모르므로 run 스프라이트로 통일
 - 생성/소멸은 부모의 Agent tool hook으로 감지
 
 필수 애니메이션 세트:
@@ -288,20 +294,24 @@ agent를 클릭하면 다음 액션을 제공한다.
 - read
 - think
 - sleep
-- celebrate
 - alert
-- error/stunned
+- error (우상단 빨간 점 애니메이션)
 
 상태 매핑 예시:
 
-- `booting` → 책상으로 걸어감
-- `thinking` → 제자리 생각 모션
-- `running_tool` → 빠른 타이핑
-- `reading` → 문서 읽기 모션
-- `waiting_input` → 손들기/느낌표 + 머리 위 ❓
-- `done` → 작은 점프 + 머리 위 ✅
-- `error` → 멈춤/경고 + 머리 위 ⚠️
-- `disconnected` → 회색화
+- `booting` → walk 스프라이트
+- `thinking` → think 스프라이트 (우상단 노란 점 움직임)
+- `running_tool` → type 스프라이트
+- `reading` → read 스프라이트
+- `waiting_input` → alert 스프라이트 + 머리 위 ❓
+- `error` → error 스프라이트 (우상단 빨간 점 움직임)
+- `disconnected` → error 스프라이트
+- `idle` → idle 스프라이트
+- `sleeping` → sleep 스프라이트 (idle과 동일 눈)
+
+제거된 상태:
+
+- `done` → 프로세스 종료 시 RemoveAgent로 햄스터 삭제. celebrate 스프라이트 불필요
 
 원칙은 하나다.
 **귀여워도 정보는 숨기지 않는다.**
