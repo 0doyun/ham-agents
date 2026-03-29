@@ -247,6 +247,7 @@ func TestRenderDoctorReportHumanReadable(t *testing.T) {
 		State:         doctorPathCheck{Path: "/tmp/ham/managed-agents.json", Exists: true, Kind: "file"},
 		Events:        doctorPathCheck{Path: "/tmp/ham/events.jsonl", Exists: false, Kind: "missing"},
 		Settings:      doctorPathCheck{Path: "/tmp/ham/settings.json", Exists: true, Kind: "file"},
+		Tmux:          doctorTmuxCheck{Installed: true, Sessions: []string{"demo"}},
 	}, false)
 	if err != nil {
 		t.Fatalf("render doctor report: %v", err)
@@ -265,6 +266,9 @@ func TestRenderDoctorReportHumanReadable(t *testing.T) {
 	if !strings.Contains(rendered, "events: missing\t/tmp/ham/events.jsonl") {
 		t.Fatalf("expected missing events line in output %q", rendered)
 	}
+	if !strings.Contains(rendered, "tmux: installed (demo)") {
+		t.Fatalf("expected tmux line in output %q", rendered)
+	}
 }
 
 func TestRenderDoctorReportJSON(t *testing.T) {
@@ -278,6 +282,7 @@ func TestRenderDoctorReportJSON(t *testing.T) {
 		State:        doctorPathCheck{Path: "/tmp/state.json", Exists: false, Kind: "missing"},
 		Events:       doctorPathCheck{Path: "/tmp/events.jsonl", Exists: false, Kind: "missing"},
 		Settings:     doctorPathCheck{Path: "/tmp/settings.json", Exists: false, Kind: "missing"},
+		Tmux:         doctorTmuxCheck{Installed: false},
 	}, true)
 	if err != nil {
 		t.Fatalf("render doctor report json: %v", err)
@@ -303,6 +308,7 @@ func TestRenderDoctorReportHumanReadableDefaultRoot(t *testing.T) {
 		State:        doctorPathCheck{Path: "/tmp/state.json", Exists: false, Kind: "missing"},
 		Events:       doctorPathCheck{Path: "/tmp/events.jsonl", Exists: false, Kind: "missing"},
 		Settings:     doctorPathCheck{Path: "/tmp/settings.json", Exists: false, Kind: "missing"},
+		Tmux:         doctorTmuxCheck{Installed: false},
 	}, false)
 	if err != nil {
 		t.Fatalf("render doctor report: %v", err)
@@ -325,6 +331,7 @@ func TestRenderDoctorReportHumanReadableShowsSocketNotListening(t *testing.T) {
 		State:        doctorPathCheck{Path: "/tmp/ham/managed-agents.json", Exists: false, Kind: "missing"},
 		Events:       doctorPathCheck{Path: "/tmp/ham/events.jsonl", Exists: false, Kind: "missing"},
 		Settings:     doctorPathCheck{Path: "/tmp/ham/settings.json", Exists: false, Kind: "missing"},
+		Tmux:         doctorTmuxCheck{Installed: false},
 	}, false)
 	if err != nil {
 		t.Fatalf("render doctor report: %v", err)
@@ -332,6 +339,34 @@ func TestRenderDoctorReportHumanReadableShowsSocketNotListening(t *testing.T) {
 
 	if !strings.Contains(output.String(), "socket: socket_not_listening\t/tmp/ham/hamd.sock") {
 		t.Fatalf("expected socket_not_listening output, got %q", output.String())
+	}
+}
+
+func TestParseAttachInputInfersTmuxProviderFromSessionRef(t *testing.T) {
+	t.Parallel()
+
+	input, err := parseAttachInput([]string{"tmux://demo:1.0", "ops"})
+	if err != nil {
+		t.Fatalf("parse attach input: %v", err)
+	}
+	if input.Provider != "tmux" {
+		t.Fatalf("expected tmux provider, got %q", input.Provider)
+	}
+}
+
+func TestChooseAttachableSessionWithPromptUsesProvidedLabel(t *testing.T) {
+	t.Parallel()
+
+	var output strings.Builder
+	_, err := chooseAttachableSessionWithPrompt(strings.NewReader("1\n"), &output, []core.AttachableSession{
+		{ID: "demo:1.0", Title: "ops", SessionRef: "tmux://demo:1.0"},
+		{ID: "demo:1.1", Title: "shell", SessionRef: "tmux://demo:1.1"},
+	}, "tmux pane")
+	if err != nil {
+		t.Fatalf("choose tmux pane: %v", err)
+	}
+	if !strings.Contains(output.String(), "Select tmux pane") {
+		t.Fatalf("expected tmux prompt, got %q", output.String())
 	}
 }
 

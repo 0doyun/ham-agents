@@ -19,25 +19,27 @@ type SessionLister interface {
 }
 
 type Server struct {
-	socketPath    string
-	registry      *hamruntime.Registry
-	managed       *hamruntime.ManagedService
-	settings      *hamruntime.SettingsService
-	teams         *hamruntime.TeamService
-	sessionLister SessionLister
+	socketPath        string
+	registry          *hamruntime.Registry
+	managed           *hamruntime.ManagedService
+	settings          *hamruntime.SettingsService
+	teams             *hamruntime.TeamService
+	itermSessionLister SessionLister
+	tmuxSessionLister  SessionLister
 
 	listener   net.Listener
 	cancelFunc context.CancelFunc
 }
 
-func NewServer(socketPath string, registry *hamruntime.Registry, managed *hamruntime.ManagedService, settings *hamruntime.SettingsService, teams *hamruntime.TeamService, sessionLister SessionLister) *Server {
+func NewServer(socketPath string, registry *hamruntime.Registry, managed *hamruntime.ManagedService, settings *hamruntime.SettingsService, teams *hamruntime.TeamService, itermSessionLister SessionLister, tmuxSessionLister SessionLister) *Server {
 	return &Server{
-		socketPath:    socketPath,
-		registry:      registry,
-		managed:       managed,
-		settings:      settings,
-		teams:         teams,
-		sessionLister: sessionLister,
+		socketPath:         socketPath,
+		registry:           registry,
+		managed:            managed,
+		settings:           settings,
+		teams:              teams,
+		itermSessionLister: itermSessionLister,
+		tmuxSessionLister:  tmuxSessionLister,
 	}
 }
 
@@ -224,10 +226,19 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		}
 		return Response{OpenTarget: &target}, nil
 	case CommandListItermSessions:
-		if s.sessionLister == nil {
+		if s.itermSessionLister == nil {
 			return Response{AttachableSessions: []core.AttachableSession{}}, nil
 		}
-		sessions, err := s.sessionLister.ListSessions()
+		sessions, err := s.itermSessionLister.ListSessions()
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{AttachableSessions: sessions}, nil
+	case CommandListTmuxSessions:
+		if s.tmuxSessionLister == nil {
+			return Response{AttachableSessions: []core.AttachableSession{}}, nil
+		}
+		sessions, err := s.tmuxSessionLister.ListSessions()
 		if err != nil {
 			return Response{}, err
 		}

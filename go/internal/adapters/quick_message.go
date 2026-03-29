@@ -44,7 +44,7 @@ func (s QuickMessageSender) Send(target core.OpenTarget, message string) (string
 	}
 
 	if s.tryTerminalWrite(target, trimmed) == nil {
-		return "sent via iTerm automation", nil
+		return terminalDeliveryResult(target.Kind), nil
 	}
 
 	if err := s.runner.RunWithInput("pbcopy", trimmed); err != nil {
@@ -56,6 +56,15 @@ func (s QuickMessageSender) Send(target core.OpenTarget, message string) (string
 	}
 
 	return "copied to clipboard and opened target", nil
+}
+
+func terminalDeliveryResult(kind core.OpenTargetKind) string {
+	switch kind {
+	case core.OpenTargetKindTmuxPane:
+		return "sent via tmux"
+	default:
+		return "sent via iTerm automation"
+	}
 }
 
 func (s QuickMessageSender) tryTerminalWrite(target core.OpenTarget, message string) error {
@@ -75,6 +84,15 @@ func (s QuickMessageSender) tryTerminalWrite(target core.OpenTarget, message str
 			return err
 		}
 		return s.runner.Run("osascript", "-e", appleScriptWrite(message))
+	case core.OpenTargetKindTmuxPane:
+		ref, err := ParseTmuxSessionRef(target.Value)
+		if err != nil {
+			return err
+		}
+		if err := s.runner.Run("tmux", "send-keys", "-t", ref.PaneTarget(), "-l", message); err != nil {
+			return err
+		}
+		return s.runner.Run("tmux", "send-keys", "-t", ref.PaneTarget(), "Enter")
 	default:
 		return fmt.Errorf("unsupported target kind %q", target.Kind)
 	}
@@ -84,6 +102,15 @@ func (s QuickMessageSender) openTarget(target core.OpenTarget) error {
 	switch target.Kind {
 	case core.OpenTargetKindExternalURL, core.OpenTargetKindItermSession, core.OpenTargetKindWorkspace:
 		return s.runner.Run("open", target.Value)
+	case core.OpenTargetKindTmuxPane:
+		ref, err := ParseTmuxSessionRef(target.Value)
+		if err != nil {
+			return err
+		}
+		if err := s.runner.Run("tmux", "select-window", "-t", ref.WindowTarget()); err != nil {
+			return err
+		}
+		return s.runner.Run("tmux", "select-pane", "-t", ref.PaneTarget())
 	default:
 		return fmt.Errorf("unsupported target kind %q", target.Kind)
 	}

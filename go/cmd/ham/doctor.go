@@ -23,6 +23,7 @@ type doctorReport struct {
 	Settings      doctorPathCheck `json:"settings"`
 	Launchd       string          `json:"launchd"`
 	HookStatus    string          `json:"hook_status"`
+	Tmux          doctorTmuxCheck `json:"tmux"`
 }
 
 type doctorPathCheck struct {
@@ -30,6 +31,12 @@ type doctorPathCheck struct {
 	Exists    bool   `json:"exists"`
 	Kind      string `json:"kind"`
 	Reachable bool   `json:"reachable,omitempty"`
+}
+
+type doctorTmuxCheck struct {
+	Installed bool     `json:"installed"`
+	Sessions  []string `json:"sessions,omitempty"`
+	Error     string   `json:"error,omitempty"`
 }
 
 func gatherDoctorReport(socketPath string) (doctorReport, error) {
@@ -64,6 +71,7 @@ func gatherDoctorReport(socketPath string) (doctorReport, error) {
 		Settings:      inspectRegularPath(settingsPath),
 		Launchd:       inspectLaunchdStatus(),
 		HookStatus:    inspectHookStatus(),
+		Tmux:          inspectTmuxStatus(),
 	}, nil
 }
 
@@ -88,6 +96,7 @@ func renderDoctorReport(out io.Writer, report doctorReport, asJSON bool) error {
 		formatDoctorPathLine("settings", report.Settings),
 		fmt.Sprintf("launchd: %s", report.Launchd),
 		formatHookStatusLine(report.HookStatus),
+		formatTmuxStatusLine(report.Tmux),
 	}
 	for _, line := range lines {
 		if _, err := fmt.Fprintln(out, line); err != nil {
@@ -95,6 +104,26 @@ func renderDoctorReport(out io.Writer, report doctorReport, asJSON bool) error {
 		}
 	}
 	return nil
+}
+
+func inspectTmuxStatus() doctorTmuxCheck {
+	if _, err := exec.LookPath("tmux"); err != nil {
+		return doctorTmuxCheck{Installed: false}
+	}
+
+	output, err := exec.Command("tmux", "list-sessions", "-F", "#{session_name}").Output()
+	if err != nil {
+		return doctorTmuxCheck{Installed: true, Error: strings.TrimSpace(err.Error())}
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
+	sessions := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if trimmed := strings.TrimSpace(line); trimmed != "" {
+			sessions = append(sessions, trimmed)
+		}
+	}
+	return doctorTmuxCheck{Installed: true, Sessions: sessions}
 }
 
 func formatDoctorPathLine(label string, check doctorPathCheck) string {
@@ -195,4 +224,17 @@ func formatHookStatusLine(status string) string {
 	default:
 		return fmt.Sprintf("hooks: %s", status)
 	}
+}
+
+func formatTmuxStatusLine(check doctorTmuxCheck) string {
+	if !check.Installed {
+		return "tmux: not installed"
+	}
+	if check.Error != "" {
+		return fmt.Sprintf("tmux: installed (%s)", check.Error)
+	}
+	if len(check.Sessions) == 0 {
+		return "tmux: installed (no sessions)"
+	}
+	return fmt.Sprintf("tmux: installed (%s)", strings.Join(check.Sessions, ", "))
 }

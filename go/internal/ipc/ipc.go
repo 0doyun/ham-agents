@@ -32,6 +32,7 @@ const (
 	CommandStopManaged           Command = "managed.stop"
 	CommandOpenTarget            Command = "agents.open_target"
 	CommandListItermSessions     Command = "iterm.sessions"
+	CommandListTmuxSessions      Command = "tmux.sessions"
 	CommandListAgents            Command = "agents.list"
 	CommandStatus                Command = "agents.status"
 	CommandEvents                Command = "events.list"
@@ -258,6 +259,14 @@ func (c *Client) ListTeams(ctx context.Context) ([]core.Team, error) {
 
 func (c *Client) ListItermSessions(ctx context.Context) ([]core.AttachableSession, error) {
 	response, err := c.request(ctx, Request{Command: CommandListItermSessions})
+	if err != nil {
+		return nil, err
+	}
+	return response.AttachableSessions, nil
+}
+
+func (c *Client) ListTmuxSessions(ctx context.Context) ([]core.AttachableSession, error) {
+	response, err := c.request(ctx, Request{Command: CommandListTmuxSessions})
 	if err != nil {
 		return nil, err
 	}

@@ -122,6 +122,10 @@ struct ItermSessionOpener: SessionOpening {
                 return
             }
             workspace.open(url)
+        case .tmuxPane(let target, let sessionName, let windowIndex, let paneIndex):
+            if focusTmuxPane(target: target, sessionName: sessionName, windowIndex: windowIndex, paneIndex: paneIndex) {
+                return
+            }
         case .externalURL(let url):
             workspace.open(url)
         case .workspace(let path):
@@ -158,6 +162,12 @@ struct ItermSessionOpener: SessionOpening {
 
         return executeAppleScript(source)
     }
+
+    private func focusTmuxPane(target: String, sessionName: String, windowIndex: Int, paneIndex: Int) -> Bool {
+        executeProcess(["tmux", "select-window", "-t", "\(sessionName):\(windowIndex)"]) &&
+        executeProcess(["tmux", "select-pane", "-t", "\(sessionName):\(windowIndex).\(paneIndex)"]) ||
+        executeProcess(["tmux", "select-pane", "-t", target])
+    }
 }
 
 struct ItermQuickMessageSender: QuickMessageSending {
@@ -189,6 +199,9 @@ struct ItermQuickMessageSender: QuickMessageSending {
         case .itermSession(let sessionID, let url):
             workspace.open(url)
             return executeAppleScript(targetedWriteSource(message: message, sessionID: sessionID))
+        case .tmuxPane(let target, _, _, _):
+            return executeProcess(["tmux", "send-keys", "-t", target, "-l", message]) &&
+                executeProcess(["tmux", "send-keys", "-t", target, "Enter"])
         case .externalURL(let url):
             workspace.open(url)
         case .workspace(let path):
@@ -242,6 +255,20 @@ struct ItermQuickMessageSender: QuickMessageSending {
             end tell
         end tell
         """
+    }
+}
+
+@discardableResult
+private func executeProcess(_ arguments: [String]) -> Bool {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+    process.arguments = arguments
+    do {
+        try process.run()
+        process.waitUntilExit()
+        return process.terminationStatus == 0
+    } catch {
+        return false
     }
 }
 

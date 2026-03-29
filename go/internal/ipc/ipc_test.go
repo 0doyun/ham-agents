@@ -41,6 +41,10 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		sessions: []core.AttachableSession{
 			{ID: "abc", Title: "Claude", SessionRef: "iterm2://session/abc", IsActive: true},
 		},
+	}, stubSessionLister{
+		sessions: []core.AttachableSession{
+			{ID: "demo:1.0", Title: "ops", SessionRef: "tmux://demo:1.0", IsActive: true},
+		},
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -126,6 +130,14 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	}
 	if len(sessions) != 1 || sessions[0].ID != "abc" {
 		t.Fatalf("unexpected attachable sessions %#v", sessions)
+	}
+
+	tmuxSessions, err := client.ListTmuxSessions(context.Background())
+	if err != nil {
+		t.Fatalf("list tmux sessions via client: %v", err)
+	}
+	if len(tmuxSessions) != 1 || tmuxSessions[0].ID != "demo:1.0" {
+		t.Fatalf("unexpected tmux sessions %#v", tmuxSessions)
 	}
 
 	settings, err := client.Settings(context.Background())
@@ -269,7 +281,7 @@ func TestServerRejectsDirectoryAtSocketPath(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil)
 	err := server.Serve(context.Background())
 	if err == nil {
 		t.Fatal("expected server startup to fail when socket path is a directory")
@@ -301,7 +313,7 @@ func TestClientServerRoundTripForTeamCommands(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -391,7 +403,7 @@ func TestClientServerStopManagedStopsProcess(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -474,7 +486,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, stubSessionLister{})
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, stubSessionLister{}, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
