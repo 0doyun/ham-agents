@@ -59,6 +59,12 @@ struct HamMenuBarApp: App {
                 projectOpener: projectOpener
             )
         )
+        notificationSink.setInteractionHandler { interaction in
+            Task { @MainActor in
+                NSApp.activate(ignoringOtherApps: true)
+                viewModel.handleNotificationInteraction(interaction)
+            }
+        }
         viewModel.start()
         return viewModel
     }

@@ -14,6 +14,7 @@ public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var notificationPermissionStatus: NotificationPermissionStatus = .notDetermined
     @Published public private(set) var quickMessageFeedback: String?
     @Published public private(set) var notificationHistory: [NotificationHistoryEntry] = []
+    @Published public var selectedAgentID: Agent.ID?
     @Published public var roleDraft = ""
     @Published public private(set) var settings = DaemonSettingsPayload(
         notifications: DaemonNotificationSettingsPayload(
@@ -110,6 +111,20 @@ public final class MenuBarViewModel: ObservableObject {
 
     public func setRoleDraft(from agentID: Agent.ID?) {
         roleDraft = agent(withID: agentID)?.role ?? ""
+    }
+
+    public func handleNotificationInteraction(_ interaction: NotificationInteraction) {
+        switch interaction {
+        case .focusAgent(let agentID):
+            selectedAgentID = agentID
+            setRoleDraft(from: agentID)
+        case .openTerminal(let agentID):
+            selectedAgentID = agentID
+            setRoleDraft(from: agentID)
+            openSession(forAgentID: agentID)
+        case .dismiss:
+            break
+        }
     }
 
     public func recentEvents(forAgentID id: Agent.ID?) -> [AgentEventPayload] {
@@ -594,6 +609,9 @@ public final class MenuBarViewModel: ObservableObject {
         self.summary = summary
         self.agents = agents
         self.teams = teams
+        if selectedAgentID == nil || agent(withID: selectedAgentID)?.id != selectedAgentID {
+            selectedAgentID = agents.first?.id
+        }
 
         for candidate in candidates {
             notificationSink.send(candidate)
