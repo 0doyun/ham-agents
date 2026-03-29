@@ -60,7 +60,10 @@ let package = Package(
         .executableTarget(
             name: "HamMenuBarApp",
             dependencies: ["HamAppServices", "HamCore", "HamNotifications"],
-            path: "apps/macos/HamMenuBarApp/Sources"
+            path: "apps/macos/HamMenuBarApp/Sources",
+            resources: [
+                .copy("Resources/office_background.png")
+            ]
         ),
         .testTarget(
             name: "HamCoreTests",
