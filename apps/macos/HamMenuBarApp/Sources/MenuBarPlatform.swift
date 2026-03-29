@@ -164,9 +164,12 @@ struct ItermSessionOpener: SessionOpening {
     }
 
     private func focusTmuxPane(target: String, sessionName: String, windowIndex: Int, paneIndex: Int) -> Bool {
-        executeProcess(["tmux", "select-window", "-t", "\(sessionName):\(windowIndex)"]) &&
-        executeProcess(["tmux", "select-pane", "-t", "\(sessionName):\(windowIndex).\(paneIndex)"]) ||
-        executeProcess(["tmux", "select-pane", "-t", target])
+        let primarySuccess = executeProcess(["tmux", "select-window", "-t", "\(sessionName):\(windowIndex)"]) &&
+            executeProcess(["tmux", "select-pane", "-t", "\(sessionName):\(windowIndex).\(paneIndex)"])
+        if !primarySuccess {
+            return executeProcess(["tmux", "select-pane", "-t", target])
+        }
+        return true
     }
 }
 
@@ -200,7 +203,8 @@ struct ItermQuickMessageSender: QuickMessageSending {
             workspace.open(url)
             return executeAppleScript(targetedWriteSource(message: message, sessionID: sessionID))
         case .tmuxPane(let target, _, _, _):
-            return executeProcess(["tmux", "send-keys", "-t", target, "-l", message]) &&
+            let safe = message.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: "")
+            return executeProcess(["tmux", "send-keys", "-t", target, "-l", safe]) &&
                 executeProcess(["tmux", "send-keys", "-t", target, "Enter"])
         case .externalURL(let url):
             workspace.open(url)
