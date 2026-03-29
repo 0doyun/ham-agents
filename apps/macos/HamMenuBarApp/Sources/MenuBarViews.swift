@@ -87,7 +87,8 @@ struct MenuBarContentView: View {
                     reduceMotion: viewModel.settings.appearance.reduceMotion,
                     hamsterSkin: viewModel.settings.appearance.hamsterSkin,
                     hat: viewModel.settings.appearance.hat,
-                    deskTheme: viewModel.settings.appearance.deskTheme
+                    deskTheme: viewModel.settings.appearance.deskTheme,
+                    onSelectAgent: { id in selectedAgentID = id }
                 )
 
                 if !filteredAttentionAgents.isEmpty {
@@ -658,163 +659,110 @@ private struct AgentDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Details")
-                .font(.subheadline.weight(.semibold))
-
             if let agent {
-                Text(agent.displayName)
-                    .font(.headline)
-                Text("\(agent.provider) · \(agent.mode.rawValue)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                if let sessionTitle = agent.sessionTitle, !sessionTitle.isEmpty {
-                    Text(sessionTitle)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                if agent.mode == .attached {
-                    Text(agent.sessionIsActive ? "Current iTerm session" : "Background iTerm session")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    if let sessionTTY = agent.sessionTTY, !sessionTTY.isEmpty {
-                        Text("tty \(sessionTTY)")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    if let sessionWorkingDirectory = agent.sessionWorkingDirectory, !sessionWorkingDirectory.isEmpty {
-                        Text(sessionWorkingDirectory)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-                    if let sessionActivity = agent.sessionActivity, !sessionActivity.isEmpty {
-                        Text("activity \(sessionActivity)")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    if let sessionProcessID = agent.sessionProcessID {
-                        Text("pid \(sessionProcessID)")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    if let sessionCommand = agent.sessionCommand, !sessionCommand.isEmpty {
-                        Text(sessionCommand)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
-                }
-                Text(agent.projectPath)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                Text(confidenceText)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                if let statusReason = agent.statusReason, !statusReason.isEmpty {
-                    Text("Reason: \(statusReason)")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                // Header: name + status badge
+                HStack(alignment: .center, spacing: 8) {
+                    Text(agent.displayName)
+                        .font(.headline)
+                    StatusBadge(status: agent.status)
+                    Spacer()
                 }
 
-                Text("Role")
-                    .font(.caption.weight(.semibold))
-                HStack {
-                    TextField("Role…", text: $roleDraft)
+                // One-line meta
+                Text("\(agent.provider) · \(agent.mode.rawValue) · \(agent.projectPath)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                // Quick Message (top — most frequent action)
+                HStack(spacing: 6) {
+                    TextField("Quick message…", text: $quickMessage)
                         .textFieldStyle(.roundedBorder)
-                    Button("Save") {
-                        Task { await saveRole() }
+                    Button("Send") {
+                        sendQuickMessage()
                     }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(quickMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-
-                if let summary = agent.lastUserVisibleSummary {
-                    Text(summary)
-                        .font(.caption)
-                }
-
-                Button("Open Project Folder") {
-                    openProject()
-                }
-                .buttonStyle(.bordered)
-
-                Button("Open in iTerm") {
-                    openSession()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!canOpenSession)
-
-                Button("Stop Tracking") {
-                    Task { await stopTracking() }
-                }
-                .buttonStyle(.bordered)
-                .tint(.red)
-
-                Button(notificationsMuted ? "Resume Notifications" : "Pause Notifications") {
-                    toggleNotifications()
-                }
-                .buttonStyle(.bordered)
-
-                Text("Quick Message")
-                    .font(.caption.weight(.semibold))
-                    .padding(.top, 4)
-                TextField("Draft message…", text: $quickMessage, axis: .vertical)
-                    .textFieldStyle(.roundedBorder)
-                    .lineLimit(2 ... 4)
-                Button("Send Message") {
-                    sendQuickMessage()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(quickMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 if let quickMessageFeedback {
                     Text(quickMessageFeedback)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
 
-                Text("Recent Events")
-                    .font(.caption.weight(.semibold))
-                    .padding(.top, 4)
+                // Action buttons row
+                HStack(spacing: 6) {
+                    Button("Open in iTerm") {
+                        openSession()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canOpenSession)
 
-                let recentEventSeverityChips = AgentEventPresenter.summarizeBySeverity(recentEvents)
-                if !recentEventSeverityChips.isEmpty {
-                    EventSummaryChipsView(chips: recentEventSeverityChips)
+                    Button("Open Folder") {
+                        openProject()
+                    }
+                    .buttonStyle(.bordered)
+
+                    Menu {
+                        // Role editing section
+                        Text("Role")
+                            .font(.caption.weight(.semibold))
+                        HStack {
+                            TextField("Role…", text: $roleDraft)
+                                .textFieldStyle(.roundedBorder)
+                            Button("Save") {
+                                Task { await saveRole() }
+                            }
+                            .buttonStyle(.bordered)
+                        }
+
+                        Divider()
+
+                        Button(notificationsMuted ? "Resume Notifications" : "Pause Notifications") {
+                            toggleNotifications()
+                        }
+
+                        Divider()
+
+                        Button(role: .destructive) {
+                            Task { await stopTracking() }
+                        } label: {
+                            Text("Stop Tracking")
+                        }
+                    } label: {
+                        Text("⋯")
+                            .frame(minWidth: 28)
+                    }
+                    .menuStyle(.borderlessButton)
+                    .fixedSize()
                 }
-                if !recentEventSummaryChips.isEmpty {
-                    EventSummaryChipsView(chips: recentEventSummaryChips)
-                }
+
+                // Recent Events (compact)
+                Text("Recent")
+                    .font(.caption.weight(.semibold))
+                    .padding(.top, 2)
 
                 if recentEvents.isEmpty {
-                    Text("No recent events for this agent.")
+                    Text("No recent events.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(recentEvents.prefix(3)) { event in
-                        let presentation = AgentEventPresenter.present(event)
-                        VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(recentEvents.prefix(5)) { event in
+                            let presentation = AgentEventPresenter.present(event)
                             HStack(spacing: 6) {
-                                Text(presentation.label)
-                                    .font(.caption2.weight(.semibold))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 2)
-                                    .background(eventBadgeBackground(for: presentation.emphasis))
-                                    .clipShape(Capsule())
-                                if presentation.showsTechnicalType {
-                                    Text(event.type)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                } else {
-                                    Text(event.occurredAt.formatted(.relative(presentation: .named)))
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                }
+                                Circle()
+                                    .fill(eventBadgeColor(for: presentation.emphasis))
+                                    .frame(width: 7, height: 7)
+                                Text(AgentEventPresenter.displaySummary(for: event))
+                                    .font(.caption2)
+                                    .lineLimit(1)
+                                Spacer()
+                                Text(event.occurredAt.formatted(.relative(presentation: .named)))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
                             }
-                            Text(AgentEventPresenter.displaySummary(for: event))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
                         }
-                        .padding(.vertical, 4)
                     }
                 }
             } else {
@@ -825,6 +773,59 @@ private struct AgentDetailView: View {
 
             Spacer()
         }
+    }
+}
+
+private struct StatusBadge: View {
+    let status: AgentStatus
+
+    var body: some View {
+        Text(statusLabel)
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(statusColor.opacity(0.18))
+            .foregroundStyle(statusColor)
+            .clipShape(Capsule())
+    }
+
+    private var statusLabel: String {
+        switch status {
+        case .booting:       return "booting"
+        case .thinking:      return "thinking"
+        case .reading:       return "reading"
+        case .runningTool:   return "running tool"
+        case .waitingInput:  return "waiting input"
+        case .error:         return "error"
+        case .disconnected:  return "disconnected"
+        case .done:          return "done"
+        case .idle:          return "idle"
+        case .sleeping:      return "sleeping"
+        }
+    }
+
+    private var statusColor: Color {
+        switch status {
+        case .thinking, .reading, .runningTool, .booting:
+            return .blue
+        case .waitingInput:
+            return .orange
+        case .error, .disconnected:
+            return .red
+        case .done:
+            return .green
+        case .idle, .sleeping:
+            return .gray
+        }
+    }
+}
+
+private func eventBadgeColor(for emphasis: AgentEventEmphasis) -> Color {
+    switch emphasis {
+    case .positive: return .green
+    case .warning:  return .orange
+    case .info:     return .blue
+    case .neutral:  return .gray
     }
 }
 
