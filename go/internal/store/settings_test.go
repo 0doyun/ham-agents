@@ -23,6 +23,7 @@ func TestFileSettingsStoreRoundTrip(t *testing.T) {
 	}
 	settings.Notifications.PreviewText = true
 	settings.Notifications.Silence = true
+	settings.Notifications.HeartbeatMinutes = 30
 	settings.Notifications.QuietHoursStartHour = 21
 	settings.Notifications.QuietHoursEndHour = 7
 	settings.General.LaunchAtLogin = true
@@ -54,6 +55,9 @@ func TestFileSettingsStoreRoundTrip(t *testing.T) {
 	}
 	if !reloaded.Notifications.Silence {
 		t.Fatal("expected silence notifications to persist")
+	}
+	if reloaded.Notifications.HeartbeatMinutes != 30 {
+		t.Fatalf("expected heartbeat minutes 30, got %d", reloaded.Notifications.HeartbeatMinutes)
 	}
 	if reloaded.Notifications.QuietHoursStartHour != 21 {
 		t.Fatalf("expected quiet start hour 21, got %d", reloaded.Notifications.QuietHoursStartHour)
@@ -124,6 +128,9 @@ func TestFileSettingsStoreBackfillsQuietHoursDefaultsForLegacyFiles(t *testing.T
 	}
 	if settings.Notifications.QuietHoursEndHour != core.DefaultQuietEndHour {
 		t.Fatalf("expected quiet end default %d, got %d", core.DefaultQuietEndHour, settings.Notifications.QuietHoursEndHour)
+	}
+	if settings.Notifications.HeartbeatMinutes != core.DefaultHeartbeatMinutes {
+		t.Fatalf("expected heartbeat default %d, got %d", core.DefaultHeartbeatMinutes, settings.Notifications.HeartbeatMinutes)
 	}
 	if settings.Appearance.Theme != core.DefaultTheme {
 		t.Fatalf("expected default theme %q, got %q", core.DefaultTheme, settings.Appearance.Theme)

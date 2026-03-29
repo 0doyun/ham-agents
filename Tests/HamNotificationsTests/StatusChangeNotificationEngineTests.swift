@@ -99,11 +99,35 @@ final class StatusChangeNotificationEngineTests: XCTestCase {
         XCTAssertEqual(candidates[0].body, "No activity for 11m. Last seen: Observed tool-like activity.")
     }
 
+    func testHeartbeatCandidateProducedForLongRunningOmcAgent() {
+        let startedAt = Date(timeIntervalSince1970: 0)
+        let agent = makeAgent(
+            status: .thinking,
+            summary: "Read: spec.md",
+            lastEventAt: Date(timeIntervalSince1970: 100),
+            registeredAt: startedAt,
+            omcMode: "ralph"
+        )
+        let engine = StatusChangeNotificationEngine()
+
+        let candidates = engine.heartbeatCandidates(
+            agents: [agent],
+            observedAt: Date(timeIntervalSince1970: 30 * 60),
+            intervalMinutes: 10
+        )
+
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertEqual(candidates[0].title, "builder is still running")
+        XCTAssertEqual(candidates[0].body, "30m in thinking. Last: Read: spec.md")
+    }
+
     private func makeAgent(
         status: AgentStatus,
         summary: String? = nil,
         policy: NotificationPolicy = .default,
-        lastEventAt: Date = Date(timeIntervalSince1970: 1)
+        lastEventAt: Date = Date(timeIntervalSince1970: 1),
+        registeredAt: Date? = nil,
+        omcMode: String? = nil
     ) -> Agent {
         Agent(
             id: "agent-1",
@@ -114,8 +138,10 @@ final class StatusChangeNotificationEngineTests: XCTestCase {
             projectPath: "/tmp/app",
             status: status,
             statusConfidence: 1,
+            registeredAt: registeredAt,
             lastEventAt: lastEventAt,
             lastUserVisibleSummary: summary,
+            omcMode: omcMode,
             notificationPolicy: policy
         )
     }

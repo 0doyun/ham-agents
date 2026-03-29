@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/adapters"
+	"github.com/ham-agents/ham-agents/go/internal/core"
 	"github.com/ham-agents/ham-agents/go/internal/ipc"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
 	"github.com/ham-agents/ham-agents/go/internal/store"
@@ -113,6 +115,7 @@ func run(args []string) error {
 func pollRuntimeState(ctx context.Context, registry *runtime.Registry, settings *runtime.SettingsService, itermAdapter adapters.Iterm2Adapter, tmuxAdapter adapters.TmuxAdapter, transcriptAdapter adapters.TranscriptAdapter, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+	heartbeatSentAt := map[string]time.Time{}
 
 	for {
 		select {
@@ -120,7 +123,8 @@ func pollRuntimeState(ctx context.Context, registry *runtime.Registry, settings 
 			return
 		case <-ticker.C:
 			_ = registry.RefreshObserved(ctx)
-			if settingsSnapshot, err := settings.Get(ctx); err == nil && settingsSnapshot.Integrations.ProviderAdapters["transcript"] {
+			settingsSnapshot, err := settings.Get(ctx)
+			if err == nil && settingsSnapshot.Integrations.ProviderAdapters["transcript"] {
 				_ = ensureObservedTranscripts(ctx, registry, transcriptAdapter, settingsSnapshot.Integrations.TranscriptDirs)
 			}
 			if sessions, err := itermAdapter.ListSessions(); err == nil {
@@ -129,7 +133,59 @@ func pollRuntimeState(ctx context.Context, registry *runtime.Registry, settings 
 			if sessions, err := tmuxAdapter.ListSessions(); err == nil {
 				_ = registry.RefreshAttachedByScheme(ctx, "tmux", sessions)
 			}
+			if err == nil {
+				emitHeartbeatEvents(ctx, registry, settingsSnapshot, heartbeatSentAt)
+			}
 		}
+	}
+}
+
+func emitHeartbeatEvents(ctx context.Context, registry *runtime.Registry, settings core.Settings, heartbeatSentAt map[string]time.Time) {
+	if settings.Notifications.HeartbeatMinutes <= 0 {
+		return
+	}
+
+	agents, err := registry.List(ctx)
+	if err != nil {
+		return
+	}
+
+	now := time.Now().UTC()
+	interval := time.Duration(settings.Notifications.HeartbeatMinutes) * time.Minute
+	for _, agent := range agents {
+		if !heartbeatEligible(agent) || agent.RegisteredAt.IsZero() {
+			continue
+		}
+		if now.Sub(agent.RegisteredAt) < interval {
+			continue
+		}
+		if lastSent, ok := heartbeatSentAt[agent.ID]; ok && now.Sub(lastSent) < interval {
+			continue
+		}
+
+		summary := fmt.Sprintf("Heartbeat: %dm in %s.", int(now.Sub(agent.RegisteredAt)/time.Minute), core.HumanAgentStatusLabel(agent.Status))
+		if strings.TrimSpace(agent.LastUserVisibleSummary) != "" {
+			summary += " Last: " + strings.TrimSpace(agent.LastUserVisibleSummary)
+		}
+		registry.RecordInformationalEvent(ctx, core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     "Heartbeat update emitted.",
+			LifecycleConfidence: agent.StatusConfidence,
+		})
+		heartbeatSentAt[agent.ID] = now
+	}
+}
+
+func heartbeatEligible(agent core.Agent) bool {
+	switch agent.OmcMode {
+	case "autopilot", "ralph", "team":
+		return core.IsRunningStatus(agent.Status)
+	default:
+		return false
 	}
 }
 

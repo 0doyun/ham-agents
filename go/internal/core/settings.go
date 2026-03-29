@@ -13,6 +13,7 @@ const (
 	DefaultQuietEndHour   = 8
 	DefaultTheme          = "auto"
 	DefaultAnimationSpeed = 1.0
+	DefaultHeartbeatMinutes = 0
 )
 
 type NotificationSettings struct {
@@ -24,6 +25,7 @@ type NotificationSettings struct {
 	QuietHoursStartHour int  `json:"quiet_hours_start_hour"`
 	QuietHoursEndHour   int  `json:"quiet_hours_end_hour"`
 	PreviewText         bool `json:"preview_text"`
+	HeartbeatMinutes    int  `json:"heartbeat_minutes"`
 }
 
 type GeneralSettings struct {
@@ -146,6 +148,7 @@ func (n *NotificationSettings) UnmarshalJSON(data []byte) error {
 		QuietHoursStartHour *int  `json:"quiet_hours_start_hour"`
 		QuietHoursEndHour   *int  `json:"quiet_hours_end_hour"`
 		PreviewText         *bool `json:"preview_text"`
+		HeartbeatMinutes    *int  `json:"heartbeat_minutes"`
 	}
 
 	var raw rawNotificationSettings
@@ -180,6 +183,9 @@ func (n *NotificationSettings) UnmarshalJSON(data []byte) error {
 	if raw.PreviewText != nil {
 		n.PreviewText = *raw.PreviewText
 	}
+	if raw.HeartbeatMinutes != nil {
+		n.HeartbeatMinutes = *raw.HeartbeatMinutes
+	}
 
 	return nil
 }
@@ -190,6 +196,11 @@ func (n NotificationSettings) Validate() error {
 	}
 	if n.QuietHoursEndHour < MinQuietHour || n.QuietHoursEndHour > MaxQuietHour {
 		return fmt.Errorf("quiet hours end hour must be between %d and %d", MinQuietHour, MaxQuietHour)
+	}
+	switch n.HeartbeatMinutes {
+	case 0, 10, 30, 60:
+	default:
+		return fmt.Errorf("heartbeat minutes must be one of 0, 10, 30, or 60")
 	}
 	return nil
 }
@@ -267,6 +278,7 @@ func DefaultSettings() Settings {
 			QuietHoursStartHour: DefaultQuietStartHour,
 			QuietHoursEndHour:   DefaultQuietEndHour,
 			PreviewText:         false,
+			HeartbeatMinutes:    DefaultHeartbeatMinutes,
 		},
 		Appearance: AppearanceSettings{
 			Theme:                    DefaultTheme,

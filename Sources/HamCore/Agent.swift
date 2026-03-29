@@ -36,6 +36,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
     public var status: AgentStatus
     public var statusConfidence: Double
     public var statusReason: String?
+    public var registeredAt: Date?
     public var lastEventAt: Date
     public var lastUserVisibleSummary: String?
     public var recentTools: [String]
@@ -63,6 +64,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         status: AgentStatus,
         statusConfidence: Double,
         statusReason: String? = nil,
+        registeredAt: Date? = nil,
         lastEventAt: Date,
         lastUserVisibleSummary: String? = nil,
         recentTools: [String] = [],
@@ -89,6 +91,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         self.status = status
         self.statusConfidence = statusConfidence
         self.statusReason = statusReason
+        self.registeredAt = registeredAt
         self.lastEventAt = lastEventAt
         self.lastUserVisibleSummary = lastUserVisibleSummary
         self.recentTools = recentTools
@@ -117,6 +120,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         case status
         case statusConfidence = "status_confidence"
         case statusReason = "status_reason"
+        case registeredAt = "registered_at"
         case lastEventAt = "last_event_at"
         case lastUserVisibleSummary = "last_user_visible_summary"
         case recentTools = "recent_tools"
@@ -146,6 +150,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         status = try c.decode(AgentStatus.self, forKey: .status)
         statusConfidence = try c.decodeIfPresent(Double.self, forKey: .statusConfidence) ?? 0
         statusReason = try c.decodeIfPresent(String.self, forKey: .statusReason)
+        registeredAt = try c.decodeIfPresent(Date.self, forKey: .registeredAt)
         lastEventAt = try c.decodeIfPresent(Date.self, forKey: .lastEventAt) ?? Date()
         lastUserVisibleSummary = try c.decodeIfPresent(String.self, forKey: .lastUserVisibleSummary)
         recentTools = try c.decodeIfPresent([String].self, forKey: .recentTools) ?? []

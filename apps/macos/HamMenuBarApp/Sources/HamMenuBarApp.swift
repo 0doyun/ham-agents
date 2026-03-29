@@ -10,6 +10,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+@MainActor
+final class HamOfficeWindowPresenter {
+    static let shared = HamOfficeWindowPresenter()
+
+    private var window: NSWindow?
+
+    func show(viewModel: MenuBarViewModel) {
+        if let window {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let contentView = MenuBarContentView(viewModel: viewModel)
+            .frame(minWidth: 380, minHeight: 400)
+        let hostingController = NSHostingController(rootView: contentView)
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 420, height: 520),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Ham Office"
+        window.isReleasedWhenClosed = false
+        window.contentViewController = hostingController
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        self.window = window
+    }
+}
+
 @main
 struct HamMenuBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -63,6 +96,7 @@ struct HamMenuBarApp: App {
             Task { @MainActor in
                 NSApp.activate(ignoringOtherApps: true)
                 viewModel.handleNotificationInteraction(interaction)
+                HamOfficeWindowPresenter.shared.show(viewModel: viewModel)
             }
         }
         viewModel.start()
