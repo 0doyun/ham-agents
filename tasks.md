@@ -24,103 +24,91 @@
 - [x] **Epic 18: Claude Code Hook 기반 상태 추적 (Phase 1)** ✅
 - [x] Epic 19: 단일 오피스 UI 재설계 (Phase 2) ✅
 - [x] **Epic 21: 오피스 사이드뷰 전환 + 상태 정리** ✅
-- [ ] Epic 22: tmux 지원
-- [ ] Epic 23: OMC 모드 인식
-- [ ] Epic 24: 자율 모드 heartbeat 알림
-- [ ] Epic 20: 멀티 프로바이더 확장 (Phase 3)
+- [ ] **Epic 22: 테스트 안정화 + tmux 지원** ← 현재 활성
+- [ ] Epic 23: 에이전트 출력 요약
+- [ ] Epic 24: OMC 모드 인식
+- [ ] Epic 25: 알림 고도화
+- [ ] Epic 26: 자율 모드 heartbeat 알림
+- [ ] Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
 
 ---
 
 ## Active Scope
 
-**Epic 21: 오피스 사이드뷰 전환 + 상태 정리**
+**Epic 22: 테스트 안정화 + tmux 지원**
 
-Claude Code + OMC 사용자 집중 지원을 위한 오피스 UI 재설계 및 상태 모델 정리.
+Claude Code + OMC 사용자의 핵심 갭 해소. 테스트 안정화 후 tmux 지원 추가.
 
 ### Current Slice Checklist
 
-**상태 모델 정리:**
-- [x] `done` 상태 제거 — 프로세스 종료 시 `RemoveAgent`로 햄스터 삭제 (이미 정상 종료 경로에서 동작 중)
-- [x] `sleeping` 상태를 별도 영역 없이 현재 위치에서 졸기 모션으로 변경
-- [x] OfficeArea에서 `.sofa` 제거 → 3영역 (desk, bookshelf, alertLight)
-- [x] idle/sleeping → 마지막 위치에서 졸기 모션 (💤)
-- [x] PixelOfficeMapper, PixelOfficeModel 업데이트
-- [x] celebrate 스프라이트 상태 제거 (done 제거에 따라)
-- [x] Go/Swift 모델 동기화
+**Phase 0: 테스트 안정화**
+- [ ] `go test ./...` 전체 통과 확인 — Epic 21에서 상태 모델 변경(done 제거, sleeping 통합 등)으로 깨진 테스트 수정
+- [ ] `swift build --disable-sandbox` 빌드 확인
+- [ ] 기존 hook 커맨드 동작 확인 (tool-start, tool-done, session-end, agent-spawned, agent-finished)
 
-**오피스 사이드뷰 전환:**
-- [x] 3 레이어 구조: 벽(배경) → 햄스터(중간) → 가구(전경)
-- [x] 벽 레이어: 경고판, 창문, 시계, 책장 (벽에 걸린 형태)
-- [x] 전경 가구: 책상+모니터, 커피머신(소품), 책더미
-- [x] 경고등 영역 (좌측)
-- [x] 햄스터는 가구 뒤(중간 레이어)에서 자연스럽게 배치
-- [x] 미니 햄스터는 부모 아래에 유지
-- [x] 가로 공간 활용 — 6~8마리도 여유있게
+**Phase 1: tmux 어댑터 (Go)**
+- [ ] tmux 세션/윈도우/pane 목록 조회 어댑터 (`go/internal/adapters/tmux.go`)
+  - `tmux list-sessions`, `tmux list-windows -t <session>`, `tmux list-panes -t <window>` 파싱
+  - 각 pane의 현재 command, pid, tty 수집
+- [ ] tmux session_ref 형식 정의: `tmux://<session>:<window>.<pane>`
+- [ ] `ham run` 실행 시 tmux 환경 자동 감지 (`$TMUX` 환경변수)
+  - tmux 내에서 실행 시 현재 pane의 session_ref 자동 등록
+  - iTerm이면 기존 로직 유지
+- [ ] Go tests for tmux adapter
 
-**디테일 패널 (이전 작업 포함):**
-- [x] 픽셀 오피스 햄스터 클릭으로 디테일 선택 (완료)
-- [x] Quick Message 상단 배치 (완료)
-- [x] 버튼 가로 배치 + ⋯ 오버플로 메뉴 (완료)
-- [x] 이벤트 컴팩트 표시 (완료)
+**Phase 2: tmux CLI 통합**
+- [ ] `ham attach --pick-tmux-session` — tmux pane 목록에서 선택해서 attach
+- [ ] `ham open` — session_ref가 tmux://이면 `tmux select-window`, `tmux select-pane`으로 포커스
+- [ ] `ham ask` — session_ref가 tmux://이면 `tmux send-keys`로 메시지 전송
+- [ ] `ham doctor`에 tmux 상태 진단 추가 (tmux 설치 여부, 세션 목록)
+- [ ] Go tests
 
-**빌드/테스트:**
-- [x] `swift build --disable-sandbox` 성공
-- [x] `go test ./...` 통과
+**Phase 3: tmux 메뉴바 통합**
+- [ ] 메뉴바 디테일 패널에서 "Open in tmux" 버튼 추가 (session_ref 종류에 따라 iTerm/tmux 자동 선택)
+- [ ] Swift build 확인
 
-#### Acceptance Criteria
-- [x] 오피스가 사이드뷰 레이어 구조로 렌더링됨 (벽 → 햄스터 → 가구)
-- [x] done 상태 없이 프로세스 종료 시 햄스터가 사라짐
-- [x] idle/sleeping 햄스터가 현재 위치에서 졸기 모션
-- [x] 3영역 (desk, bookshelf, alertLight)만 존재
-- [x] 에이전트 6마리 + 서브에이전트에서도 자연스러운 배치
-
----
-
-## Next Epics (순서대로)
-
-### Epic 19: 단일 오피스 UI 재설계 (Phase 2)
-4존 그리드(Desk/Library/Kitchen/Alert Corner) → 단일 오피스 공간으로 변경.
-
-- [x] 4존 그리드 레이아웃 제거, 단일 오피스 캔버스 구현
-- [x] 가구 배치 (책상, 책장, 소파, 경고등) 및 영역 암시
-- [x] 상태 기반 햄스터 위치 배치 로직 (가구 근처 자연 배치)
-- [x] 미니 햄스터 렌더링 (서브에이전트 시각화)
-- [x] 머리 위 상태 아이콘 (⚠️ ❓ ✅)
-- [x] 도구별 스프라이트 분화 (Read → 책 읽기, Bash → 타이핑)
-- [x] 정확한 상태 기반 알림 개선
-- [x] Swift tests
-
-#### Acceptance Criteria
-- [x] 단일 오피스 공간에 햄스터들이 가구 근처에 자연스럽게 배치됨
-- [x] 서브에이전트가 부모 근처 미니 햄스터로 보임
-- [x] 상태가 스프라이트 + 위치 + 아이콘 3가지로 전달됨
-- [x] 에이전트 6개 이상에서도 공간이 부족하지 않음
-
-### Epic 22: tmux 지원
-OMC 사용자의 핵심 갭. `/omc-teams`는 tmux pane으로 에이전트를 띄우는데 현재 ham은 iTerm만 지원.
-
-- [ ] tmux 세션/윈도우/pane 목록 조회 어댑터 (Go adapters)
-- [ ] `ham attach --pick-tmux-session` CLI
-- [ ] `ham open`에서 tmux pane 포커스 (`tmux select-window`, `select-pane`)
-- [ ] `ham ask`에서 tmux pane에 메시지 전송 (`tmux send-keys`)
-- [ ] `ham run`에서 tmux pane 내 실행 시 자동 session_ref 등록 (`tmux://session/...`)
-- [ ] 메뉴바 앱에서 "Open in tmux" 버튼 (iTerm 버튼과 병렬)
-- [ ] `ham doctor`에 tmux 상태 진단 추가
-- [ ] Go/Swift tests
+**커밋 + 테스트:**
+- [ ] Phase 0 완료 후 커밋 (테스트 안정화)
+- [ ] Phase 1~2 완료 후 커밋 (tmux 지원 코어)
+- [ ] Phase 3 완료 후 커밋 (tmux UI 통합)
+- [ ] `go test ./...` + `swift build --disable-sandbox` 최종 통과
 
 #### Acceptance Criteria
 - [ ] tmux 내에서 `ham run claude` 실행 시 tmux session_ref가 자동 등록됨
 - [ ] `ham open`으로 해당 tmux pane에 포커스 가능
 - [ ] `ham ask`로 tmux pane에 메시지 전송 가능
-- [ ] `ham attach --pick-tmux-session`으로 기존 tmux 세션 연결 가능
+- [ ] `ham attach --pick-tmux-session`으로 기존 tmux pane 연결 가능
 - [ ] iTerm과 tmux 혼용 환경에서 정상 동작
+- [ ] 기존 iTerm 기능이 깨지지 않음
 
-### Epic 23: OMC 모드 인식
+---
+
+## Next Epics (순서대로)
+
+### Epic 23: 에이전트 출력 요약
+터미널을 안 열어보고도 에이전트가 뭘 하는지 파악할 수 있게.
+
+- [ ] hook 이벤트에서 구조화된 정보 수집 (도구 이름, 파일 경로 등)
+- [ ] `lastUserVisibleSummary`를 구조화된 요약으로 교체
+  - "Read: go/internal/ipc/server.go"
+  - "Edit: go/cmd/ham/main.go"
+  - "Bash: go test ./..."
+  - "Agent spawned: test-runner"
+- [ ] 디테일 패널에 최근 도구 사용 히스토리 표시 (최근 5개)
+- [ ] `ham list`에서 마지막 활동 요약 표시 개선
+- [ ] Go/Swift 모델 업데이트 + tests
+
+#### Acceptance Criteria
+- [ ] 디테일 패널에서 에이전트의 최근 활동이 구조화된 형태로 보임
+- [ ] PTY 원시 출력 대신 "Read: file.go", "Bash: command" 형태의 요약
+- [ ] ham list에서도 마지막 활동 요약이 읽기 좋게 표시됨
+
+### Epic 24: OMC 모드 인식
 Claude Code + OMC 사용 시 어떤 모드(autopilot, ralph, team 등)로 실행 중인지 표시.
 
-- [ ] OMC 환경변수 감지 로직 (OMC_MODE, OMC_SKILL 등 — OMC가 세팅하는 변수 확인)
+- [ ] OMC 환경변수 감지 방법 조사 (OMC가 어떤 변수를 세팅하는지 확인)
 - [ ] Agent 모델에 `omc_mode` 필드 추가 (Go core + Swift)
-- [ ] hook 또는 PTY 환경에서 OMC 모드 전달 경로 구현
+- [ ] hook command에 OMC 모드 전달 경로 구현 (환경변수 → hook → IPC)
 - [ ] UI: 햄스터 이름 옆에 모드 뱃지 (`[autopilot]`, `[ralph]`, `[team]`)
 - [ ] `ham list`/`ham status`에서 OMC 모드 표시
 - [ ] Go/Swift tests
@@ -129,13 +117,27 @@ Claude Code + OMC 사용 시 어떤 모드(autopilot, ralph, team 등)로 실행
 - [ ] OMC autopilot/ralph/team 실행 시 해당 모드가 UI에 표시됨
 - [ ] OMC 없이 실행 시 모드 필드 미표시 (기존 동작 유지)
 
-### Epic 24: 자율 모드 heartbeat 알림
+### Epic 25: 알림 고도화
+waiting_input/error 시 터미널 안 열고도 판단할 수 있도록 알림에 컨텍스트 추가.
+
+- [ ] waiting_input 알림에 마지막 요약 포함 (뭘 물어보는지 미리보기)
+- [ ] error 알림에 에러 메시지 요약 포함
+- [ ] 알림 클릭 시 해당 에이전트 디테일로 이동 (메뉴바 팝오버 열림)
+- [ ] 알림 액션 버튼: "Open Terminal" / "Dismiss"
+- [ ] Go/Swift tests
+
+#### Acceptance Criteria
+- [ ] waiting_input 알림에 컨텍스트가 포함되어 터미널 안 열고 판단 가능
+- [ ] error 알림에 에러 메시지가 보임
+- [ ] 알림 클릭 시 해당 에이전트가 선택된 상태로 팝오버 열림
+
+### Epic 26: 자율 모드 heartbeat 알림
 autopilot/ralph 같은 장시간 자율 실행에 대한 주기적 상태 알림.
 
 - [ ] heartbeat 알림 설정 (간격: 10분/30분/1시간, 기본 off)
 - [ ] 장시간 실행 중 "N분째 실행 중, 현재 상태: thinking" 알림
 - [ ] 에러 발생 시 즉시 알림 (기존)
-- [ ] settings에 heartbeat 간격 설정 추가
+- [ ] settings에 heartbeat 간격 설정 추가 (CLI + UI)
 - [ ] Go/Swift tests
 
 #### Acceptance Criteria
@@ -143,7 +145,7 @@ autopilot/ralph 같은 장시간 자율 실행에 대한 주기적 상태 알림
 - [ ] 에러 시 heartbeat 간격과 관계없이 즉시 알림
 - [ ] 기본값 off로 기존 사용자에게 영향 없음
 
-### Epic 20: 멀티 프로바이더 확장 (Phase 3)
+### Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
 Claude Code 이외 프로바이더 지원 추가.
 
 - [ ] Codex 전용 어댑터
@@ -155,126 +157,6 @@ Claude Code 이외 프로바이더 지원 추가.
 #### Acceptance Criteria
 - [ ] Codex/Gemini CLI로 `ham run` 시 해당 어댑터가 상태를 정확하게 추론함
 - [ ] `ham setup`이 각 프로바이더별 설정을 안내함
-
-### Epic 10: Team and Workspace
-spec §6 Team/Workspace, §12 `ham team` CLI, §11 팀 요약 알림, §14 team 단위 focus.
-
-- [ ] Team domain model 추가 (Go core) — team_id, display_name, member agent_ids
-- [ ] Workspace domain model 추가 — project_path 기반 자동 그룹핑
-- [ ] `ham team create <name>` / `ham team add <name> <agent>` CLI
-- [ ] daemon IPC에 team CRUD surface 추가
-- [ ] `ham ask <team> "..."` — team 대상 메시지 브로드캐스트
-- [ ] team 단위 focus — team의 agent들을 한 번에 열기 (§14 Should)
-- [ ] 팀 요약 알림 — team 전체 상태 요약 notification (§11)
-- [ ] menu bar popover에 workspace/team filter 추가
-- [ ] Go/Swift tests
-
-#### Acceptance Criteria
-- [ ] agent를 team으로 묶을 수 있음
-- [ ] CLI와 menu bar에서 team/workspace 단위로 필터/조회 가능
-- [ ] team 없는 agent도 정상 동작
-- [ ] team 대상 메시지가 모든 멤버에게 전달됨
-
-### Epic 11: Managed Process Lifecycle
-`ham run`이 실제 provider 세션을 spawn하고, `ham stop`이 실제로 종료하는 것. spec §7 Managed, §12 `ham run`/`ham stop`, §13 데이터 흐름.
-
-- [ ] `ham run`이 실제 child process를 spawn (provider별 command 결정)
-- [ ] process stdout/stderr를 structured event로 수집
-- [ ] structured launch events를 daemon event log로 연결 (§15)
-- [ ] process exit 감지 → done/error 상태 전이
-- [ ] `ham stop`이 실제 process signal/termination 수행
-- [ ] managed mode의 high-confidence 상태 추론 — structured events 기반 (§15)
-- [ ] Go tests
-
-#### Acceptance Criteria
-- [ ] `ham run claude --project ... --role ...`로 실제 세션이 뜸
-- [ ] 세션 종료가 자동으로 agent 상태에 반영됨
-- [ ] `ham stop`이 진짜 세션을 멈춤
-- [ ] managed agent는 structured events 덕분에 highest confidence
-
-### Epic 12: Pixel Office Experience
-spec §8 메뉴바 햄스터, §9 오피스 UI, §17 Appearance 중 sprite 관련. 제품의 핵심 비주얼.
-
-- [ ] `avatar_variant` 필드를 agent model에 추가 (§6)
-- [ ] 메뉴바 햄스터 아이콘 애니메이션 — idle/running/waiting/error/done 상태별 (§8)
-- [ ] room layout 구현 (Desk/Library/Kitchen/Alert zone) (§9)
-- [ ] sprite asset 기본 세트 (idle/walk/run/type/read/think/sleep/celebrate/alert/error) (§9)
-- [ ] 상태 → zone/animation 매핑 (§9)
-- [ ] SpriteKit 또는 Canvas 기반 렌더링
-- [ ] popover 내 캔버스 통합
-- [ ] Appearance 설정 — animation speed multiplier, reduce motion (§17)
-- [ ] Go/Swift tests
-
-#### Acceptance Criteria
-- [ ] 메뉴바 아이콘이 상태에 따라 시각적으로 변화
-- [ ] popover에 pixel office가 렌더링됨
-- [ ] 상태가 시각적으로 구분됨
-- [ ] 귀여움이 정보 전달을 가리지 않음
-
-### Epic 13: Notification Completeness
-spec §11 알림 스펙의 누락분. 현재 기본 알림은 동작하지만 고급 정책이 빠져 있음.
-
-- [ ] 팀 요약 알림 — Epic 10 이후 team이 있을 때 team 단위 digest (§11)
-- [ ] 상태 flap bundling — 같은 agent가 짧은 시간에 상태를 왕복하면 묶어서 1건 처리 (§11)
-- [ ] 연속 유사 알림 dedupe 강화 — 현재 transition-based dedupe 위에 time-window dedupe 추가 (§11)
-- [ ] notification history 저장 — 과거 알림 이력을 store에 기록 (§16)
-- [ ] `done` 알림을 long-running task에만 제한하는 정책 (§11 기본 정책)
-- [ ] Go/Swift tests
-
-#### Acceptance Criteria
-- [ ] 상태가 빠르게 왕복해도 알림이 1건만 옴
-- [ ] 과거 알림 이력을 조회할 수 있음
-- [ ] team 요약 알림이 동작함
-
-### Epic 14: Settings Completeness
-spec §17 설정 화면의 누락분. 현재 notifications/appearance.theme/integrations.iterm_enabled만 구현됨.
-
-- [ ] General — Launch at login (§17)
-- [ ] General — Compact mode (§17)
-- [ ] General — Show menu bar animation always (§17)
-- [ ] Integrations — Transcript directories 설정 (§17)
-- [ ] Integrations — Provider adapters on/off (§17)
-- [ ] Privacy — local-only mode (§17)
-- [ ] Privacy — event history retention period (§17)
-- [ ] Privacy — transcript excerpt storage on/off (§17)
-- [ ] Appearance — 햄스터 스킨/모자/책상 테마 (§17, Epic 12 이후)
-- [ ] daemon settings schema 확장 + CLI/Swift round-trip
-- [ ] Go/Swift tests
-
-#### Acceptance Criteria
-- [ ] spec §17의 5개 섹션이 모두 동작함
-- [ ] CLI와 menu bar에서 모든 설정을 수정 가능
-
-### Epic 15: Provider Adapter Layer
-spec §13 adapter layer, §15 provider-specific adapter 힌트. 현재 iTerm2 adapter만 있고 generic process adapter / transcript adapter가 없음.
-
-- [ ] transcript adapter — transcript/log 디렉터리 감시, 파일 변경 기반 event 생성 (§13, §15)
-- [ ] generic process adapter — process exit/signal 감지 (§13)
-- [ ] provider-specific adapter 힌트 — Claude CLI 등 known provider의 structured output 파싱 (§15)
-- [ ] adapter on/off를 settings에서 제어 (§17 Integrations)
-- [ ] Go tests
-
-#### Acceptance Criteria
-- [ ] transcript 디렉터리를 watch하면 observed agent 상태가 자동 갱신됨
-- [ ] known provider의 structured output이 higher-confidence 추론에 반영됨
-
-### Epic 16: Final Polish and Performance
-spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
-
-- [ ] exportable logs — `ham logs --export` 또는 파일 내보내기 (§20 v1.0)
-- [ ] detach/reattach UX 개선 (§20 v1.0)
-- [ ] 알림 flap bundling 고도화 (§11)
-- [ ] observed inference heuristic 고도화 (§15)
-- [ ] 민감 경로/환경변수 마스킹 (§16)
-- [ ] 성능 목표 검증 및 최적화 (§19) — idle CPU <2%/<1%, 메모리 <150MB/<100MB, 팝오버 <200ms
-- [ ] 디자인 polish / sprite variation
-- [ ] iTerm2 레이아웃 변경 감지 (§14, Won't v1 이지만 best-effort)
-- [ ] Go/Swift tests + 성능 벤치마크
-
-#### Acceptance Criteria
-- [ ] spec §19 성능 목표 달성
-- [ ] 민감 정보가 마스킹됨
-- [ ] 전체 UX 플로우(§18)가 end-to-end로 동작
 
 ---
 
@@ -354,10 +236,12 @@ spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
 18. ~~Epic 18: Claude Code Hook 기반 상태 추적 (Phase 1)~~ ✅
 19. ~~Epic 19: 단일 오피스 UI 재설계 (Phase 2)~~ ✅
 21. ~~Epic 21: 오피스 사이드뷰 전환 + 상태 정리~~ ✅
-22. Epic 22: tmux 지원
-23. Epic 23: OMC 모드 인식
-24. Epic 24: 자율 모드 heartbeat 알림
-20. Epic 20: 멀티 프로바이더 확장 (Phase 3)
+22. **Epic 22: 테스트 안정화 + tmux 지원** ← 현재
+23. Epic 23: 에이전트 출력 요약
+24. Epic 24: OMC 모드 인식
+25. Epic 25: 알림 고도화
+26. Epic 26: 자율 모드 heartbeat 알림
+20. Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
 
 ---
 
@@ -366,22 +250,17 @@ spec의 나머지 품질 요구사항. 모든 기능 epic 완료 후 실행.
 
 | Spec 섹션 | 커버하는 Epic |
 |-----------|-------------|
-| §6 Agent 필드 | Epic 2 ✅ + Epic 12 (`avatar_variant`) |
-| §6 Team / Workspace | Epic 10 |
-| §7 세션 모드 (Managed/Attached/Observed) | Epic 7 ✅ + Epic 11 (managed lifecycle) |
-| §8 메뉴바 상시 경험 | Epic 4 ✅ + Epic 12 (아이콘 애니메이션) |
-| §9 오피스 UI | Epic 12 |
-| §10 상태 머신 | Epic 8 ✅ |
-| §11 알림 | Epic 5 ✅ + Epic 13 (flap/team summary/history) |
-| §12 CLI | Epic 2–8 ✅ + Epic 10 (`ham team`) + Epic 16 (`--export`) |
-| §13 아키텍처 | Epic 3 ✅ + Epic 15 (adapter layer) |
-| §14 iTerm2 연동 | Epic 6 ✅ + Epic 10 (team focus) + Epic 16 (레이아웃 감지) |
-| §15 상태 추론 엔진 | Epic 8 ✅ + Epic 11 (structured events) + Epic 15 (provider adapter) |
-| §16 저장/프라이버시 | Epic 3 ✅ + Epic 13 (notification history) + Epic 14 (Privacy 설정) + Epic 16 (마스킹) |
-| §17 설정 화면 | Epic 5 ✅ (일부) + Epic 14 (전체) |
-| §18 UX 플로우 | Epic 16 (end-to-end 검증) |
-| §19 성능 목표 | Epic 16 |
-| §20 단계별 범위 | Epic 12 (v0.2 pixel office) + Epic 16 (v1.0 exportable logs, detach/reattach) |
+| §6 Agent 필드 | Epic 2 ✅ + Epic 12 ✅ + Epic 23 (RecentTools) + Epic 24 (OmcMode) |
+| §7 세션 모드 | Epic 7 ✅ + Epic 11 ✅ + Epic 18 ✅ (hook 기반) |
+| §8 메뉴바 상시 경험 | Epic 4 ✅ + Epic 12 ✅ |
+| §9 오피스 UI | Epic 12 ✅ + Epic 19 ✅ + Epic 21 ✅ (그리드 워크스테이션) |
+| §10 상태 머신 | Epic 8 ✅ + Epic 18 ✅ (hook 기반) + Epic 21 ✅ (done 제거) |
+| §11 알림 | Epic 5 ✅ + Epic 13 ✅ + Epic 25 (컨텍스트 알림) + Epic 26 (heartbeat) |
+| §12 CLI | Epic 2–8 ✅ + Epic 10 ✅ + Epic 18 ✅ (ham hook/setup) + Epic 22 (tmux) |
+| §13 아키텍처 | Epic 3 ✅ + Epic 15 ✅ + Epic 22 (tmux adapter) |
+| §14 iTerm2/tmux 연동 | Epic 6 ✅ + Epic 22 (tmux 지원) |
+| §15 상태 추론 엔진 | Epic 8 ✅ + Epic 18 ✅ (hook 기반) + Epic 23 (출력 요약) |
+| §17 설정 화면 | Epic 5 ✅ + Epic 14 ✅ + Epic 26 (heartbeat 설정) |
 
 ---
 
