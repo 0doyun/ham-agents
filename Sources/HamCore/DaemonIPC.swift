@@ -129,6 +129,7 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
     public var quietHoursStartHour: Int
     public var quietHoursEndHour: Int
     public var previewText: Bool
+    public var heartbeatMinutes: Int
 
     public init(
         done: Bool,
@@ -138,7 +139,8 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
         quietHoursEnabled: Bool,
         quietHoursStartHour: Int,
         quietHoursEndHour: Int,
-        previewText: Bool
+        previewText: Bool,
+        heartbeatMinutes: Int = 0
     ) {
         self.done = done
         self.error = error
@@ -148,6 +150,7 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
         self.quietHoursStartHour = quietHoursStartHour
         self.quietHoursEndHour = quietHoursEndHour
         self.previewText = previewText
+        self.heartbeatMinutes = heartbeatMinutes
     }
 
     enum CodingKeys: String, CodingKey {
@@ -159,6 +162,7 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
         case quietHoursStartHour = "quiet_hours_start_hour"
         case quietHoursEndHour = "quiet_hours_end_hour"
         case previewText = "preview_text"
+        case heartbeatMinutes = "heartbeat_minutes"
     }
 
     public init(from decoder: Decoder) throws {
@@ -171,6 +175,7 @@ public struct DaemonNotificationSettingsPayload: Codable, Equatable, Sendable {
         quietHoursStartHour = try container.decode(Int.self, forKey: .quietHoursStartHour)
         quietHoursEndHour = try container.decode(Int.self, forKey: .quietHoursEndHour)
         previewText = try container.decode(Bool.self, forKey: .previewText)
+        heartbeatMinutes = try container.decodeIfPresent(Int.self, forKey: .heartbeatMinutes) ?? 0
     }
 }
 
@@ -223,7 +228,8 @@ public struct DaemonSettingsPayload: Codable, Equatable, Sendable {
             quietHoursEnabled: false,
             quietHoursStartHour: 22,
             quietHoursEndHour: 8,
-            previewText: false
+            previewText: false,
+            heartbeatMinutes: 0
         ),
         appearance: .default,
         integrations: .default,

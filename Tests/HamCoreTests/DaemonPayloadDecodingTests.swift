@@ -122,7 +122,8 @@ final class DaemonPayloadDecodingTests: XCTestCase {
             "quiet_hours_enabled": false,
             "quiet_hours_start_hour": 22,
             "quiet_hours_end_hour": 8,
-            "preview_text": false
+            "preview_text": false,
+            "heartbeat_minutes": 30
           },
           "appearance": {
             "theme": "auto"
@@ -136,6 +137,7 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         let settings = try DaemonJSONDecoder.make().decode(DaemonSettingsPayload.self, from: Data(payload.utf8))
 
         XCTAssertTrue(settings.notifications.silence)
+        XCTAssertEqual(settings.notifications.heartbeatMinutes, 30)
         XCTAssertFalse(settings.general.launchAtLogin)
         XCTAssertEqual(settings.appearance.animationSpeedMultiplier, 1)
         XCTAssertFalse(settings.appearance.reduceMotion)
@@ -168,6 +170,7 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         let settings = try DaemonJSONDecoder.make().decode(DaemonSettingsPayload.self, from: Data(payload.utf8))
 
         XCTAssertFalse(settings.notifications.silence)
+        XCTAssertEqual(settings.notifications.heartbeatMinutes, 0)
         XCTAssertFalse(settings.general.compactMode)
         XCTAssertEqual(settings.appearance.animationSpeedMultiplier, 1)
         XCTAssertFalse(settings.appearance.reduceMotion)

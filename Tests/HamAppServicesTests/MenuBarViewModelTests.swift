@@ -957,6 +957,35 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.settings.notifications.previewText)
     }
 
+    func testUpdateNotificationSettingsCanSetHeartbeatMinutes() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 10)
+                ),
+                events: [],
+                agents: [agent]
+            )
+        )
+
+        await viewModel.refresh()
+        await viewModel.updateNotificationSetting(heartbeatMinutes: 30)
+
+        XCTAssertEqual(viewModel.settings.notifications.heartbeatMinutes, 30)
+    }
+
     func testUpdateNotificationSettingsCanToggleQuietHours() async {
         let agent = Agent(
             id: "agent-1",
@@ -1019,6 +1048,53 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.updateNotificationSetting(silence: true)
 
         XCTAssertTrue(viewModel.settings.notifications.silence)
+    }
+
+    func testRefreshSendsHeartbeatNotificationWhenConfigured() async {
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            registeredAt: Date(timeIntervalSince1970: 0),
+            lastEventAt: Date(timeIntervalSince1970: 60),
+            lastUserVisibleSummary: "Read: spec.md",
+            omcMode: "ralph"
+        )
+        let settings = DaemonSettingsPayload(
+            notifications: DaemonNotificationSettingsPayload(
+                done: true,
+                error: true,
+                waitingInput: true,
+                silence: false,
+                quietHoursEnabled: false,
+                quietHoursStartHour: 22,
+                quietHoursEndHour: 8,
+                previewText: true,
+                heartbeatMinutes: 10
+            )
+        )
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(
+            client: StubClient(
+                snapshot: DaemonRuntimeSnapshotPayload(
+                    agents: [agent],
+                    generatedAt: Date(timeIntervalSince1970: 20 * 60)
+                ),
+                events: [],
+                agents: [agent],
+                settings: settings
+            ),
+            notificationSink: sink
+        )
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(sink.candidates.first?.title, "builder is still running")
     }
 
     func testUpdateAppearanceSettingsChangesPublishedTheme() async {

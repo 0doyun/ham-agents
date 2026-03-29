@@ -44,6 +44,7 @@ type Agent struct {
 	Status                  AgentStatus        `json:"status"`
 	StatusConfidence        float64            `json:"status_confidence"`
 	StatusReason            string             `json:"status_reason,omitempty"`
+	RegisteredAt            time.Time          `json:"registered_at,omitempty"`
 	LastEventAt             time.Time          `json:"last_event_at"`
 	LastUserVisibleSummary  string             `json:"last_user_visible_summary,omitempty"`
 	RecentTools            []string           `json:"recent_tools,omitempty"`

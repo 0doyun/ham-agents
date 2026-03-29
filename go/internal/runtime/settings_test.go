@@ -24,6 +24,7 @@ func TestSettingsServicePersistsUpdates(t *testing.T) {
 	}
 	settings.Notifications.Done = false
 	settings.Notifications.Silence = true
+	settings.Notifications.HeartbeatMinutes = 10
 
 	updated, err := service.Update(ctx, settings)
 	if err != nil {
@@ -34,6 +35,9 @@ func TestSettingsServicePersistsUpdates(t *testing.T) {
 	}
 	if !updated.Notifications.Silence {
 		t.Fatal("expected silence notifications to be enabled")
+	}
+	if updated.Notifications.HeartbeatMinutes != 10 {
+		t.Fatalf("expected heartbeat minutes 10, got %d", updated.Notifications.HeartbeatMinutes)
 	}
 }
 
@@ -66,6 +70,22 @@ func TestSettingsServiceRejectsInvalidTheme(t *testing.T) {
 
 	if _, err := service.Update(ctx, settings); err == nil {
 		t.Fatal("expected invalid theme to be rejected")
+	}
+}
+
+func TestSettingsServiceRejectsInvalidHeartbeatMinutes(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	service := runtime.NewSettingsService(
+		store.NewFileSettingsStore(filepath.Join(t.TempDir(), "settings.json")),
+	)
+
+	settings := core.DefaultSettings()
+	settings.Notifications.HeartbeatMinutes = 15
+
+	if _, err := service.Update(ctx, settings); err == nil {
+		t.Fatal("expected invalid heartbeat minutes to be rejected")
 	}
 }
 

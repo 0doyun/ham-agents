@@ -172,6 +172,8 @@ public final class UserNotificationSink: NSObject, NotificationSink, Notificatio
             return "\(agent.id).error"
         case .silence(let agent):
             return "\(agent.id).silence"
+        case .heartbeat(let agent, _):
+            return "\(agent.id).heartbeat"
         case .teamDigest(let teamName):
             return "\(teamName).team_digest"
         }

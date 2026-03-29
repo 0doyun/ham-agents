@@ -68,12 +68,25 @@
   - local notification category with `Open Terminal` / `Dismiss`
   - stable `agent_id` payload on attention notifications
   - response handling that selects the target agent on default click and opens the terminal on the action button path
-- Menu bar state now exposes a selected-agent binding so notification interactions can move focus to the relevant agent detail state before the user resumes.
+- Notification interactions now also bring up a visible Ham Office window backed by the shared menu bar view model, so clicking a notification reveals the relevant agent detail surface instead of only activating the app process.
 - Verification:
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift build --disable-sandbox` ✅
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
 - `tasks.md` Active Scope advanced to Epic 26 per Progression policy.
+
+### 2026-03-30 (Epic 26 heartbeat notifications complete)
+- Added `heartbeat_minutes` to the shared Go/Swift notification settings contract with supported values `0`, `10`, `30`, `60` and default `0` (off).
+- Managed/attached/observed agents now carry `registered_at`, letting the notification pipeline calculate elapsed runtime for long-running autonomous sessions.
+- Notification engine now emits heartbeat candidates for running agents with active OMC modes, producing messages like `30m in thinking. Last: Read: spec.md`.
+- `hamd` now also owns a daemon-side heartbeat emission loop that appends informational heartbeat events on the configured cadence for eligible autonomous sessions.
+- Heartbeat notifications reuse the existing local-notification flow, respect the stored notification settings, and are rate-limited by notification history so they repeat no more often than the configured interval.
+- CLI and menu bar settings now expose the heartbeat interval, and existing error notifications remain immediate.
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift build --disable-sandbox` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 20 per Progression policy.
 
 ### 2026-03-26 (Epic 17 one-command bootstrap complete)
 - Added CLI-side daemon auto-bootstrap for daemon-backed commands by probing the socket first, spawning `hamd serve` only when unreachable, and waiting briefly for the socket to become reachable before continuing.

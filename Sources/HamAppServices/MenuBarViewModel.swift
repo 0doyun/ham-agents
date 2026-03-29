@@ -289,7 +289,8 @@ public final class MenuBarViewModel: ObservableObject {
         quietHoursEnabled: Bool? = nil,
         quietHoursStartHour: Int? = nil,
         quietHoursEndHour: Int? = nil,
-        previewText: Bool? = nil
+        previewText: Bool? = nil,
+        heartbeatMinutes: Int? = nil
     ) async {
         var updated = settings
         if let done { updated.notifications.done = done }
@@ -300,6 +301,7 @@ public final class MenuBarViewModel: ObservableObject {
         if let quietHoursStartHour { updated.notifications.quietHoursStartHour = quietHoursStartHour }
         if let quietHoursEndHour { updated.notifications.quietHoursEndHour = quietHoursEndHour }
         if let previewText { updated.notifications.previewText = previewText }
+        if let heartbeatMinutes { updated.notifications.heartbeatMinutes = heartbeatMinutes }
 
         do {
             settings = try await client.updateSettings(updated)
@@ -562,6 +564,8 @@ public final class MenuBarViewModel: ObservableObject {
                 guard settings.notifications.waitingInput else { return nil }
             case .silence:
                 guard settings.notifications.silence else { return nil }
+            case .heartbeat:
+                guard settings.notifications.heartbeatMinutes > 0 else { return nil }
             case .teamDigest:
                 guard settings.notifications.error || settings.notifications.waitingInput else { return nil }
             }
@@ -595,6 +599,15 @@ public final class MenuBarViewModel: ObservableObject {
                 current: agents,
                 previousObservedAt: self.summary?.generatedAt,
                 currentObservedAt: summary.generatedAt
+            ),
+            settings: settings,
+            observedAt: summary.generatedAt,
+            previousAgents: previousAgents
+        ) + filteredNotificationCandidates(
+            notificationEngine.heartbeatCandidates(
+                agents: agents,
+                observedAt: summary.generatedAt,
+                intervalMinutes: settings.notifications.heartbeatMinutes
             ),
             settings: settings,
             observedAt: summary.generatedAt,
@@ -644,6 +657,11 @@ public final class MenuBarViewModel: ObservableObject {
             if let previousAgent = previousAgents.first(where: { $0.id == agent.id }) {
                 return date.timeIntervalSince(previousAgent.lastEventAt) < longRunningThreshold
             }
+        case .heartbeat:
+            let heartbeatWindow = TimeInterval(max(1, settings.notifications.heartbeatMinutes) * 60)
+            if let recent = notificationHistory.last(where: { $0.key == key }) {
+                return date.timeIntervalSince(recent.createdAt) < heartbeatWindow
+            }
         default:
             break
         }
@@ -656,6 +674,7 @@ public final class MenuBarViewModel: ObservableObject {
         case .waitingInput(let agent): return "agent:\(agent.id):attention"
         case .error(let agent): return "agent:\(agent.id):attention"
         case .silence(let agent): return "agent:\(agent.id):silence"
+        case .heartbeat(let agent, _): return "agent:\(agent.id):heartbeat"
         case .teamDigest(let name): return "team:\(name):digest"
         }
     }

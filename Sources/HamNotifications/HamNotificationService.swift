@@ -6,6 +6,7 @@ public enum NotificationEvent: Equatable, Sendable {
     case waitingInput(Agent)
     case error(Agent)
     case silence(Agent)
+    case heartbeat(Agent, minutes: Int)
     case teamDigest(String)
 }
 
@@ -20,7 +21,7 @@ public struct HamNotificationService {
 
     public func shouldNotify(for event: NotificationEvent) -> Bool {
         switch event {
-        case .done(let agent), .waitingInput(let agent), .error(let agent), .silence(let agent):
+        case .done(let agent), .waitingInput(let agent), .error(let agent), .silence(let agent), .heartbeat(let agent, _):
             return agent.notificationPolicy != .muted
         case .teamDigest:
             return true
@@ -41,7 +42,7 @@ public struct NotificationCandidate: Equatable, Sendable {
 
     public var agentID: String? {
         switch event {
-        case .done(let agent), .waitingInput(let agent), .error(let agent), .silence(let agent):
+        case .done(let agent), .waitingInput(let agent), .error(let agent), .silence(let agent), .heartbeat(let agent, _):
             return agent.id
         case .teamDigest:
             return nil
@@ -129,6 +130,35 @@ public struct StatusChangeNotificationEngine {
         }
     }
 
+    public func heartbeatCandidates(
+        agents: [Agent],
+        observedAt: Date,
+        intervalMinutes: Int
+    ) -> [NotificationCandidate] {
+        guard intervalMinutes > 0 else { return [] }
+
+        return agents.compactMap { agent in
+            guard isHeartbeatEligible(agent) else { return nil }
+            let startedAt = agent.registeredAt ?? agent.lastEventAt
+            let elapsedMinutes = Int(observedAt.timeIntervalSince(startedAt) / 60)
+            guard elapsedMinutes >= intervalMinutes else { return nil }
+            let status = agent.status.humanizedLabel
+            let body: String
+            if let summary = agent.lastUserVisibleSummary, !summary.isEmpty {
+                body = "\(elapsedMinutes)m in \(status). Last: \(summary)"
+            } else {
+                body = "\(elapsedMinutes)m in \(status) at \(agent.projectPath)"
+            }
+            let event = NotificationEvent.heartbeat(agent, minutes: elapsedMinutes)
+            guard service.shouldNotify(for: event) else { return nil }
+            return NotificationCandidate(
+                event: event,
+                title: "\(agent.displayName) is still running",
+                body: body
+            )
+        }
+    }
+
     private func title(for event: NotificationEvent) -> String {
         switch event {
         case .done(let agent):
@@ -139,6 +169,8 @@ public struct StatusChangeNotificationEngine {
             return "\(agent.displayName) hit an error"
         case .silence(let agent):
             return "\(agent.displayName) went quiet"
+        case .heartbeat(let agent, _):
+            return "\(agent.displayName) is still running"
         case .teamDigest(let name):
             return "\(name) needs attention"
         }
@@ -154,6 +186,11 @@ public struct StatusChangeNotificationEngine {
                 return "No activity for \(duration). Last seen: \(summary)"
             }
             return "No activity for \(duration) at \(agent.projectPath)"
+        case .heartbeat(let agent, let minutes):
+            if let summary = agent.lastUserVisibleSummary, !summary.isEmpty {
+                return "\(minutes)m in \(agent.status.humanizedLabel). Last: \(summary)"
+            }
+            return "\(minutes)m in \(agent.status.humanizedLabel) at \(agent.projectPath)"
         case .teamDigest:
             return "Team requires attention."
         }
@@ -186,5 +223,16 @@ public struct StatusChangeNotificationEngine {
             return "\(minutes)m"
         }
         return "\(seconds)s"
+    }
+
+    private func isHeartbeatEligible(_ agent: Agent) -> Bool {
+        guard let omcMode = agent.omcMode else { return false }
+        switch omcMode {
+        case "autopilot", "ralph", "team":
+            break
+        default:
+            return false
+        }
+        return agent.status.isRunningActivity
     }
 }

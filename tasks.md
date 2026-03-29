@@ -28,29 +28,28 @@
 - [x] **Epic 23: 에이전트 출력 요약** ✅
 - [x] **Epic 24: OMC 모드 인식** ✅
 - [x] **Epic 25: 알림 고도화** ✅
-- [ ] **Epic 26: 자율 모드 heartbeat 알림** ← 현재 활성
-- [ ] Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
+- [x] **Epic 26: 자율 모드 heartbeat 알림** ✅
+- [ ] **Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)** ← 현재 활성
 
 ---
 
 ## Active Scope
 
-**Epic 26: 자율 모드 heartbeat 알림**
+**Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)**
 
-autopilot/ralph 같은 장시간 자율 실행에 대한 주기적 상태 알림.
+Claude Code 이외 프로바이더 지원 추가.
 
 ### Current Slice Checklist
 
-- [ ] heartbeat 알림 설정 (간격: 10분/30분/1시간, 기본 off)
-- [ ] 장시간 실행 중 "N분째 실행 중, 현재 상태: thinking" 알림
-- [ ] 에러 발생 시 즉시 알림 (기존)
-- [ ] settings에 heartbeat 간격 설정 추가 (CLI + UI)
-- [ ] Go/Swift tests
+- [ ] Codex 전용 어댑터
+- [ ] Gemini CLI 전용 어댑터
+- [ ] `ham setup codex`, `ham setup gemini`
+- [ ] 범용 추론 엔진은 hook 미지원 프로바이더 fallback으로 유지
+- [ ] Go tests
 
 #### Acceptance Criteria
-- [ ] heartbeat 설정 시 주기적 알림이 발송됨
-- [ ] 에러 시 heartbeat 간격과 관계없이 즉시 알림
-- [ ] 기본값 off로 기존 사용자에게 영향 없음
+- [ ] Codex/Gemini CLI로 `ham run` 시 해당 어댑터가 상태를 정확하게 추론함
+- [ ] `ham setup`이 각 프로바이더별 설정을 안내함
 
 ---
 

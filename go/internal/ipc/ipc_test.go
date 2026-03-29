@@ -147,6 +147,7 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	settings.Notifications.PreviewText = true
 	settings.Notifications.QuietHoursStartHour = 21
 	settings.Notifications.QuietHoursEndHour = 6
+	settings.Notifications.HeartbeatMinutes = 10
 	settings.Appearance.Theme = "night"
 	settings.Integrations.ItermEnabled = false
 	updatedSettings, err := client.UpdateSettings(context.Background(), settings)
@@ -158,6 +159,9 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 	}
 	if updatedSettings.Notifications.QuietHoursStartHour != 21 || updatedSettings.Notifications.QuietHoursEndHour != 6 {
 		t.Fatalf("expected quiet hours 21-6, got %d-%d", updatedSettings.Notifications.QuietHoursStartHour, updatedSettings.Notifications.QuietHoursEndHour)
+	}
+	if updatedSettings.Notifications.HeartbeatMinutes != 10 {
+		t.Fatalf("expected heartbeat minutes 10, got %d", updatedSettings.Notifications.HeartbeatMinutes)
 	}
 	if updatedSettings.Appearance.Theme != "night" {
 		t.Fatalf("expected theme night, got %q", updatedSettings.Appearance.Theme)

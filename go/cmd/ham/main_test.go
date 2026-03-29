@@ -951,6 +951,19 @@ func TestApplyNotificationSettingsArgsParsesSilenceFlag(t *testing.T) {
 	}
 }
 
+func TestApplyNotificationSettingsArgsParsesHeartbeatMinutes(t *testing.T) {
+	t.Parallel()
+
+	settings := core.DefaultSettings().Notifications
+
+	if err := applyNotificationSettingsArgs(&settings, []string{"--heartbeat-minutes=30"}); err != nil {
+		t.Fatalf("apply notification settings args: %v", err)
+	}
+	if settings.HeartbeatMinutes != 30 {
+		t.Fatalf("expected heartbeat minutes 30, got %d", settings.HeartbeatMinutes)
+	}
+}
+
 func TestRenderAgentsHumanReadableUsesRecencyWithinSameSeverity(t *testing.T) {
 	t.Parallel()
 

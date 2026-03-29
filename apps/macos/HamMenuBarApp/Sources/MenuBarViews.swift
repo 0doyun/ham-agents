@@ -243,6 +243,9 @@ struct MenuBarContentView: View {
                     },
                     updatePreviewText: { value in
                         Task { await viewModel.updateNotificationSetting(previewText: value) }
+                    },
+                    updateHeartbeatMinutes: { value in
+                        Task { await viewModel.updateNotificationSetting(heartbeatMinutes: value) }
                     }
                 )
 
@@ -361,6 +364,7 @@ private struct NotificationSettingsSection: View {
     let updateQuietStartHour: (Int) -> Void
     let updateQuietEndHour: (Int) -> Void
     let updatePreviewText: (Bool) -> Void
+    let updateHeartbeatMinutes: (Int) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -408,6 +412,19 @@ private struct NotificationSettingsSection: View {
                     .foregroundStyle(.secondary)
             }
             Toggle("Preview Text", isOn: Binding(get: { settings.previewText }, set: updatePreviewText))
+            Picker(
+                "Heartbeat",
+                selection: Binding(
+                    get: { settings.heartbeatMinutes },
+                    set: updateHeartbeatMinutes
+                )
+            ) {
+                Text("Off").tag(0)
+                Text("10 min").tag(10)
+                Text("30 min").tag(30)
+                Text("60 min").tag(60)
+            }
+            .labelsHidden()
         }
         .toggleStyle(.checkbox)
     }

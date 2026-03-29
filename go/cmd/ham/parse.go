@@ -351,6 +351,12 @@ func applyNotificationSettingsArgs(settings *core.NotificationSettings, args []s
 				return err
 			}
 			settings.PreviewText = value
+		case strings.HasPrefix(argument, "--heartbeat-minutes="):
+			value, err := strconv.Atoi(strings.TrimPrefix(argument, "--heartbeat-minutes="))
+			if err != nil {
+				return fmt.Errorf("invalid heartbeat minutes %q", strings.TrimPrefix(argument, "--heartbeat-minutes="))
+			}
+			settings.HeartbeatMinutes = value
 		default:
 			return fmt.Errorf("unsupported notifications flag %q", argument)
 		}

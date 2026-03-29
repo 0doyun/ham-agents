@@ -246,6 +246,10 @@ func (r *Registry) appendEvent(ctx context.Context, event core.Event) {
 	_ = r.eventStore.Append(ctx, event)
 }
 
+func (r *Registry) RecordInformationalEvent(ctx context.Context, event core.Event) {
+	r.appendEvent(ctx, event)
+}
+
 func agentsEqual(lhs []core.Agent, rhs []core.Agent) bool {
 	if len(lhs) != len(rhs) {
 		return false
