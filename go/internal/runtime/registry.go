@@ -142,6 +142,38 @@ func (r *Registry) Remove(ctx context.Context, agentID string) error {
 	}})
 }
 
+func (r *Registry) FindAgentBySessionID(ctx context.Context, sessionID string) (core.Agent, error) {
+	trimmed := strings.TrimSpace(sessionID)
+	if trimmed == "" {
+		return core.Agent{}, fmt.Errorf("session ID is required")
+	}
+	agents, err := r.store.LoadAgents(ctx)
+	if err != nil {
+		return core.Agent{}, err
+	}
+	for _, agent := range agents {
+		if strings.TrimSpace(agent.SessionID) == trimmed {
+			return agent, nil
+		}
+	}
+	return core.Agent{}, fmt.Errorf("agent for session %q not found", trimmed)
+}
+
+func (r *Registry) RecordHookSessionSeen(ctx context.Context, agentID string, sessionID string) error {
+	trimmed := strings.TrimSpace(sessionID)
+	if trimmed == "" {
+		return nil
+	}
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, _ time.Time) (*core.Event, error) {
+		if agent.SessionID == trimmed {
+			return nil, nil
+		}
+		agent.SessionID = trimmed
+		return nil, nil
+	})
+	return err
+}
+
 func (r *Registry) mutateAgent(
 	ctx context.Context,
 	agentID string,
