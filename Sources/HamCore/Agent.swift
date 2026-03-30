@@ -36,12 +36,14 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
     public var status: AgentStatus
     public var statusConfidence: Double
     public var statusReason: String?
+    public var errorType: String?
     public var registeredAt: Date?
     public var lastEventAt: Date
     public var lastUserVisibleSummary: String?
     public var recentTools: [String]
     public var omcMode: String?
     public var notificationPolicy: NotificationPolicy
+    public var sessionID: String?
     public var sessionRef: String?
     public var sessionTitle: String?
     public var sessionIsActive: Bool
@@ -64,12 +66,14 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         status: AgentStatus,
         statusConfidence: Double,
         statusReason: String? = nil,
+        errorType: String? = nil,
         registeredAt: Date? = nil,
         lastEventAt: Date,
         lastUserVisibleSummary: String? = nil,
         recentTools: [String] = [],
         omcMode: String? = nil,
         notificationPolicy: NotificationPolicy = .default,
+        sessionID: String? = nil,
         sessionRef: String? = nil,
         sessionTitle: String? = nil,
         sessionIsActive: Bool = false,
@@ -91,12 +95,14 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         self.status = status
         self.statusConfidence = statusConfidence
         self.statusReason = statusReason
+        self.errorType = errorType
         self.registeredAt = registeredAt
         self.lastEventAt = lastEventAt
         self.lastUserVisibleSummary = lastUserVisibleSummary
         self.recentTools = recentTools
         self.omcMode = omcMode
         self.notificationPolicy = notificationPolicy
+        self.sessionID = sessionID
         self.sessionRef = sessionRef
         self.sessionTitle = sessionTitle
         self.sessionIsActive = sessionIsActive
@@ -120,12 +126,14 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         case status
         case statusConfidence = "status_confidence"
         case statusReason = "status_reason"
+        case errorType = "error_type"
         case registeredAt = "registered_at"
         case lastEventAt = "last_event_at"
         case lastUserVisibleSummary = "last_user_visible_summary"
         case recentTools = "recent_tools"
         case omcMode = "omc_mode"
         case notificationPolicy = "notification_policy"
+        case sessionID = "session_id"
         case sessionRef = "session_ref"
         case sessionTitle = "session_title"
         case sessionIsActive = "session_is_active"
@@ -150,12 +158,14 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         status = try c.decode(AgentStatus.self, forKey: .status)
         statusConfidence = try c.decodeIfPresent(Double.self, forKey: .statusConfidence) ?? 0
         statusReason = try c.decodeIfPresent(String.self, forKey: .statusReason)
+        errorType = try c.decodeIfPresent(String.self, forKey: .errorType)
         registeredAt = try c.decodeIfPresent(Date.self, forKey: .registeredAt)
         lastEventAt = try c.decodeIfPresent(Date.self, forKey: .lastEventAt) ?? Date()
         lastUserVisibleSummary = try c.decodeIfPresent(String.self, forKey: .lastUserVisibleSummary)
         recentTools = try c.decodeIfPresent([String].self, forKey: .recentTools) ?? []
         omcMode = try c.decodeIfPresent(String.self, forKey: .omcMode)
         notificationPolicy = try c.decodeIfPresent(NotificationPolicy.self, forKey: .notificationPolicy) ?? .default
+        sessionID = try c.decodeIfPresent(String.self, forKey: .sessionID)
         sessionRef = try c.decodeIfPresent(String.self, forKey: .sessionRef)
         sessionTitle = try c.decodeIfPresent(String.self, forKey: .sessionTitle)
         sessionIsActive = try c.decodeIfPresent(Bool.self, forKey: .sessionIsActive) ?? false
