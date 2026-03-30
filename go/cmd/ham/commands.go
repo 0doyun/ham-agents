@@ -318,34 +318,42 @@ func runTeam(ctx context.Context, client *ipc.Client, args []string) error {
 
 func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("hook subcommand required: tool-start, tool-done, session-end, agent-spawned, agent-finished")
+		return fmt.Errorf("hook subcommand required: tool-start, tool-done, notification, stop-failure, session-start, session-end, subagent-start, subagent-stop")
 	}
 
+	payload := readHookPayload(os.Stdin)
 	agentID := os.Getenv("HAM_AGENT_ID")
-	if agentID == "" {
+	if agentID == "" && payload.SessionID == "" {
 		return fmt.Errorf("HAM_AGENT_ID environment variable is required")
 	}
 
 	switch args[0] {
 	case "tool-start":
-		toolName := ""
-		if len(args) > 1 {
-			toolName = args[1]
-		}
-		return client.HookToolStart(ctx, agentID, toolName, hookToolInputPreview(os.Stdin, toolName), detectOmcMode())
+		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
+		return client.HookToolStart(ctx, agentID, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
 	case "tool-done":
-		toolName := ""
-		if len(args) > 1 {
-			toolName = args[1]
-		}
-		return client.HookToolDone(ctx, agentID, toolName, hookToolInputPreview(os.Stdin, toolName), detectOmcMode())
+		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
+		return client.HookToolDone(ctx, agentID, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
+	case "notification":
+		return client.HookNotification(ctx, agentID, payload.SessionID, payload.NotificationType, detectOmcMode())
+	case "stop-failure":
+		return client.HookStopFailure(ctx, agentID, payload.SessionID, payload.ErrorType, detectOmcMode())
+	case "session-start":
+		return client.HookSessionStart(ctx, agentID, payload.SessionID, detectOmcMode())
 	case "session-end":
-		return client.HookSessionEnd(ctx, agentID, detectOmcMode())
-	case "agent-spawned":
+		return client.HookSessionEnd(ctx, agentID, payload.SessionID, detectOmcMode())
+	case "subagent-start", "agent-spawned":
 		description := parseHookDescription(args[1:])
-		return client.HookAgentSpawned(ctx, agentID, description, detectOmcMode())
-	case "agent-finished":
-		return client.HookAgentFinished(ctx, agentID, detectOmcMode())
+		if description == "" {
+			description = payload.subagentDescription()
+		}
+		return client.HookAgentSpawned(ctx, agentID, payload.SessionID, description, detectOmcMode())
+	case "subagent-stop", "agent-finished":
+		description := parseHookDescription(args[1:])
+		if description == "" {
+			description = payload.subagentCompletionDescription()
+		}
+		return client.HookAgentFinished(ctx, agentID, payload.SessionID, description, detectOmcMode())
 	default:
 		return fmt.Errorf("unsupported hook subcommand %q", args[0])
 	}
@@ -360,20 +368,71 @@ func parseHookDescription(args []string) string {
 	return ""
 }
 
-func hookToolInputPreview(in io.Reader, toolName string) string {
+type hookPayload struct {
+	SessionID           string         `json:"session_id"`
+	ToolName            string         `json:"tool_name"`
+	ToolInput           map[string]any `json:"tool_input"`
+	NotificationType    string         `json:"notification_type"`
+	ErrorType           string         `json:"error_type"`
+	AgentID             string         `json:"agent_id"`
+	AgentType           string         `json:"agent_type"`
+	AgentTranscriptPath string         `json:"agent_transcript_path"`
+}
+
+func readHookPayload(in io.Reader) hookPayload {
 	if file, ok := in.(*os.File); ok {
 		if info, err := file.Stat(); err == nil && info.Mode()&os.ModeCharDevice != 0 {
-			return ""
+			return hookPayload{}
 		}
 	}
 
-	var payload struct {
-		ToolInput map[string]any `json:"tool_input"`
+	data, err := io.ReadAll(in)
+	if err != nil || len(data) == 0 {
+		return hookPayload{}
 	}
-	if err := json.NewDecoder(in).Decode(&payload); err != nil || len(payload.ToolInput) == 0 {
+
+	var payload hookPayload
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return hookPayload{}
+	}
+	return payload
+}
+
+func hookToolInputPreview(toolName string, toolInput map[string]any) string {
+	if len(toolInput) == 0 {
 		return ""
 	}
-	return summarizeToolInput(toolName, payload.ToolInput)
+	return summarizeToolInput(toolName, toolInput)
+}
+
+func argAt(args []string, index int) string {
+	if index >= 0 && index < len(args) {
+		return args[index]
+	}
+	return ""
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			return trimmed
+		}
+	}
+	return ""
+}
+
+func (p hookPayload) subagentDescription() string {
+	if value := firstNonEmpty(p.AgentType, p.AgentID); value != "" {
+		return value
+	}
+	return ""
+}
+
+func (p hookPayload) subagentCompletionDescription() string {
+	if value := firstNonEmpty(p.AgentTranscriptPath, p.AgentType, p.AgentID); value != "" {
+		return value
+	}
+	return ""
 }
 
 func summarizeToolInput(toolName string, input map[string]any) string {
