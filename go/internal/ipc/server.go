@@ -364,6 +364,30 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{}, nil
+	case CommandHookTeammateIdle:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookTeammateIdle(ctx, request.AgentID, request.TeammateName, request.TeamRole, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookTaskCreated:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookTaskCreated(ctx, request.AgentID, request.TaskName, request.TaskDescription, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookTaskCompleted:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookTaskCompleted(ctx, request.AgentID, request.TaskName, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
 	case CommandShutdown:
 		if s.managed != nil {
 			s.managed.StopAll(ctx)

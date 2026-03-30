@@ -318,7 +318,7 @@ func runTeam(ctx context.Context, client *ipc.Client, args []string) error {
 
 func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("hook subcommand required: tool-start, tool-done, notification, stop-failure, session-start, session-end, subagent-start, subagent-stop")
+		return fmt.Errorf("hook subcommand required: tool-start, tool-done, notification, stop-failure, session-start, session-end, subagent-start, subagent-stop, teammate-idle, task-created, task-completed")
 	}
 
 	payload := readHookPayload(os.Stdin)
@@ -354,6 +354,12 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 			description = payload.subagentCompletionDescription()
 		}
 		return client.HookAgentFinished(ctx, agentID, payload.SessionID, description, detectOmcMode())
+	case "teammate-idle":
+		return client.HookTeammateIdle(ctx, agentID, payload.SessionID, payload.TeammateName, payload.TeamRole, detectOmcMode())
+	case "task-created":
+		return client.HookTaskCreated(ctx, agentID, payload.SessionID, payload.TaskName, payload.TaskDescription, detectOmcMode())
+	case "task-completed":
+		return client.HookTaskCompleted(ctx, agentID, payload.SessionID, payload.TaskName, detectOmcMode())
 	default:
 		return fmt.Errorf("unsupported hook subcommand %q", args[0])
 	}
@@ -377,6 +383,10 @@ type hookPayload struct {
 	AgentID             string         `json:"agent_id"`
 	AgentType           string         `json:"agent_type"`
 	AgentTranscriptPath string         `json:"agent_transcript_path"`
+	TeammateName        string         `json:"teammate_name"`
+	TeamRole            string         `json:"team_role"`
+	TaskName            string         `json:"task_name"`
+	TaskDescription     string         `json:"task_description"`
 }
 
 func readHookPayload(in io.Reader) hookPayload {

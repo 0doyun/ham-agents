@@ -83,6 +83,9 @@ func runSetupWith(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	fmt.Fprintln(stdout, "  SessionEnd:    ham hook session-end")
 	fmt.Fprintln(stdout, "  SubagentStart: ham hook subagent-start")
 	fmt.Fprintln(stdout, "  SubagentStop:  ham hook subagent-stop")
+	fmt.Fprintln(stdout, "  TeammateIdle:  ham hook teammate-idle")
+	fmt.Fprintln(stdout, "  TaskCreated:   ham hook task-created")
+	fmt.Fprintln(stdout, "  TaskCompleted: ham hook task-completed")
 	fmt.Fprintln(stdout, "")
 
 	if !confirmPrompt(stdin, stdout, "Apply these hooks?") {
@@ -132,9 +135,9 @@ func readClaudeSettings(path string, deps setupDependencies) (map[string]interfa
 	return settings, nil
 }
 
-var hamHookCategories = []string{"PreToolUse", "PostToolUse", "Notification", "StopFailure", "SessionStart", "Stop", "SessionEnd", "SubagentStart", "SubagentStop"}
+var hamHookCategories = []string{"PreToolUse", "PostToolUse", "Notification", "StopFailure", "SessionStart", "Stop", "SessionEnd", "SubagentStart", "SubagentStop", "TeammateIdle", "TaskCreated", "TaskCompleted"}
 
-// hasHamHooks returns true if ALL three hook categories already contain a "ham hook" command.
+// hasHamHooks returns true if ALL hook categories already contain a "ham hook" command.
 func hasHamHooks(settings map[string]interface{}) bool {
 	hooks, ok := settings["hooks"].(map[string]interface{})
 	if !ok {
@@ -186,6 +189,9 @@ func mergeHamHooks(settings map[string]interface{}) {
 		"SessionEnd":    {"command": "ham hook session-end", "timeout": float64(5000)},
 		"SubagentStart": {"command": "ham hook subagent-start", "timeout": float64(5000)},
 		"SubagentStop":  {"command": "ham hook subagent-stop", "timeout": float64(5000)},
+		"TeammateIdle":  {"command": "ham hook teammate-idle", "timeout": float64(5000)},
+		"TaskCreated":   {"command": "ham hook task-created", "timeout": float64(5000)},
+		"TaskCompleted": {"command": "ham hook task-completed", "timeout": float64(5000)},
 	}
 
 	for key, hookEntry := range hamHookEntries {

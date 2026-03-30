@@ -1382,3 +1382,96 @@ func TestRemoveDeletesAgentFromRegistry(t *testing.T) {
 		t.Fatalf("expected removed event to expose lifecycle-aware presentation summary %#v", events[len(events)-1])
 	}
 }
+
+func TestRecordHookTeammateIdle(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "lead", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := registry.RecordHookTeammateIdle(ctx, agent.ID, "worker-1", "teammate", "team"); err != nil {
+		t.Fatalf("RecordHookTeammateIdle: %v", err)
+	}
+
+	agents, _ := registry.List(ctx)
+	if len(agents) != 1 {
+		t.Fatalf("expected 1 agent, got %d", len(agents))
+	}
+	if agents[0].TeamRole != "teammate" {
+		t.Fatalf("expected team_role=teammate, got %q", agents[0].TeamRole)
+	}
+	if agents[0].LastUserVisibleSummary != "Teammate idle: worker-1" {
+		t.Fatalf("unexpected summary %q", agents[0].LastUserVisibleSummary)
+	}
+}
+
+func TestRecordHookTaskCreatedAndCompleted(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	root := t.TempDir()
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "lead", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	// Create 2 tasks.
+	if err := registry.RecordHookTaskCreated(ctx, agent.ID, "write tests", "unit tests for hooks", ""); err != nil {
+		t.Fatalf("RecordHookTaskCreated: %v", err)
+	}
+	if err := registry.RecordHookTaskCreated(ctx, agent.ID, "fix bug", "", ""); err != nil {
+		t.Fatalf("RecordHookTaskCreated 2: %v", err)
+	}
+
+	agents, _ := registry.List(ctx)
+	if agents[0].TeamTaskTotal != 2 {
+		t.Fatalf("expected TeamTaskTotal=2, got %d", agents[0].TeamTaskTotal)
+	}
+	if agents[0].TeamTaskCompleted != 0 {
+		t.Fatalf("expected TeamTaskCompleted=0, got %d", agents[0].TeamTaskCompleted)
+	}
+
+	// Complete 1 task.
+	if err := registry.RecordHookTaskCompleted(ctx, agent.ID, "write tests", ""); err != nil {
+		t.Fatalf("RecordHookTaskCompleted: %v", err)
+	}
+
+	agents, _ = registry.List(ctx)
+	if agents[0].TeamTaskTotal != 2 {
+		t.Fatalf("expected TeamTaskTotal=2, got %d", agents[0].TeamTaskTotal)
+	}
+	if agents[0].TeamTaskCompleted != 1 {
+		t.Fatalf("expected TeamTaskCompleted=1, got %d", agents[0].TeamTaskCompleted)
+	}
+	if agents[0].LastUserVisibleSummary != "Task completed: write tests" {
+		t.Fatalf("unexpected summary %q", agents[0].LastUserVisibleSummary)
+	}
+
+	// Verify events.
+	events, _ := registry.Events(ctx, 10)
+	taskEvents := 0
+	for _, ev := range events {
+		if ev.Type == core.EventTypeTeamTaskCreated || ev.Type == core.EventTypeTeamTaskCompleted {
+			taskEvents++
+		}
+	}
+	if taskEvents != 3 {
+		t.Fatalf("expected 3 team task events, got %d", taskEvents)
+	}
+}
