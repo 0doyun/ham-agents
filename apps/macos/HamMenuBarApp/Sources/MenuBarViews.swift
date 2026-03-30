@@ -728,6 +728,18 @@ private struct AgentDetailView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
 
+                if let errorType = agent.errorType, !errorType.isEmpty {
+                    Text("Error Type: \(errorType)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                } else if let reason = agent.statusReason, !reason.isEmpty {
+                    Text(reason)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
                 // Quick Message (top — most frequent action)
                 HStack(spacing: 6) {
                     TextField("Quick message…", text: $quickMessage)
