@@ -51,6 +51,9 @@ const (
 	CommandHookSessionEnd        Command = "hook.session-end"
 	CommandHookAgentSpawned      Command = "hook.agent-spawned"
 	CommandHookAgentFinished     Command = "hook.agent-finished"
+	CommandHookTeammateIdle      Command = "hook.teammate-idle"
+	CommandHookTaskCreated       Command = "hook.task-created"
+	CommandHookTaskCompleted     Command = "hook.task-completed"
 )
 
 type Request struct {
@@ -78,6 +81,10 @@ type Request struct {
 	ErrorType        string         `json:"error_type,omitempty"`
 	HookType         string         `json:"hook_type,omitempty"`
 	Description      string         `json:"description,omitempty"`
+	TeammateName     string         `json:"teammate_name,omitempty"`
+	TeamRole         string         `json:"team_role,omitempty"`
+	TaskName         string         `json:"task_name,omitempty"`
+	TaskDescription  string         `json:"task_description,omitempty"`
 }
 
 type Response struct {
@@ -431,6 +438,21 @@ func (c *Client) HookAgentSpawned(ctx context.Context, agentID string, sessionID
 
 func (c *Client) HookAgentFinished(ctx context.Context, agentID string, sessionID string, description string, omcMode string) error {
 	_, err := c.request(ctx, Request{Command: CommandHookAgentFinished, AgentID: agentID, SessionID: sessionID, Description: description, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookTeammateIdle(ctx context.Context, agentID string, sessionID string, teammateName string, teamRole string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookTeammateIdle, AgentID: agentID, SessionID: sessionID, TeammateName: teammateName, TeamRole: teamRole, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookTaskCreated(ctx context.Context, agentID string, sessionID string, taskName string, taskDescription string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookTaskCreated, AgentID: agentID, SessionID: sessionID, TaskName: taskName, TaskDescription: taskDescription, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookTaskCompleted(ctx context.Context, agentID string, sessionID string, taskName string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookTaskCompleted, AgentID: agentID, SessionID: sessionID, TaskName: taskName, OmcMode: omcMode})
 	return err
 }
 

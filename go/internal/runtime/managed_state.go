@@ -348,6 +348,81 @@ func (r *Registry) RecordHookAgentFinished(ctx context.Context, agentID string, 
 	return err
 }
 
+func (r *Registry) RecordHookTeammateIdle(ctx context.Context, agentID string, teammateName string, teamRole string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		if teamRole != "" {
+			agent.TeamRole = teamRole
+		}
+		agent.LastEventAt = now
+		summary := "Teammate idle"
+		if teammateName != "" {
+			summary = fmt.Sprintf("Teammate idle: %s", teammateName)
+		}
+		agent.LastUserVisibleSummary = summary
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeTeammateIdle,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookTaskCreated(ctx context.Context, agentID string, taskName string, taskDescription string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.TeamTaskTotal++
+		agent.LastEventAt = now
+		summary := "Team task created"
+		if taskName != "" {
+			summary = fmt.Sprintf("Task created: %s", taskName)
+		}
+		agent.LastUserVisibleSummary = summary
+		pushRecentTool(agent, summary)
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeTeamTaskCreated,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookTaskCompleted(ctx context.Context, agentID string, taskName string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		if agent.TeamTaskCompleted < agent.TeamTaskTotal {
+			agent.TeamTaskCompleted++
+		}
+		agent.LastEventAt = now
+		summary := "Team task completed"
+		if taskName != "" {
+			summary = fmt.Sprintf("Task completed: %s", taskName)
+		}
+		agent.LastUserVisibleSummary = summary
+		pushRecentTool(agent, summary)
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeTeamTaskCompleted,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
 func structuredToolSummary(toolName string, toolInputPreview string) string {
 	label := strings.TrimSpace(toolName)
 	if label == "" {

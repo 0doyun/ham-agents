@@ -64,6 +64,9 @@ type Agent struct {
 	SessionCommand          string             `json:"session_command,omitempty"`
 	AvatarVariant           string             `json:"avatar_variant"`
 	SubAgentCount           int                `json:"sub_agent_count,omitempty"`
+	TeamRole                string             `json:"team_role,omitempty"`
+	TeamTaskTotal           int                `json:"team_task_total,omitempty"`
+	TeamTaskCompleted       int                `json:"team_task_completed,omitempty"`
 }
 
 type RuntimeSnapshot struct {
@@ -95,6 +98,9 @@ const (
 	EventTypeAgentProcessOutput             EventType = "agent.process_output"
 	EventTypeAgentProcessExited             EventType = "agent.process_exited"
 	EventTypeAgentLayoutChanged             EventType = "agent.layout_changed"
+	EventTypeTeammateIdle                   EventType = "team.teammate_idle"
+	EventTypeTeamTaskCreated                EventType = "team.task_created"
+	EventTypeTeamTaskCompleted              EventType = "team.task_completed"
 )
 
 type Event struct {

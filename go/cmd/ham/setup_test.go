@@ -176,6 +176,15 @@ func TestSetupSkipsWhenHamHooksAlreadyExist(t *testing.T) {
 			"SubagentStop": []interface{}{
 				map[string]interface{}{"command": "ham hook subagent-stop", "timeout": float64(5000)},
 			},
+			"TeammateIdle": []interface{}{
+				map[string]interface{}{"command": "ham hook teammate-idle", "timeout": float64(5000)},
+			},
+			"TaskCreated": []interface{}{
+				map[string]interface{}{"command": "ham hook task-created", "timeout": float64(5000)},
+			},
+			"TaskCompleted": []interface{}{
+				map[string]interface{}{"command": "ham hook task-completed", "timeout": float64(5000)},
+			},
 		},
 	}
 	data, _ := json.MarshalIndent(existing, "", "  ")
@@ -266,6 +275,9 @@ func TestHasHamHooksAllThreeConfigured(t *testing.T) {
 			"SessionEnd":    []interface{}{map[string]interface{}{"command": "ham hook session-end"}},
 			"SubagentStart": []interface{}{map[string]interface{}{"command": "ham hook subagent-start"}},
 			"SubagentStop":  []interface{}{map[string]interface{}{"command": "ham hook subagent-stop"}},
+			"TeammateIdle":  []interface{}{map[string]interface{}{"command": "ham hook teammate-idle"}},
+			"TaskCreated":   []interface{}{map[string]interface{}{"command": "ham hook task-created"}},
+			"TaskCompleted": []interface{}{map[string]interface{}{"command": "ham hook task-completed"}},
 		},
 	}
 	if !hasHamHooks(settings) {
@@ -333,7 +345,7 @@ func TestMergeHamHooksSkipsExistingCategories(t *testing.T) {
 		t.Fatalf("expected 1 PreToolUse entry (existing), got %d", len(preArr))
 	}
 
-	for _, key := range []string{"PostToolUse", "Notification", "StopFailure", "SessionStart", "Stop", "SessionEnd", "SubagentStart", "SubagentStop"} {
+	for _, key := range []string{"PostToolUse", "Notification", "StopFailure", "SessionStart", "Stop", "SessionEnd", "SubagentStart", "SubagentStop", "TeammateIdle", "TaskCreated", "TaskCompleted"} {
 		arr := hooks[key].([]interface{})
 		if len(arr) != 1 {
 			t.Fatalf("expected 1 %s entry (newly added), got %d", key, len(arr))
@@ -398,6 +410,9 @@ func TestSetupLaunchdAdvice(t *testing.T) {
 					"SessionEnd":    []interface{}{map[string]interface{}{"command": "ham hook session-end"}},
 					"SubagentStart": []interface{}{map[string]interface{}{"command": "ham hook subagent-start"}},
 					"SubagentStop":  []interface{}{map[string]interface{}{"command": "ham hook subagent-stop"}},
+					"TeammateIdle":  []interface{}{map[string]interface{}{"command": "ham hook teammate-idle"}},
+					"TaskCreated":   []interface{}{map[string]interface{}{"command": "ham hook task-created"}},
+					"TaskCompleted": []interface{}{map[string]interface{}{"command": "ham hook task-completed"}},
 				},
 			}
 			data, _ := json.MarshalIndent(existing, "", "  ")
