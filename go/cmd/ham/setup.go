@@ -152,6 +152,8 @@ func hasHamHooks(settings map[string]interface{}) bool {
 }
 
 // categoryHasHamHook checks whether a specific hook category contains a "ham hook" command.
+// Supports both legacy flat format {"command": "..."} and new matcher group format
+// {"matcher": "", "hooks": [{"type": "command", "command": "..."}]}.
 func categoryHasHamHook(hooksMap map[string]interface{}, key string) bool {
 	arr, ok := hooksMap[key].([]interface{})
 	if !ok {
@@ -162,9 +164,23 @@ func categoryHasHamHook(hooksMap map[string]interface{}, key string) bool {
 		if !ok {
 			continue
 		}
-		cmd, _ := entryMap["command"].(string)
-		if strings.Contains(cmd, "ham hook") {
+		// Legacy flat format: {"command": "ham hook ..."}
+		if cmd, ok := entryMap["command"].(string); ok && strings.Contains(cmd, "ham hook") {
 			return true
+		}
+		// New matcher group format: {"hooks": [{"command": "ham hook ..."}]}
+		innerHooks, ok := entryMap["hooks"].([]interface{})
+		if !ok {
+			continue
+		}
+		for _, inner := range innerHooks {
+			innerMap, ok := inner.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if cmd, ok := innerMap["command"].(string); ok && strings.Contains(cmd, "ham hook") {
+				return true
+			}
 		}
 	}
 	return false
@@ -180,18 +196,18 @@ func mergeHamHooks(settings map[string]interface{}) {
 	}
 
 	hamHookEntries := map[string]map[string]interface{}{
-		"PreToolUse":    {"command": "ham hook tool-start \"$TOOL_NAME\"", "timeout": float64(5000)},
-		"PostToolUse":   {"command": "ham hook tool-done \"$TOOL_NAME\"", "timeout": float64(5000)},
-		"Notification":  {"command": "ham hook notification", "timeout": float64(5000)},
-		"StopFailure":   {"command": "ham hook stop-failure", "timeout": float64(5000)},
-		"SessionStart":  {"command": "ham hook session-start", "timeout": float64(5000)},
-		"Stop":          {"command": "ham hook session-end", "timeout": float64(5000)},
-		"SessionEnd":    {"command": "ham hook session-end", "timeout": float64(5000)},
-		"SubagentStart": {"command": "ham hook subagent-start", "timeout": float64(5000)},
-		"SubagentStop":  {"command": "ham hook subagent-stop", "timeout": float64(5000)},
-		"TeammateIdle":  {"command": "ham hook teammate-idle", "timeout": float64(5000)},
-		"TaskCreated":   {"command": "ham hook task-created", "timeout": float64(5000)},
-		"TaskCompleted": {"command": "ham hook task-completed", "timeout": float64(5000)},
+		"PreToolUse":    hamHookMatcherGroup("ham hook tool-start \"$TOOL_NAME\""),
+		"PostToolUse":   hamHookMatcherGroup("ham hook tool-done \"$TOOL_NAME\""),
+		"Notification":  hamHookMatcherGroup("ham hook notification"),
+		"StopFailure":   hamHookMatcherGroup("ham hook stop-failure"),
+		"SessionStart":  hamHookMatcherGroup("ham hook session-start"),
+		"Stop":          hamHookMatcherGroup("ham hook session-end"),
+		"SessionEnd":    hamHookMatcherGroup("ham hook session-end"),
+		"SubagentStart": hamHookMatcherGroup("ham hook subagent-start"),
+		"SubagentStop":  hamHookMatcherGroup("ham hook subagent-stop"),
+		"TeammateIdle":  hamHookMatcherGroup("ham hook teammate-idle"),
+		"TaskCreated":   hamHookMatcherGroup("ham hook task-created"),
+		"TaskCompleted": hamHookMatcherGroup("ham hook task-completed"),
 	}
 
 	for key, hookEntry := range hamHookEntries {
@@ -216,6 +232,21 @@ func confirmPrompt(in io.Reader, out io.Writer, message string) bool {
 	}
 	answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
 	return answer == "" || answer == "y" || answer == "yes"
+}
+
+// hamHookMatcherGroup builds a Claude Code hook matcher group entry.
+// Schema: {"matcher": "", "hooks": [{"type": "command", "command": "...", "timeout": 5000}]}
+func hamHookMatcherGroup(command string) map[string]interface{} {
+	return map[string]interface{}{
+		"matcher": "",
+		"hooks": []interface{}{
+			map[string]interface{}{
+				"type":    "command",
+				"command": command,
+				"timeout": float64(5000),
+			},
+		},
+	}
 }
 
 func printLaunchdAdvice(out io.Writer, deps setupDependencies) {
