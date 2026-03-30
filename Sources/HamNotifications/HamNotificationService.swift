@@ -8,6 +8,7 @@ public enum NotificationEvent: Equatable, Sendable {
     case silence(Agent)
     case heartbeat(Agent, minutes: Int)
     case teamDigest(String)
+    case teamTaskCompleted(String)
 }
 
 public enum NotificationInteraction: Equatable, Sendable {
@@ -23,7 +24,7 @@ public struct HamNotificationService {
         switch event {
         case .done(let agent), .waitingInput(let agent), .error(let agent), .silence(let agent), .heartbeat(let agent, _):
             return agent.notificationPolicy != .muted
-        case .teamDigest:
+        case .teamDigest, .teamTaskCompleted:
             return true
         }
     }
@@ -44,7 +45,7 @@ public struct NotificationCandidate: Equatable, Sendable {
         switch event {
         case .done(let agent), .waitingInput(let agent), .error(let agent), .silence(let agent), .heartbeat(let agent, _):
             return agent.id
-        case .teamDigest:
+        case .teamDigest, .teamTaskCompleted:
             return nil
         }
     }
@@ -173,6 +174,8 @@ public struct StatusChangeNotificationEngine {
             return "\(agent.displayName) is still running"
         case .teamDigest(let name):
             return "\(name) needs attention"
+        case .teamTaskCompleted(let name):
+            return "\(name) completed a task"
         }
     }
 
@@ -193,6 +196,8 @@ public struct StatusChangeNotificationEngine {
             return "\(minutes)m in \(agent.status.humanizedLabel) at \(agent.projectPath)"
         case .teamDigest:
             return "Team requires attention."
+        case .teamTaskCompleted:
+            return "A team task finished."
         }
     }
 
