@@ -69,6 +69,15 @@ final class PixelOfficeModelTests: XCTestCase {
         XCTAssertEqual(occupant.area, .desk)
     }
 
+    func testOccupantRetainsTeamRoleAndTaskProgress() {
+        let agent = makeAgent(status: .thinking, teamRole: "lead", teamTaskTotal: 4, teamTaskCompleted: 1)
+        let occupant = PixelOfficeMapper.occupant(for: agent)
+
+        XCTAssertEqual(occupant.agent.teamRole, "lead")
+        XCTAssertEqual(occupant.agent.teamTaskTotal, 4)
+        XCTAssertEqual(occupant.agent.teamTaskCompleted, 1)
+    }
+
     func testThreeAreasOnly() {
         // Verify OfficeArea has exactly 3 cases
         XCTAssertEqual(OfficeArea.allCases.count, 3)
@@ -77,7 +86,14 @@ final class PixelOfficeModelTests: XCTestCase {
         XCTAssertTrue(OfficeArea.allCases.contains(.alertLight))
     }
 
-    private func makeAgent(id: String = "agent-1", status: AgentStatus, subAgentCount: Int = 0) -> Agent {
+    private func makeAgent(
+        id: String = "agent-1",
+        status: AgentStatus,
+        subAgentCount: Int = 0,
+        teamRole: String? = nil,
+        teamTaskTotal: Int = 0,
+        teamTaskCompleted: Int = 0
+    ) -> Agent {
         Agent(
             id: id,
             displayName: "builder",
@@ -88,7 +104,10 @@ final class PixelOfficeModelTests: XCTestCase {
             status: status,
             statusConfidence: 1,
             lastEventAt: .init(timeIntervalSince1970: 1),
-            subAgentCount: subAgentCount
+            subAgentCount: subAgentCount,
+            teamRole: teamRole,
+            teamTaskTotal: teamTaskTotal,
+            teamTaskCompleted: teamTaskCompleted
         )
     }
 }

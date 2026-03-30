@@ -16,7 +16,10 @@ struct PreviewDaemonClient: HamDaemonClientProtocol {
                     projectPath: "/tmp/demo",
                     status: .thinking,
                     statusConfidence: 1,
-                    lastEventAt: .now
+                    lastEventAt: .now,
+                    teamRole: "lead",
+                    teamTaskTotal: 5,
+                    teamTaskCompleted: 2
                 )
             ],
             generatedAt: .now

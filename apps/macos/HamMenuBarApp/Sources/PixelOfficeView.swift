@@ -289,6 +289,25 @@ struct PixelOfficeView: View {
     @ViewBuilder
     private func hamsterCell(occupant: PixelOfficeOccupant, cellWidth: CGFloat) -> some View {
         VStack(spacing: 0) {
+            HStack(spacing: 4) {
+                if occupant.agent.teamRole == "lead" {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Color.yellow)
+                } else if occupant.agent.teamRole == "teammate" {
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.75))
+                }
+
+                if occupant.agent.teamTaskTotal > 0 {
+                    Text("\(min(max(occupant.agent.teamTaskCompleted, 0), occupant.agent.teamTaskTotal))/\(occupant.agent.teamTaskTotal)")
+                        .font(.system(size: 7, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+            }
+            .frame(height: 10)
+
             // Status indicator (only waitingInput gets ❓, others use monitor glow)
             if occupant.agent.status == .waitingInput {
                 Text("❓")
