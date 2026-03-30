@@ -649,3 +649,110 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 		t.Fatalf("server shutdown: %v", err)
 	}
 }
+
+func TestSessionStartAutoRegistersAgent(t *testing.T) {
+	t.Parallel()
+
+	root, err := os.MkdirTemp("/tmp", "hamd-ipc-autoreg-")
+	if err != nil {
+		t.Fatalf("create temp dir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+
+	socketPath := filepath.Join(root, "s.sock")
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+	managedService := runtime.NewManagedService(registry)
+	settingsService := runtime.NewSettingsService(
+		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
+	)
+	teamService := runtime.NewTeamService(
+		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
+	)
+
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, stubSessionLister{}, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- server.Serve(ctx)
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if _, err := os.Stat(socketPath); err == nil {
+			break
+		}
+		select {
+		case err := <-serverErrors:
+			if err != nil && strings.Contains(err.Error(), "operation not permitted") {
+				t.Skipf("unix socket binding unavailable in sandbox: %v", err)
+			}
+			t.Fatalf("server exited before socket became ready: %v", err)
+		default:
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("socket did not appear: %s", socketPath)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	client := ipc.NewClient(socketPath)
+
+	// No agent registered yet. SessionStart with a session_id should auto-register.
+	sessionID := "auto-test-session-123"
+	if err := client.HookSessionStart(context.Background(), "", sessionID, ""); err != nil {
+		t.Fatalf("hook session-start (auto-register): %v", err)
+	}
+
+	// Verify an agent was created.
+	snapshot, err := client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status after auto-register: %v", err)
+	}
+	if len(snapshot.Agents) != 1 {
+		t.Fatalf("expected 1 auto-registered agent, got %d", len(snapshot.Agents))
+	}
+	autoAgent := snapshot.Agents[0]
+	if autoAgent.Provider != "claude" {
+		t.Fatalf("expected provider=claude, got %q", autoAgent.Provider)
+	}
+	if autoAgent.SessionID != sessionID {
+		t.Fatalf("expected session_id=%q, got %q", sessionID, autoAgent.SessionID)
+	}
+
+	// Subsequent hooks should find the auto-registered agent by agent ID.
+	if err := client.HookToolStart(context.Background(), autoAgent.ID, "Edit", "main.go", ""); err != nil {
+		t.Fatalf("hook tool-start after auto-register: %v", err)
+	}
+	snapshot, err = client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status after tool-start: %v", err)
+	}
+	if len(snapshot.Agents) != 1 {
+		t.Fatalf("expected still 1 agent, got %d", len(snapshot.Agents))
+	}
+	if snapshot.Agents[0].Status != core.AgentStatusRunningTool {
+		t.Fatalf("expected running_tool after Edit tool-start, got %q", snapshot.Agents[0].Status)
+	}
+
+	// SessionEnd should remove the auto-registered agent.
+	if err := client.HookSessionEnd(context.Background(), "", sessionID, ""); err != nil {
+		t.Fatalf("hook session-end: %v", err)
+	}
+	snapshot, err = client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status after session-end: %v", err)
+	}
+	if len(snapshot.Agents) != 0 {
+		t.Fatalf("expected agent removed after session-end, got %d", len(snapshot.Agents))
+	}
+
+	cancel()
+	if err := <-serverErrors; err != nil && !errors.Is(err, context.Canceled) {
+		t.Fatalf("server shutdown: %v", err)
+	}
+}
