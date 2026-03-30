@@ -57,13 +57,8 @@ func TestSetupCreatesSettingsWhenNoneExist(t *testing.T) {
 		if !ok || len(arr) == 0 {
 			t.Fatalf("expected %s hook entries, got %v", key, hooks[key])
 		}
-		entry, ok := arr[0].(map[string]interface{})
-		if !ok {
-			t.Fatalf("expected object entry for %s", key)
-		}
-		cmd, _ := entry["command"].(string)
-		if !strings.Contains(cmd, "ham hook") {
-			t.Fatalf("expected ham hook command for %s, got %q", key, cmd)
+		if !categoryHasHamHook(hooks, key) {
+			t.Fatalf("expected ham hook in %s matcher group", key)
 		}
 	}
 
@@ -132,9 +127,12 @@ func TestSetupPreservesExistingSettings(t *testing.T) {
 	if firstCmd != "other-tool pre" {
 		t.Fatalf("existing hook lost, got %q", firstCmd)
 	}
-	secondCmd := preArr[1].(map[string]interface{})["command"].(string)
-	if !strings.Contains(secondCmd, "ham hook tool-start") {
-		t.Fatalf("ham hook not appended, got %q", secondCmd)
+	// Second entry is a matcher group: {"matcher": "", "hooks": [{"command": "ham hook ..."}]}
+	secondEntry := preArr[1].(map[string]interface{})
+	innerHooks := secondEntry["hooks"].([]interface{})
+	innerCmd := innerHooks[0].(map[string]interface{})["command"].(string)
+	if !strings.Contains(innerCmd, "ham hook tool-start") {
+		t.Fatalf("ham hook not appended, got %q", innerCmd)
 	}
 }
 
@@ -350,9 +348,8 @@ func TestMergeHamHooksSkipsExistingCategories(t *testing.T) {
 		if len(arr) != 1 {
 			t.Fatalf("expected 1 %s entry (newly added), got %d", key, len(arr))
 		}
-		cmd := arr[0].(map[string]interface{})["command"].(string)
-		if !strings.Contains(cmd, "ham hook") {
-			t.Fatalf("expected ham hook command for %s, got %q", key, cmd)
+		if !categoryHasHamHook(hooks, key) {
+			t.Fatalf("expected ham hook in %s matcher group", key)
 		}
 	}
 }
