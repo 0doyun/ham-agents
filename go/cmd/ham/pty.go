@@ -55,9 +55,13 @@ func runWithPTY(
 	defer signal.Stop(sigwinch)
 
 	// Put the real terminal into raw mode so keystrokes pass through directly.
-	oldState, err := makeRaw(os.Stdin.Fd())
-	if err != nil {
-		return fmt.Errorf("set raw mode: %w", err)
+	// Skip if stdin is not a terminal (e.g. running inside a pipe or socket).
+	var oldState *termios
+	if isTerminal(os.Stdin.Fd()) {
+		oldState, err = makeRaw(os.Stdin.Fd())
+		if err != nil {
+			return fmt.Errorf("set raw mode: %w", err)
+		}
 	}
 	defer restoreTerminal(os.Stdin.Fd(), oldState)
 
@@ -173,6 +177,12 @@ func makeRaw(fd uintptr) (*termios, error) {
 	}
 
 	return &old, nil
+}
+
+func isTerminal(fd uintptr) bool {
+	var t termios
+	_, _, errno := syscall.Syscall6(syscall.SYS_IOCTL, fd, syscall.TIOCGETA, uintptr(unsafe.Pointer(&t)), 0, 0, 0)
+	return errno == 0
 }
 
 func restoreTerminal(fd uintptr, state *termios) {
