@@ -54,6 +54,9 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
     public var sessionCommand: String?
     public var avatarVariant: String
     public var subAgentCount: Int
+    public var teamRole: String?
+    public var teamTaskTotal: Int
+    public var teamTaskCompleted: Int
 
     public init(
         id: String,
@@ -83,7 +86,10 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         sessionProcessID: Int? = nil,
         sessionCommand: String? = nil,
         avatarVariant: String = "default",
-        subAgentCount: Int = 0
+        subAgentCount: Int = 0,
+        teamRole: String? = nil,
+        teamTaskTotal: Int = 0,
+        teamTaskCompleted: Int = 0
     ) {
         self.id = id
         self.displayName = displayName
@@ -113,6 +119,9 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         self.sessionCommand = sessionCommand
         self.avatarVariant = avatarVariant
         self.subAgentCount = subAgentCount
+        self.teamRole = teamRole
+        self.teamTaskTotal = teamTaskTotal
+        self.teamTaskCompleted = teamTaskCompleted
     }
 
     enum CodingKeys: String, CodingKey {
@@ -144,6 +153,9 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         case sessionCommand = "session_command"
         case avatarVariant = "avatar_variant"
         case subAgentCount = "sub_agent_count"
+        case teamRole = "team_role"
+        case teamTaskTotal = "team_task_total"
+        case teamTaskCompleted = "team_task_completed"
     }
 
     public init(from decoder: Decoder) throws {
@@ -176,5 +188,8 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         sessionCommand = try c.decodeIfPresent(String.self, forKey: .sessionCommand)
         avatarVariant = try c.decodeIfPresent(String.self, forKey: .avatarVariant) ?? "default"
         subAgentCount = try c.decodeIfPresent(Int.self, forKey: .subAgentCount) ?? 0
+        teamRole = try c.decodeIfPresent(String.self, forKey: .teamRole)
+        teamTaskTotal = try c.decodeIfPresent(Int.self, forKey: .teamTaskTotal) ?? 0
+        teamTaskCompleted = try c.decodeIfPresent(Int.self, forKey: .teamTaskCompleted) ?? 0
     }
 }
