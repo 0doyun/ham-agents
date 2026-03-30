@@ -124,8 +124,16 @@ struct MenuBarContentView: View {
                                     HStack(spacing: 6) {
                                         Text(agent.displayName)
                                             .font(.body.weight(.medium))
+                                        if let teamRole = agent.teamRole, !teamRole.isEmpty {
+                                            TeamRoleBadge(role: teamRole)
+                                        }
                                         if let omcMode = agent.omcMode, !omcMode.isEmpty {
                                             OmcModeBadge(mode: omcMode)
+                                        }
+                                        if let progress = teamTaskProgressText(for: agent) {
+                                            Text(progress)
+                                                .font(.caption2.monospacedDigit())
+                                                .foregroundStyle(.secondary)
                                         }
                                     }
                                     Text("\(viewModel.statusDisplayText(for: agent)) · \(agent.mode.rawValue) · \(viewModel.confidenceLevelText(for: agent)) \(viewModel.confidenceText(for: agent))")
@@ -715,6 +723,9 @@ private struct AgentDetailView: View {
                 HStack(alignment: .center, spacing: 8) {
                     Text(agent.displayName)
                         .font(.headline)
+                    if let teamRole = agent.teamRole, !teamRole.isEmpty {
+                        TeamRoleBadge(role: teamRole)
+                    }
                     if let omcMode = agent.omcMode, !omcMode.isEmpty {
                         OmcModeBadge(mode: omcMode)
                     }
@@ -738,6 +749,28 @@ private struct AgentDetailView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
+                }
+
+                if let teamRole = agent.teamRole, !teamRole.isEmpty {
+                    Text("Team Role: \(teamRoleLabel(for: teamRole))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                if let progress = teamTaskProgress(for: agent) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Team Tasks")
+                                .font(.caption.weight(.semibold))
+                            Spacer()
+                            Text("\(progress.completed)/\(progress.total)")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                        ProgressView(value: progress.fraction)
+                            .controlSize(.small)
+                    }
                 }
 
                 // Quick Message (top — most frequent action)
@@ -870,6 +903,20 @@ private struct OmcModeBadge: View {
     }
 }
 
+private struct TeamRoleBadge: View {
+    let role: String
+
+    var body: some View {
+        Label(teamRoleLabel(for: role), systemImage: role == "lead" ? "crown.fill" : "person.2.fill")
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .background(role == "lead" ? Color.yellow.opacity(0.18) : Color.gray.opacity(0.18))
+            .foregroundStyle(role == "lead" ? Color.yellow.opacity(0.95) : Color.secondary)
+            .clipShape(Capsule())
+    }
+}
+
 private struct StatusBadge: View {
     let status: AgentStatus
 
@@ -921,6 +968,30 @@ private func eventBadgeColor(for emphasis: AgentEventEmphasis) -> Color {
     case .info:     return .blue
     case .neutral:  return .gray
     }
+}
+
+private func teamRoleLabel(for role: String) -> String {
+    switch role {
+    case "lead":
+        return "Lead"
+    case "teammate":
+        return "Teammate"
+    default:
+        return role
+    }
+}
+
+private func teamTaskProgress(for agent: Agent) -> (completed: Int, total: Int, fraction: Double)? {
+    guard agent.teamTaskTotal > 0 else { return nil }
+    let total = max(agent.teamTaskTotal, 0)
+    let completed = min(max(agent.teamTaskCompleted, 0), total)
+    guard total > 0 else { return nil }
+    return (completed, total, Double(completed) / Double(total))
+}
+
+private func teamTaskProgressText(for agent: Agent) -> String? {
+    guard let progress = teamTaskProgress(for: agent) else { return nil }
+    return "\(progress.completed)/\(progress.total)"
 }
 
 private struct EventSummaryChipsView: View {
