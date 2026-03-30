@@ -166,12 +166,12 @@ Alpha. Claude Code–first, with accurate hook-based state tracking.
 - [x] macOS notifications (error, waiting input)
 - [x] OMC mode recognition (autopilot, ralph, team badges)
 - [x] Autonomous mode heartbeat notifications
+- [x] Claude Agent Teams hook integration on top of the existing team model
 - [x] Agent lifecycle (register, track, stop, remove)
 - [x] Detail panel with quick message, actions, recent events
 
 Planned:
 
-- [ ] Claude Agent Teams hook integration on top of the existing team model
 - [ ] Worktree metadata MVP (capture + detail display before richer office grouping)
 - [ ] Homebrew formula
 - [ ] Multi-provider support (Codex, Gemini CLI)
