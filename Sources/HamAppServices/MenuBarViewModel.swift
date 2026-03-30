@@ -568,6 +568,8 @@ public final class MenuBarViewModel: ObservableObject {
                 guard settings.notifications.heartbeatMinutes > 0 else { return nil }
             case .teamDigest:
                 guard settings.notifications.error || settings.notifications.waitingInput else { return nil }
+            case .teamTaskCompleted:
+                guard settings.notifications.done else { return nil }
             }
 
             if shouldSuppressNotification(candidate, at: observedAt, previousAgents: previousAgents) {
@@ -614,6 +616,11 @@ public final class MenuBarViewModel: ObservableObject {
             previousAgents: previousAgents
         ) + filteredNotificationCandidates(
             teamDigestCandidates(previousAgents: previousAgents, currentAgents: agents, teams: teams),
+            settings: settings,
+            observedAt: summary.generatedAt,
+            previousAgents: previousAgents
+        ) + filteredNotificationCandidates(
+            teamTaskCompletedCandidates(previousAgents: previousAgents, currentAgents: agents, teams: teams),
             settings: settings,
             observedAt: summary.generatedAt,
             previousAgents: previousAgents
@@ -676,6 +683,7 @@ public final class MenuBarViewModel: ObservableObject {
         case .silence(let agent): return "agent:\(agent.id):silence"
         case .heartbeat(let agent, _): return "agent:\(agent.id):heartbeat"
         case .teamDigest(let name): return "team:\(name):digest"
+        case .teamTaskCompleted(let name): return "team:\(name):task-completed"
         }
     }
 
@@ -715,6 +723,29 @@ public final class MenuBarViewModel: ObservableObject {
                 title: "\(team.displayName) needs attention",
                 body: body
             )
+        }
+    }
+
+    private func teamTaskCompletedCandidates(
+        previousAgents: [Agent],
+        currentAgents: [Agent],
+        teams: [DaemonTeamPayload]
+    ) -> [NotificationCandidate] {
+        let previousByID = Dictionary(uniqueKeysWithValues: previousAgents.map { ($0.id, $0) })
+
+        return currentAgents.flatMap { agent -> [NotificationCandidate] in
+            guard let previous = previousByID[agent.id] else { return [] }
+            guard agent.teamTaskCompleted > previous.teamTaskCompleted else { return [] }
+            let matchingTeams = teams.filter { $0.memberAgentIDs.contains(agent.id) }
+            guard !matchingTeams.isEmpty else { return [] }
+            let body = agent.lastUserVisibleSummary ?? "A team task finished."
+            return matchingTeams.map { team in
+                NotificationCandidate(
+                    event: .teamTaskCompleted(team.displayName),
+                    title: "\(team.displayName) completed a task",
+                    body: body
+                )
+            }
         }
     }
 

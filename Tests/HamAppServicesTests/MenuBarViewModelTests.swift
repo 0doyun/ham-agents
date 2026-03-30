@@ -16,7 +16,10 @@ final class MenuBarViewModelTests: XCTestCase {
             projectPath: "/tmp/app",
             status: .thinking,
             statusConfidence: 1,
-            lastEventAt: Date(timeIntervalSince1970: 1)
+            lastEventAt: Date(timeIntervalSince1970: 1),
+            teamRole: "lead",
+            teamTaskTotal: 3,
+            teamTaskCompleted: 1
         )
         let client = StubClient(
             snapshot: DaemonRuntimeSnapshotPayload(
@@ -62,7 +65,10 @@ final class MenuBarViewModelTests: XCTestCase {
             projectPath: "/tmp/app",
             status: .thinking,
             statusConfidence: 1,
-            lastEventAt: Date(timeIntervalSince1970: 1)
+            lastEventAt: Date(timeIntervalSince1970: 1),
+            teamRole: "lead",
+            teamTaskTotal: 3,
+            teamTaskCompleted: 1
         )
         let client = StubClient(
             snapshot: DaemonRuntimeSnapshotPayload(
@@ -98,7 +104,10 @@ final class MenuBarViewModelTests: XCTestCase {
             projectPath: "/tmp/app",
             status: .thinking,
             statusConfidence: 1,
-            lastEventAt: Date(timeIntervalSince1970: 1)
+            lastEventAt: Date(timeIntervalSince1970: 1),
+            teamRole: "lead",
+            teamTaskTotal: 3,
+            teamTaskCompleted: 1
         )
         let otherAgent = Agent(
             id: "agent-2",
@@ -131,6 +140,9 @@ final class MenuBarViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.filteredNonAttentionAgents(teamID: "team-1", workspace: nil).map(\.id), ["agent-1"])
         XCTAssertEqual(viewModel.filteredNonAttentionAgents(teamID: nil, workspace: "/tmp/other").map(\.id), ["agent-2"])
         XCTAssertEqual(viewModel.filteredOfficeOccupants(teamID: "team-1", workspace: nil).map(\.area), [.desk])
+        XCTAssertEqual(viewModel.agent(withID: "agent-1")?.teamRole, "lead")
+        XCTAssertEqual(viewModel.agent(withID: "agent-1")?.teamTaskTotal, 3)
+        XCTAssertEqual(viewModel.agent(withID: "agent-1")?.teamTaskCompleted, 1)
     }
 
     func testRefreshRecordsNotificationHistory() async {
@@ -396,6 +408,106 @@ final class MenuBarViewModelTests: XCTestCase {
         await viewModel.refresh()
 
         XCTAssertTrue(sink.candidates.contains(where: { $0.title == "alpha needs attention" && $0.body.contains("needs input") }))
+    }
+
+    func testRefreshSendsTeamTaskCompletedNotification() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1),
+            teamRole: "lead",
+            teamTaskTotal: 2,
+            teamTaskCompleted: 0
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2),
+            lastUserVisibleSummary: "Task completed: write tests",
+            teamRole: "lead",
+            teamTaskTotal: 2,
+            teamTaskCompleted: 1
+        )
+        let team = DaemonTeamPayload(id: "team-1", displayName: "alpha", memberAgentIDs: ["agent-1"])
+        var settings = DaemonSettingsPayload.default
+        settings.notifications.previewText = true
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(
+            client: TransitioningClient(initialAgents: [previous], nextAgents: [current], teams: [team], settings: settings),
+            notificationSink: sink
+        )
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertTrue(sink.candidates.contains(where: {
+            $0.title == "alpha completed a task" && $0.body == "Task completed: write tests"
+        }))
+    }
+
+    func testRefreshSendsTeamTaskCompletedNotificationsForMultiTeamMembership() async {
+        let previous = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1),
+            teamRole: "lead",
+            teamTaskTotal: 2,
+            teamTaskCompleted: 0
+        )
+        let current = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 2),
+            lastUserVisibleSummary: "Task completed: write tests",
+            teamRole: "lead",
+            teamTaskTotal: 2,
+            teamTaskCompleted: 1
+        )
+        let teams = [
+            DaemonTeamPayload(id: "team-1", displayName: "alpha", memberAgentIDs: ["agent-1"]),
+            DaemonTeamPayload(id: "team-2", displayName: "beta", memberAgentIDs: ["agent-1"]),
+        ]
+        var settings = DaemonSettingsPayload.default
+        settings.notifications.previewText = true
+        let sink = RecordingNotificationSink()
+        let viewModel = MenuBarViewModel(
+            client: TransitioningClient(initialAgents: [previous], nextAgents: [current], teams: teams, settings: settings),
+            notificationSink: sink
+        )
+
+        await viewModel.refresh()
+        await viewModel.refresh()
+
+        XCTAssertTrue(sink.candidates.contains(where: {
+            $0.title == "alpha completed a task" && $0.body == "Task completed: write tests"
+        }))
+        XCTAssertTrue(sink.candidates.contains(where: {
+            $0.title == "beta completed a task" && $0.body == "Task completed: write tests"
+        }))
     }
 
     func testRefreshSuppressesRepeatedAttentionNotificationWithinWindow() async {

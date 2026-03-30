@@ -176,6 +176,8 @@ public final class UserNotificationSink: NSObject, NotificationSink, Notificatio
             return "\(agent.id).heartbeat"
         case .teamDigest(let teamName):
             return "\(teamName).team_digest"
+        case .teamTaskCompleted(let teamName):
+            return "\(teamName).team_task_completed"
         }
     }
 
