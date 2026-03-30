@@ -13,12 +13,12 @@ import (
 
 // setupDependencies allows tests to inject fakes for filesystem and binary lookups.
 type setupDependencies struct {
-	lookPath     func(string) (string, error)
-	userHomeDir  func() (string, error)
-	readFile     func(string) ([]byte, error)
-	writeFile    func(string, []byte, os.FileMode) error
-	mkdirAll     func(string, os.FileMode) error
-	stat         func(string) (os.FileInfo, error)
+	lookPath      func(string) (string, error)
+	userHomeDir   func() (string, error)
+	readFile      func(string) ([]byte, error)
+	writeFile     func(string, []byte, os.FileMode) error
+	mkdirAll      func(string, os.FileMode) error
+	stat          func(string) (os.FileInfo, error)
 	launchdStatus func() string
 }
 
@@ -74,9 +74,15 @@ func runSetupWith(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	// Step 5: Show what we'll add and ask for confirmation.
 	fmt.Fprintln(stdout, "\nham will add the following hooks to ~/.claude/settings.json:")
 	fmt.Fprintln(stdout, "")
-	fmt.Fprintln(stdout, "  PreToolUse:  ham hook tool-start \"$TOOL_NAME\"")
-	fmt.Fprintln(stdout, "  PostToolUse: ham hook tool-done \"$TOOL_NAME\"")
-	fmt.Fprintln(stdout, "  Stop:        ham hook session-end")
+	fmt.Fprintln(stdout, "  PreToolUse:    ham hook tool-start \"$TOOL_NAME\"")
+	fmt.Fprintln(stdout, "  PostToolUse:   ham hook tool-done \"$TOOL_NAME\"")
+	fmt.Fprintln(stdout, "  Notification:  ham hook notification")
+	fmt.Fprintln(stdout, "  StopFailure:   ham hook stop-failure")
+	fmt.Fprintln(stdout, "  SessionStart:  ham hook session-start")
+	fmt.Fprintln(stdout, "  Stop:          ham hook session-end")
+	fmt.Fprintln(stdout, "  SessionEnd:    ham hook session-end")
+	fmt.Fprintln(stdout, "  SubagentStart: ham hook subagent-start")
+	fmt.Fprintln(stdout, "  SubagentStop:  ham hook subagent-stop")
 	fmt.Fprintln(stdout, "")
 
 	if !confirmPrompt(stdin, stdout, "Apply these hooks?") {
@@ -126,7 +132,7 @@ func readClaudeSettings(path string, deps setupDependencies) (map[string]interfa
 	return settings, nil
 }
 
-var hamHookCategories = []string{"PreToolUse", "PostToolUse", "Stop"}
+var hamHookCategories = []string{"PreToolUse", "PostToolUse", "Notification", "StopFailure", "SessionStart", "Stop", "SessionEnd", "SubagentStart", "SubagentStop"}
 
 // hasHamHooks returns true if ALL three hook categories already contain a "ham hook" command.
 func hasHamHooks(settings map[string]interface{}) bool {
@@ -171,9 +177,15 @@ func mergeHamHooks(settings map[string]interface{}) {
 	}
 
 	hamHookEntries := map[string]map[string]interface{}{
-		"PreToolUse":  {"command": "ham hook tool-start \"$TOOL_NAME\"", "timeout": float64(5000)},
-		"PostToolUse": {"command": "ham hook tool-done \"$TOOL_NAME\"", "timeout": float64(5000)},
-		"Stop":        {"command": "ham hook session-end", "timeout": float64(5000)},
+		"PreToolUse":    {"command": "ham hook tool-start \"$TOOL_NAME\"", "timeout": float64(5000)},
+		"PostToolUse":   {"command": "ham hook tool-done \"$TOOL_NAME\"", "timeout": float64(5000)},
+		"Notification":  {"command": "ham hook notification", "timeout": float64(5000)},
+		"StopFailure":   {"command": "ham hook stop-failure", "timeout": float64(5000)},
+		"SessionStart":  {"command": "ham hook session-start", "timeout": float64(5000)},
+		"Stop":          {"command": "ham hook session-end", "timeout": float64(5000)},
+		"SessionEnd":    {"command": "ham hook session-end", "timeout": float64(5000)},
+		"SubagentStart": {"command": "ham hook subagent-start", "timeout": float64(5000)},
+		"SubagentStop":  {"command": "ham hook subagent-stop", "timeout": float64(5000)},
 	}
 
 	for key, hookEntry := range hamHookEntries {

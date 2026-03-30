@@ -12,12 +12,12 @@ import (
 
 func fakeSetupDeps(home string) setupDependencies {
 	return setupDependencies{
-		lookPath:    func(name string) (string, error) { return "/usr/local/bin/" + name, nil },
-		userHomeDir: func() (string, error) { return home, nil },
-		readFile:    os.ReadFile,
-		writeFile:   os.WriteFile,
-		mkdirAll:    os.MkdirAll,
-		stat:        os.Stat,
+		lookPath:      func(name string) (string, error) { return "/usr/local/bin/" + name, nil },
+		userHomeDir:   func() (string, error) { return home, nil },
+		readFile:      os.ReadFile,
+		writeFile:     os.WriteFile,
+		mkdirAll:      os.MkdirAll,
+		stat:          os.Stat,
 		launchdStatus: func() string { return "running" },
 	}
 }
@@ -52,7 +52,7 @@ func TestSetupCreatesSettingsWhenNoneExist(t *testing.T) {
 		t.Fatal("hooks key missing or not an object")
 	}
 
-	for _, key := range []string{"PreToolUse", "PostToolUse", "Stop"} {
+	for _, key := range hamHookCategories {
 		arr, ok := hooks[key].([]interface{})
 		if !ok || len(arr) == 0 {
 			t.Fatalf("expected %s hook entries, got %v", key, hooks[key])
@@ -155,8 +155,26 @@ func TestSetupSkipsWhenHamHooksAlreadyExist(t *testing.T) {
 			"PostToolUse": []interface{}{
 				map[string]interface{}{"command": "ham hook tool-done \"$TOOL_NAME\"", "timeout": float64(5000)},
 			},
+			"Notification": []interface{}{
+				map[string]interface{}{"command": "ham hook notification", "timeout": float64(5000)},
+			},
+			"StopFailure": []interface{}{
+				map[string]interface{}{"command": "ham hook stop-failure", "timeout": float64(5000)},
+			},
+			"SessionStart": []interface{}{
+				map[string]interface{}{"command": "ham hook session-start", "timeout": float64(5000)},
+			},
 			"Stop": []interface{}{
 				map[string]interface{}{"command": "ham hook session-end", "timeout": float64(5000)},
+			},
+			"SessionEnd": []interface{}{
+				map[string]interface{}{"command": "ham hook session-end", "timeout": float64(5000)},
+			},
+			"SubagentStart": []interface{}{
+				map[string]interface{}{"command": "ham hook subagent-start", "timeout": float64(5000)},
+			},
+			"SubagentStop": []interface{}{
+				map[string]interface{}{"command": "ham hook subagent-stop", "timeout": float64(5000)},
 			},
 		},
 	}
@@ -239,20 +257,25 @@ func TestHasHamHooksAllThreeConfigured(t *testing.T) {
 
 	settings := map[string]interface{}{
 		"hooks": map[string]interface{}{
-			"PreToolUse":  []interface{}{map[string]interface{}{"command": "ham hook tool-start \"$TOOL_NAME\""}},
-			"PostToolUse": []interface{}{map[string]interface{}{"command": "ham hook tool-done \"$TOOL_NAME\""}},
-			"Stop":        []interface{}{map[string]interface{}{"command": "ham hook session-end"}},
+			"PreToolUse":    []interface{}{map[string]interface{}{"command": "ham hook tool-start \"$TOOL_NAME\""}},
+			"PostToolUse":   []interface{}{map[string]interface{}{"command": "ham hook tool-done \"$TOOL_NAME\""}},
+			"Notification":  []interface{}{map[string]interface{}{"command": "ham hook notification"}},
+			"StopFailure":   []interface{}{map[string]interface{}{"command": "ham hook stop-failure"}},
+			"SessionStart":  []interface{}{map[string]interface{}{"command": "ham hook session-start"}},
+			"Stop":          []interface{}{map[string]interface{}{"command": "ham hook session-end"}},
+			"SessionEnd":    []interface{}{map[string]interface{}{"command": "ham hook session-end"}},
+			"SubagentStart": []interface{}{map[string]interface{}{"command": "ham hook subagent-start"}},
+			"SubagentStop":  []interface{}{map[string]interface{}{"command": "ham hook subagent-stop"}},
 		},
 	}
 	if !hasHamHooks(settings) {
-		t.Fatal("expected hasHamHooks to return true when all 3 categories present")
+		t.Fatal("expected hasHamHooks to return true when all required categories are present")
 	}
 }
 
 func TestHasHamHooksPartialReturnsFalse(t *testing.T) {
 	t.Parallel()
 
-	// Only 1 of 3 categories — should be false (incomplete setup).
 	settings := map[string]interface{}{
 		"hooks": map[string]interface{}{
 			"PreToolUse": []interface{}{
@@ -297,7 +320,6 @@ func TestMergeHamHooksSkipsExistingCategories(t *testing.T) {
 			"PreToolUse": []interface{}{
 				map[string]interface{}{"command": "ham hook tool-start \"$TOOL_NAME\"", "timeout": float64(5000)},
 			},
-			// PostToolUse and Stop missing — should be added.
 		},
 	}
 
@@ -311,8 +333,7 @@ func TestMergeHamHooksSkipsExistingCategories(t *testing.T) {
 		t.Fatalf("expected 1 PreToolUse entry (existing), got %d", len(preArr))
 	}
 
-	// PostToolUse and Stop should each have 1 new entry.
-	for _, key := range []string{"PostToolUse", "Stop"} {
+	for _, key := range []string{"PostToolUse", "Notification", "StopFailure", "SessionStart", "Stop", "SessionEnd", "SubagentStart", "SubagentStop"} {
 		arr := hooks[key].([]interface{})
 		if len(arr) != 1 {
 			t.Fatalf("expected 1 %s entry (newly added), got %d", key, len(arr))
@@ -368,9 +389,15 @@ func TestSetupLaunchdAdvice(t *testing.T) {
 			_ = os.MkdirAll(claudeDir, 0o755)
 			existing := map[string]interface{}{
 				"hooks": map[string]interface{}{
-					"PreToolUse":  []interface{}{map[string]interface{}{"command": "ham hook tool-start \"$TOOL_NAME\""}},
-					"PostToolUse": []interface{}{map[string]interface{}{"command": "ham hook tool-done \"$TOOL_NAME\""}},
-					"Stop":        []interface{}{map[string]interface{}{"command": "ham hook session-end"}},
+					"PreToolUse":    []interface{}{map[string]interface{}{"command": "ham hook tool-start \"$TOOL_NAME\""}},
+					"PostToolUse":   []interface{}{map[string]interface{}{"command": "ham hook tool-done \"$TOOL_NAME\""}},
+					"Notification":  []interface{}{map[string]interface{}{"command": "ham hook notification"}},
+					"StopFailure":   []interface{}{map[string]interface{}{"command": "ham hook stop-failure"}},
+					"SessionStart":  []interface{}{map[string]interface{}{"command": "ham hook session-start"}},
+					"Stop":          []interface{}{map[string]interface{}{"command": "ham hook session-end"}},
+					"SessionEnd":    []interface{}{map[string]interface{}{"command": "ham hook session-end"}},
+					"SubagentStart": []interface{}{map[string]interface{}{"command": "ham hook subagent-start"}},
+					"SubagentStop":  []interface{}{map[string]interface{}{"command": "ham hook subagent-stop"}},
 				},
 			}
 			data, _ := json.MarshalIndent(existing, "", "  ")

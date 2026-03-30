@@ -115,9 +115,12 @@ Usage:
   ham setup
   ham hook tool-start <tool-name>
   ham hook tool-done <tool-name>
+  ham hook notification
+  ham hook stop-failure
+  ham hook session-start
   ham hook session-end
-  ham hook agent-spawned [--description ...]
-  ham hook agent-finished
+  ham hook subagent-start [--description ...]
+  ham hook subagent-stop [--description ...]
   ham list [--json] [--team ref] [--workspace ref]
   ham status [--json] [--team ref] [--workspace ref]
   ham events [--json] [--limit N] [--follow] [--after-id ID] [--wait-ms N]
