@@ -23,14 +23,24 @@ public struct PixelOfficeOccupant: Equatable, Identifiable, Sendable {
     public let area: OfficeArea
     public let sprite: HamsterSpriteState
     public let subAgentCount: Int
+    public let teamRole: String?
+    public let teamTaskTotal: Int
+    public let teamTaskCompleted: Int
 
     public var id: String { agent.id }
 
-    public init(agent: Agent, area: OfficeArea, sprite: HamsterSpriteState, subAgentCount: Int = 0) {
+    public var isTeamLead: Bool { teamRole == "lead" }
+    public var isTeammate: Bool { teamRole == "teammate" }
+    public var hasTeamRole: Bool { teamRole != nil }
+
+    public init(agent: Agent, area: OfficeArea, sprite: HamsterSpriteState, subAgentCount: Int = 0, teamRole: String? = nil, teamTaskTotal: Int = 0, teamTaskCompleted: Int = 0) {
         self.agent = agent
         self.area = area
         self.sprite = sprite
         self.subAgentCount = subAgentCount
+        self.teamRole = teamRole
+        self.teamTaskTotal = teamTaskTotal
+        self.teamTaskCompleted = teamTaskCompleted
     }
 }
 
@@ -54,7 +64,10 @@ public enum PixelOfficeMapper {
             agent: agent,
             area: area(for: agent.status),
             sprite: sprite(for: agent.status),
-            subAgentCount: agent.subAgentCount
+            subAgentCount: agent.subAgentCount,
+            teamRole: agent.teamRole,
+            teamTaskTotal: agent.teamTaskTotal,
+            teamTaskCompleted: agent.teamTaskCompleted
         )
     }
 
