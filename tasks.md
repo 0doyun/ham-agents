@@ -30,57 +30,40 @@
 - [x] **Epic 25: 알림 고도화** ✅
 - [x] **Epic 26: 자율 모드 heartbeat 알림** ✅
 - [x] **Epic 27: Claude Code 공식 hook 확장 + 정확도 향상** ✅
-- [ ] Epic 28: Agent Teams 연동 ← 현재 활성
-- [ ] Epic 29: Worktree 시각화
+- [x] Epic 28: Agent Teams 연동 ✅
+- [ ] Epic 29: Worktree 시각화 ← 현재 활성
 - [ ] Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
 
 ---
 
 ## Active Scope
 
-**Epic 28: Agent Teams 연동**
+**Epic 29: Worktree 시각화**
 
-기존 Team 인프라 위에 Claude Code Agent Teams hook을 연결해 팀 작업을 오피스에서 시각화한다.
+Claude Code의 git worktree hook을 받아 metadata-first MVP부터 도입하고, richer visualization은 후속으로 미룬다.
 
 ### Current Slice Checklist
 
-**Phase 1: Team hook 수집**
-- [ ] `TeammateIdle` hook 처리 — 기존 Team/agent 표현에 teammate idle 상태 반영
-- [ ] `TaskCreated` hook 처리 — 팀 task 생성 시 이벤트 로그 + UI 표시
-- [ ] `TaskCompleted` hook 처리 — 팀 task 완료 시 알림 + 이벤트
-- [ ] `ham setup`에서 Agent Teams hook 추가 (TeammateIdle, TaskCreated, TaskCompleted)
-- [ ] Go tests
-
-**Phase 2: Team 표현 연결**
-- [ ] Agent 모델에 `team_role` 필드 추가 (lead/teammate)
-- [ ] 팀 리드 햄스터에 왕관/리더 표시, teammate는 별도 햄스터처럼 보이되 기존 팀 모델과 연결
-- [ ] 디테일 패널에 팀 task 진행 상황 표시
-- [ ] Go/Swift tests
-
-#### Acceptance Criteria
-- [ ] Agent Teams 모드에서 teammate들이 각각 별도 햄스터로 표시됨
-- [ ] 팀 리드와 teammate 구분이 시각적으로 보임
-- [ ] task 완료 시 알림이 발송됨
-
----
-
-## Next Epics (순서대로)
-
-### Epic 29: Worktree 시각화
-Claude Code의 git worktree hook을 받아 metadata-first MVP부터 도입하고, richer visualization은 후속으로 미룬다.
-
+**Phase 1: Worktree hook 수집**
 - [ ] `WorktreeCreate` hook 처리 — worktree 생성 시 에이전트에 worktree metadata 연결
 - [ ] `WorktreeRemove` hook 처리 — worktree 삭제 시 metadata 정리
+- [ ] `ham setup`에서 WorktreeCreate/Remove hook 추가
+- [ ] Go tests
+
+**Phase 2: metadata + detail 표시**
 - [ ] Agent 모델에 `worktree_branch` 필드 추가
 - [ ] 디테일 패널에 worktree 브랜치명 표시
 - [ ] richer office grouping은 후속 slice로 미루고, MVP 범위를 metadata + detail 표시로 제한
-- [ ] `ham setup`에서 WorktreeCreate/Remove hook 추가
 - [ ] Go/Swift tests
 
 #### Acceptance Criteria
 - [ ] worktree metadata가 detail 패널에서 확인 가능함
 - [ ] 브랜치명이 디테일에 표시됨
 - [ ] worktree 삭제 시 정리됨
+
+---
+
+## Next Epics (순서대로)
 
 ### Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
 Claude Code 이외 프로바이더 지원 추가.

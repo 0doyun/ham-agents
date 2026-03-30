@@ -12,6 +12,17 @@
 
 ## Log
 
+### 2026-03-30 (Epic 28 Agent Teams integration complete)
+- Pushed the previously local-only Phase 1 backend work and finished the remaining Swift/UI slice for Agent Teams.
+- Expanded the shared Swift `Agent` model to decode and carry `team_role`, `team_task_total`, and `team_task_completed` from the daemon payloads.
+- Updated the menu bar popover and pixel office UI so leaders and teammates are visually distinguished and team task progress is visible in the list, detail panel, and office view.
+- Added team task completion notifications in the menu bar refresh pipeline so completed team work emits a user-visible notification.
+- Extended Swift tests to cover team field decoding, office occupant propagation, team task completion notifications, and team-aware refresh behavior.
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 29 per Progression policy.
+
 ### 2026-03-30 (Epic 27 official Claude hook expansion complete)
 - Expanded `ham hook` beyond the initial tool/session commands to support `notification`, `stop-failure`, `session-start`, `session-end`, `subagent-start`, and `subagent-stop`.
 - Generalized hook payload handling so structured stdin JSON fields are reused across hook types, with `session_id` tracked and used as a fallback lookup path alongside `HAM_AGENT_ID`.
