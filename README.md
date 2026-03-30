@@ -156,20 +156,23 @@ Alpha. Claude Code–first, with accurate hook-based state tracking.
 - [x] `ham run claude` with interactive PTY
 - [x] Claude Code hooks integration (`ham setup`)
 - [x] Accurate state tracking via PreToolUse/PostToolUse/Stop hooks
+- [x] Expanded official Claude Code hook coverage (Notification, StopFailure, SessionStart/End, SubagentStart/Stop)
 - [x] Sub-agent detection and mini hamster visualization
 - [x] Auto multi-row grid office with individual workstations
 - [x] Automatic daemon bootstrap via launchd
 - [x] Automatic menu bar app launch
 - [x] iTerm2 session targeting (open tab, send message)
+- [x] tmux session targeting (open pane, send message)
 - [x] macOS notifications (error, waiting input)
+- [x] OMC mode recognition (autopilot, ralph, team badges)
+- [x] Autonomous mode heartbeat notifications
 - [x] Agent lifecycle (register, track, stop, remove)
 - [x] Detail panel with quick message, actions, recent events
 
 Planned:
 
-- [ ] tmux support (alongside iTerm2)
-- [ ] OMC mode recognition (autopilot, ralph, team badges)
-- [ ] Autonomous mode heartbeat notifications
+- [ ] Claude Agent Teams hook integration on top of the existing team model
+- [ ] Worktree metadata MVP (capture + detail display before richer office grouping)
 - [ ] Homebrew formula
 - [ ] Multi-provider support (Codex, Gemini CLI)
 
