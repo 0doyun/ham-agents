@@ -26,7 +26,10 @@ final class DaemonPayloadDecodingTests: XCTestCase {
           "session_activity": "claude",
           "session_process_id": 12345,
           "session_command": "/usr/local/bin/claude",
-          "avatar_variant": "default"
+          "avatar_variant": "default",
+          "team_role": "lead",
+          "team_task_total": 5,
+          "team_task_completed": 2
         }
         """
 
@@ -45,6 +48,33 @@ final class DaemonPayloadDecodingTests: XCTestCase {
         XCTAssertEqual(agent.sessionActivity, "claude")
         XCTAssertEqual(agent.sessionProcessID, 12345)
         XCTAssertEqual(agent.sessionCommand, "/usr/local/bin/claude")
+        XCTAssertEqual(agent.teamRole, "lead")
+        XCTAssertEqual(agent.teamTaskTotal, 5)
+        XCTAssertEqual(agent.teamTaskCompleted, 2)
+    }
+
+    func testAgentDefaultsMissingTeamFields() throws {
+        let payload = """
+        {
+          "id": "managed-123",
+          "display_name": "reviewer",
+          "provider": "claude",
+          "host": "MacBook-Pro.local",
+          "mode": "managed",
+          "project_path": "/tmp/demo",
+          "status": "booting",
+          "status_confidence": 1,
+          "last_event_at": "2026-03-24T14:02:18.002914Z",
+          "notification_policy": "default",
+          "avatar_variant": "default"
+        }
+        """
+
+        let agent = try DaemonJSONDecoder.make().decode(Agent.self, from: Data(payload.utf8))
+
+        XCTAssertNil(agent.teamRole)
+        XCTAssertEqual(agent.teamTaskTotal, 0)
+        XCTAssertEqual(agent.teamTaskCompleted, 0)
     }
 
     func testDaemonStatusPayloadDecodesFromGoStatusJSON() throws {
