@@ -12,6 +12,28 @@
 
 ## Log
 
+### 2026-03-30 (Epic 27 official Claude hook expansion complete)
+- Expanded `ham hook` beyond the initial tool/session commands to support `notification`, `stop-failure`, `session-start`, `session-end`, `subagent-start`, and `subagent-stop`.
+- Generalized hook payload handling so structured stdin JSON fields are reused across hook types, with `session_id` tracked and used as a fallback lookup path alongside `HAM_AGENT_ID`.
+- Extended IPC and runtime hook handling for Notification, StopFailure, SessionStart, and SessionEnd.
+- `Notification` now drives `waiting_input` directly for `idle_prompt` / `permission_prompt` with confidence `1.0`.
+- `StopFailure` now records structured `error_type`, and shared Go/Swift agent models plus the macOS detail view surface the error type.
+- `SessionEnd` now removes the agent instead of leaving a lingering `done` hamster.
+- `ham setup` now wires the broader Claude Code hook set automatically: Notification, StopFailure, SessionStart, Stop, SessionEnd, SubagentStart, SubagentStop, along with the existing PreToolUse/PostToolUse hooks.
+- Verification:
+  - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift build --disable-sandbox` ✅
+  - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
+- `tasks.md` Active Scope advanced to Epic 28 per Progression policy.
+
+### 2026-03-30 (documentation alignment for Epic 27–29 scope)
+- Reconciled the planning docs so they reflect the approved implementation framing instead of a mix of old assumptions and future-only ideas.
+- Clarified that the then-current Active Scope was **Epic 27**, explicitly superseding the earlier Epic 20 advancement note after Epic 26.
+- Reframed Epic 27 as **official Claude Code hook coverage + payload utilization** for more accurate state tracking, rather than a net-new stdin JSON infrastructure slice.
+- Rephrased Epic 28 as **Claude Agent Teams hook integration on top of the existing team infrastructure**, instead of implying a brand-new team system.
+- Re-scoped Epic 29 to a **metadata-first worktree MVP** (capture/store/show worktree details first, richer office grouping later).
+- Synchronized `README.md`, `tasks.md`, `docs/progress.md`, and `spec.md` so completed tmux / OMC mode / heartbeat work is no longer listed as merely planned.
+
 ### 2026-03-30 (Epic 22 tmux support complete)
 - Re-ran the Epic 22 baseline verification and confirmed the starting point was already green:
   - `go test ./...` ✅
@@ -86,7 +108,7 @@
   - `GOCACHE=/tmp/go-build GOTMPDIR=/tmp/go-tmp go test ./...` ✅
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift build --disable-sandbox` ✅
   - `CLANG_MODULE_CACHE_PATH=/tmp/ham-swift-module-cache SWIFTPM_MODULECACHE_OVERRIDE=/tmp/ham-swiftpm-cache swift test --disable-sandbox` ✅
-- `tasks.md` Active Scope advanced to Epic 20 per Progression policy.
+- Earlier notes briefly treated Epic 20 as the next scope after Epic 26, but this was later corrected; the current active scope remains Epic 27 until its checklist is complete.
 
 ### 2026-03-26 (Epic 17 one-command bootstrap complete)
 - Added CLI-side daemon auto-bootstrap for daemon-backed commands by probing the socket first, spawning `hamd serve` only when unreachable, and waiting briefly for the socket to become reachable before continuing.

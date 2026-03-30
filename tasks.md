@@ -29,8 +29,8 @@
 - [x] **Epic 24: OMC 모드 인식** ✅
 - [x] **Epic 25: 알림 고도화** ✅
 - [x] **Epic 26: 자율 모드 heartbeat 알림** ✅
-- [ ] **Epic 27: Hook 확장 + 정확도 향상** ← 현재 활성
-- [ ] Epic 28: Agent Teams 연동
+- [x] **Epic 27: Claude Code 공식 hook 확장 + 정확도 향상** ✅
+- [ ] Epic 28: Agent Teams 연동 ← 현재 활성
 - [ ] Epic 29: Worktree 시각화
 - [ ] Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
 
@@ -38,71 +38,22 @@
 
 ## Active Scope
 
-**Epic 27: Hook 확장 + 정확도 향상**
+**Epic 28: Agent Teams 연동**
 
-Claude Code의 공식 hook 25종 중 추가 활용 가능한 이벤트를 연동하여 상태 추적 정확도를 높인다.
+기존 Team 인프라 위에 Claude Code Agent Teams hook을 연결해 팀 작업을 오피스에서 시각화한다.
 
 ### Current Slice Checklist
 
-**Phase 1: Notification hook → waiting_input 정확 감지**
-- [ ] `ham hook notification` 서브커맨드 추가
-- [ ] `Notification` hook 이벤트 처리 — stdin JSON에서 `notification_type` 파싱
-  - `idle_prompt` → AgentStatusWaitingInput (confidence=1.0)
-  - `permission_prompt` → AgentStatusWaitingInput (confidence=1.0)
-- [ ] `ham setup`에서 `Notification` hook 자동 추가
-- [ ] spec.md의 "waiting_input PTY fallback" 주석 제거, hook 기반으로 갱신
-- [ ] Go tests
-
-**Phase 2: SubagentStart/SubagentStop hook**
-- [ ] 현재 `PreToolUse "Agent"` / `PostToolUse "Agent"`로 감지하는 서브에이전트를 전용 hook으로 교체
-- [ ] `SubagentStart` hook 처리 — stdin에서 `agent_id`, `agent_type` 파싱
-- [ ] `SubagentStop` hook 처리 — `agent_transcript_path`로 서브에이전트 작업 결과 요약 가능
-- [ ] `ham setup`에서 `SubagentStart`, `SubagentStop` hook 추가
-- [ ] Go tests
-
-**Phase 3: StopFailure hook → 에러 분류**
-- [ ] `ham hook stop-failure` 서브커맨드 추가
-- [ ] `StopFailure` hook 처리 — error type 파싱 (rate_limit, billing_error, server_error 등)
-- [ ] Agent에 `error_type` 필드 추가, 디테일 패널에 에러 유형 표시
-- [ ] `ham setup`에서 `StopFailure` hook 추가
-- [ ] Go tests
-
-**Phase 4: SessionStart/SessionEnd hook**
-- [ ] `SessionStart` hook — 세션 시작 시 정확한 session_id 수신 (stdin JSON의 session_id 필드)
-- [ ] `SessionEnd` hook — Stop 외에 세션 종료 케이스 추가 커버 (clear, logout, prompt_input_exit 등)
-- [ ] `ham setup`에서 `SessionStart`, `SessionEnd` hook 추가
-- [ ] Go tests
-
-**Phase 5: hook stdin JSON 파싱 인프라**
-- [ ] `ham hook` 커맨드에서 stdin JSON 파싱 지원 (현재는 CLI args만 사용)
-- [ ] session_id를 stdin에서 직접 읽어 HAM_AGENT_ID 환경변수 보조/대체 가능하게
-- [ ] Go tests
-
-**커밋 + 테스트:**
-- [ ] Phase 1~2 완료 후 커밋 (핵심 hook 확장)
-- [ ] Phase 3~5 완료 후 커밋 (에러 분류 + 세션 + stdin 파싱)
-- [ ] `go test ./...` + `swift build --disable-sandbox` 최종 통과
-
-#### Acceptance Criteria
-- [ ] waiting_input이 Notification hook으로 confidence=1.0 감지됨
-- [ ] 서브에이전트가 SubagentStart/Stop hook으로 정확하게 추적됨
-- [ ] 에러 유형(rate_limit, server_error 등)이 디테일 패널에 표시됨
-- [ ] ham setup이 확장된 hook 전체를 자동 설정함
-- [ ] 기존 PreToolUse/PostToolUse/Stop 동작이 깨지지 않음
-
----
-
-## Next Epics (순서대로)
-
-### Epic 28: Agent Teams 연동
-Claude Code 내장 Agent Teams 기능과 연동하여 팀 작업을 오피스에서 시각화.
-
-- [ ] `TeammateIdle` hook 처리 — teammate가 idle 전환 시 해당 햄스터 상태 반영
+**Phase 1: Team hook 수집**
+- [ ] `TeammateIdle` hook 처리 — 기존 Team/agent 표현에 teammate idle 상태 반영
 - [ ] `TaskCreated` hook 처리 — 팀 task 생성 시 이벤트 로그 + UI 표시
 - [ ] `TaskCompleted` hook 처리 — 팀 task 완료 시 알림 + 이벤트
-- [ ] Agent 모델에 `team_role` 필드 추가 (lead/teammate)
-- [ ] 팀 리드 햄스터에 왕관/리더 표시, teammate는 팀 뱃지
 - [ ] `ham setup`에서 Agent Teams hook 추가 (TeammateIdle, TaskCreated, TaskCompleted)
+- [ ] Go tests
+
+**Phase 2: Team 표현 연결**
+- [ ] Agent 모델에 `team_role` 필드 추가 (lead/teammate)
+- [ ] 팀 리드 햄스터에 왕관/리더 표시, teammate는 별도 햄스터처럼 보이되 기존 팀 모델과 연결
 - [ ] 디테일 패널에 팀 task 진행 상황 표시
 - [ ] Go/Swift tests
 
@@ -111,19 +62,23 @@ Claude Code 내장 Agent Teams 기능과 연동하여 팀 작업을 오피스에
 - [ ] 팀 리드와 teammate 구분이 시각적으로 보임
 - [ ] task 완료 시 알림이 발송됨
 
-### Epic 29: Worktree 시각화
-Claude Code의 git worktree 연동으로 병렬 개발을 오피스에서 표현.
+---
 
-- [ ] `WorktreeCreate` hook 처리 — worktree 생성 시 에이전트에 worktree 정보 연결
-- [ ] `WorktreeRemove` hook 처리 — worktree 삭제 시 정리
+## Next Epics (순서대로)
+
+### Epic 29: Worktree 시각화
+Claude Code의 git worktree hook을 받아 metadata-first MVP부터 도입하고, richer visualization은 후속으로 미룬다.
+
+- [ ] `WorktreeCreate` hook 처리 — worktree 생성 시 에이전트에 worktree metadata 연결
+- [ ] `WorktreeRemove` hook 처리 — worktree 삭제 시 metadata 정리
 - [ ] Agent 모델에 `worktree_branch` 필드 추가
 - [ ] 디테일 패널에 worktree 브랜치명 표시
-- [ ] 오피스에서 같은 프로젝트의 다른 worktree 에이전트를 시각적으로 그루핑
+- [ ] richer office grouping은 후속 slice로 미루고, MVP 범위를 metadata + detail 표시로 제한
 - [ ] `ham setup`에서 WorktreeCreate/Remove hook 추가
 - [ ] Go/Swift tests
 
 #### Acceptance Criteria
-- [ ] worktree 기반 병렬 개발 시 각 worktree가 별도 햄스터로 보임
+- [ ] worktree metadata가 detail 패널에서 확인 가능함
 - [ ] 브랜치명이 디테일에 표시됨
 - [ ] worktree 삭제 시 정리됨
 
@@ -218,12 +173,12 @@ Claude Code 이외 프로바이더 지원 추가.
 18. ~~Epic 18: Claude Code Hook 기반 상태 추적 (Phase 1)~~ ✅
 19. ~~Epic 19: 단일 오피스 UI 재설계 (Phase 2)~~ ✅
 21. ~~Epic 21: 오피스 사이드뷰 전환 + 상태 정리~~ ✅
-22. **Epic 22: 테스트 안정화 + tmux 지원** ← 현재
+22. ~~Epic 22: 테스트 안정화 + tmux 지원~~ ✅
 23. Epic 23: 에이전트 출력 요약
 24. Epic 24: OMC 모드 인식
 25. Epic 25: 알림 고도화
 26. ~~Epic 26: 자율 모드 heartbeat 알림~~ ✅
-27. **Epic 27: Hook 확장 + 정확도 향상** ← 현재
+27. Epic 27: Claude Code 공식 hook 확장 + 정확도 향상
 28. Epic 28: Agent Teams 연동
 29. Epic 29: Worktree 시각화
 20. Epic 20: 멀티 프로바이더 확장 (Phase 3, 후순위)
