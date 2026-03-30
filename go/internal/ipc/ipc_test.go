@@ -570,8 +570,22 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 		t.Fatalf("expected thinking status after tool-done, got %q", snapshot.Agents[0].Status)
 	}
 
+	if err := client.HookNotification(context.Background(), agent.ID, "session-1", "permission_prompt", "ralph"); err != nil {
+		t.Fatalf("hook notification: %v", err)
+	}
+	snapshot, err = client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status after notification: %v", err)
+	}
+	if snapshot.Agents[0].Status != core.AgentStatusWaitingInput {
+		t.Fatalf("expected waiting_input after notification, got %q", snapshot.Agents[0].Status)
+	}
+	if snapshot.Agents[0].SessionID != "session-1" {
+		t.Fatalf("expected session ID to persist, got %q", snapshot.Agents[0].SessionID)
+	}
+
 	// HookAgentSpawned should increment SubAgentCount.
-	if err := client.HookAgentSpawned(context.Background(), agent.ID, "sub-task", "ralph"); err != nil {
+	if err := client.HookAgentSpawned(context.Background(), agent.ID, "session-1", "sub-task", "ralph"); err != nil {
 		t.Fatalf("hook agent-spawned: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -583,7 +597,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookAgentFinished should decrement SubAgentCount.
-	if err := client.HookAgentFinished(context.Background(), agent.ID, "ralph"); err != nil {
+	if err := client.HookAgentFinished(context.Background(), agent.ID, "session-1", "sub-task", "ralph"); err != nil {
 		t.Fatalf("hook agent-finished: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -594,16 +608,40 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 		t.Fatalf("expected SubAgentCount 0, got %d", snapshot.Agents[0].SubAgentCount)
 	}
 
-	// HookSessionEnd should transition to done.
-	if err := client.HookSessionEnd(context.Background(), agent.ID, "ralph"); err != nil {
+	if err := client.HookStopFailure(context.Background(), "", "session-1", "rate_limit", "ralph"); err != nil {
+		t.Fatalf("hook stop-failure: %v", err)
+	}
+	snapshot, err = client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status after stop-failure: %v", err)
+	}
+	if snapshot.Agents[0].Status != core.AgentStatusError {
+		t.Fatalf("expected error status after stop-failure, got %q", snapshot.Agents[0].Status)
+	}
+	if snapshot.Agents[0].ErrorType != "rate_limit" {
+		t.Fatalf("expected error type rate_limit, got %q", snapshot.Agents[0].ErrorType)
+	}
+
+	if err := client.HookSessionStart(context.Background(), agent.ID, "session-1", "ralph"); err != nil {
+		t.Fatalf("hook session-start: %v", err)
+	}
+	snapshot, err = client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status after session-start: %v", err)
+	}
+	if snapshot.Agents[0].Status != core.AgentStatusBooting {
+		t.Fatalf("expected booting after session-start, got %q", snapshot.Agents[0].Status)
+	}
+
+	if err := client.HookSessionEnd(context.Background(), "", "session-1", "ralph"); err != nil {
 		t.Fatalf("hook session-end: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
 	if err != nil {
 		t.Fatalf("status after session-end: %v", err)
 	}
-	if snapshot.Agents[0].Status != core.AgentStatusDone {
-		t.Fatalf("expected done status after session-end, got %q", snapshot.Agents[0].Status)
+	if len(snapshot.Agents) != 0 {
+		t.Fatalf("expected agent removal after session-end, got %d agents", len(snapshot.Agents))
 	}
 
 	cancel()

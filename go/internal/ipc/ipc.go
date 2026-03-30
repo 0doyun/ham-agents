@@ -45,33 +45,39 @@ const (
 	CommandShutdown              Command = "daemon.shutdown"
 	CommandHookToolStart         Command = "hook.tool-start"
 	CommandHookToolDone          Command = "hook.tool-done"
+	CommandHookNotification      Command = "hook.notification"
+	CommandHookStopFailure       Command = "hook.stop-failure"
+	CommandHookSessionStart      Command = "hook.session-start"
 	CommandHookSessionEnd        Command = "hook.session-end"
 	CommandHookAgentSpawned      Command = "hook.agent-spawned"
 	CommandHookAgentFinished     Command = "hook.agent-finished"
 )
 
 type Request struct {
-	Command       Command        `json:"command"`
-	AgentID       string         `json:"agent_id,omitempty"`
-	Provider      string         `json:"provider,omitempty"`
-	DisplayName   string         `json:"display_name,omitempty"`
-	ProjectPath   string         `json:"project_path,omitempty"`
-	Role          string         `json:"role,omitempty"`
-	SessionRef    string         `json:"session_ref,omitempty"`
-	TeamRef       string         `json:"team_ref,omitempty"`
-	MemberAgentID string         `json:"member_agent_id,omitempty"`
-	Limit         int            `json:"limit,omitempty"`
-	AfterEventID  string         `json:"after_event_id,omitempty"`
-	WaitMillis    int            `json:"wait_millis,omitempty"`
-	Policy        string         `json:"policy,omitempty"`
-	Settings      *core.Settings `json:"settings,omitempty"`
-	ExitError     string         `json:"exit_error,omitempty"`
-	OutputLine    string         `json:"output_line,omitempty"`
-	ToolName      string         `json:"tool_name,omitempty"`
-	ToolInputPreview string      `json:"tool_input_preview,omitempty"`
-	OmcMode       string         `json:"omc_mode,omitempty"`
-	HookType      string         `json:"hook_type,omitempty"`
-	Description   string         `json:"description,omitempty"`
+	Command          Command        `json:"command"`
+	AgentID          string         `json:"agent_id,omitempty"`
+	Provider         string         `json:"provider,omitempty"`
+	DisplayName      string         `json:"display_name,omitempty"`
+	ProjectPath      string         `json:"project_path,omitempty"`
+	Role             string         `json:"role,omitempty"`
+	SessionRef       string         `json:"session_ref,omitempty"`
+	TeamRef          string         `json:"team_ref,omitempty"`
+	MemberAgentID    string         `json:"member_agent_id,omitempty"`
+	Limit            int            `json:"limit,omitempty"`
+	AfterEventID     string         `json:"after_event_id,omitempty"`
+	WaitMillis       int            `json:"wait_millis,omitempty"`
+	Policy           string         `json:"policy,omitempty"`
+	Settings         *core.Settings `json:"settings,omitempty"`
+	ExitError        string         `json:"exit_error,omitempty"`
+	OutputLine       string         `json:"output_line,omitempty"`
+	ToolName         string         `json:"tool_name,omitempty"`
+	ToolInputPreview string         `json:"tool_input_preview,omitempty"`
+	OmcMode          string         `json:"omc_mode,omitempty"`
+	SessionID        string         `json:"session_id,omitempty"`
+	NotificationType string         `json:"notification_type,omitempty"`
+	ErrorType        string         `json:"error_type,omitempty"`
+	HookType         string         `json:"hook_type,omitempty"`
+	Description      string         `json:"description,omitempty"`
 }
 
 type Response struct {
@@ -398,18 +404,33 @@ func (c *Client) HookToolDone(ctx context.Context, agentID string, toolName stri
 	return err
 }
 
-func (c *Client) HookSessionEnd(ctx context.Context, agentID string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookSessionEnd, AgentID: agentID, OmcMode: omcMode})
+func (c *Client) HookNotification(ctx context.Context, agentID string, sessionID string, notificationType string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookNotification, AgentID: agentID, SessionID: sessionID, NotificationType: notificationType, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookAgentSpawned(ctx context.Context, agentID string, description string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookAgentSpawned, AgentID: agentID, Description: description, OmcMode: omcMode})
+func (c *Client) HookStopFailure(ctx context.Context, agentID string, sessionID string, errorType string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookStopFailure, AgentID: agentID, SessionID: sessionID, ErrorType: errorType, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookAgentFinished(ctx context.Context, agentID string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookAgentFinished, AgentID: agentID, OmcMode: omcMode})
+func (c *Client) HookSessionStart(ctx context.Context, agentID string, sessionID string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookSessionStart, AgentID: agentID, SessionID: sessionID, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookSessionEnd(ctx context.Context, agentID string, sessionID string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookSessionEnd, AgentID: agentID, SessionID: sessionID, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookAgentSpawned(ctx context.Context, agentID string, sessionID string, description string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookAgentSpawned, AgentID: agentID, SessionID: sessionID, Description: description, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookAgentFinished(ctx context.Context, agentID string, sessionID string, description string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookAgentFinished, AgentID: agentID, SessionID: sessionID, Description: description, OmcMode: omcMode})
 	return err
 }
 

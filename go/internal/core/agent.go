@@ -44,12 +44,14 @@ type Agent struct {
 	Status                  AgentStatus        `json:"status"`
 	StatusConfidence        float64            `json:"status_confidence"`
 	StatusReason            string             `json:"status_reason,omitempty"`
+	ErrorType               string             `json:"error_type,omitempty"`
 	RegisteredAt            time.Time          `json:"registered_at,omitempty"`
 	LastEventAt             time.Time          `json:"last_event_at"`
 	LastUserVisibleSummary  string             `json:"last_user_visible_summary,omitempty"`
-	RecentTools            []string           `json:"recent_tools,omitempty"`
-	OmcMode                string             `json:"omc_mode,omitempty"`
+	RecentTools             []string           `json:"recent_tools,omitempty"`
+	OmcMode                 string             `json:"omc_mode,omitempty"`
 	NotificationPolicy      NotificationPolicy `json:"notification_policy"`
+	SessionID               string             `json:"session_id,omitempty"`
 	SessionRef              string             `json:"session_ref,omitempty"`
 	SessionTitle            string             `json:"session_title,omitempty"`
 	SessionIsActive         bool               `json:"session_is_active,omitempty"`

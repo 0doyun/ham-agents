@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
@@ -19,11 +20,11 @@ type SessionLister interface {
 }
 
 type Server struct {
-	socketPath        string
-	registry          *hamruntime.Registry
-	managed           *hamruntime.ManagedService
-	settings          *hamruntime.SettingsService
-	teams             *hamruntime.TeamService
+	socketPath         string
+	registry           *hamruntime.Registry
+	managed            *hamruntime.ManagedService
+	settings           *hamruntime.SettingsService
+	teams              *hamruntime.TeamService
 	itermSessionLister SessionLister
 	tmuxSessionLister  SessionLister
 
@@ -300,27 +301,66 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		}
 		return Response{Settings: &settings}, nil
 	case CommandHookToolStart:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
 		if err := s.registry.RecordHookToolStart(ctx, request.AgentID, request.ToolName, request.ToolInputPreview, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
 	case CommandHookToolDone:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
 		if err := s.registry.RecordHookToolDone(ctx, request.AgentID, request.ToolName, request.ToolInputPreview, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
+	case CommandHookNotification:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookNotification(ctx, request.AgentID, request.NotificationType, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookStopFailure:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookStopFailure(ctx, request.AgentID, request.ErrorType, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookSessionStart:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookSessionStart(ctx, request.AgentID, request.SessionID, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
 	case CommandHookSessionEnd:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
 		if err := s.registry.RecordHookSessionEnd(ctx, request.AgentID, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
 	case CommandHookAgentSpawned:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
 		if err := s.registry.RecordHookAgentSpawned(ctx, request.AgentID, request.Description, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
 	case CommandHookAgentFinished:
-		if err := s.registry.RecordHookAgentFinished(ctx, request.AgentID, request.OmcMode); err != nil {
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookAgentFinished(ctx, request.AgentID, request.Description, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
@@ -339,4 +379,34 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 	default:
 		return Response{}, fmt.Errorf("unsupported command %q", request.Command)
 	}
+}
+
+func (s *Server) prepareHookRequest(ctx context.Context, request *Request) error {
+	if request == nil {
+		return fmt.Errorf("hook request is required")
+	}
+	if strings.TrimSpace(request.SessionID) != "" && strings.TrimSpace(request.AgentID) != "" {
+		if err := s.registry.RecordHookSessionSeen(ctx, request.AgentID, request.SessionID); err != nil {
+			return err
+		}
+	}
+	resolvedAgentID, err := s.resolveHookAgentID(ctx, *request)
+	if err != nil {
+		return err
+	}
+	request.AgentID = resolvedAgentID
+	return nil
+}
+
+func (s *Server) resolveHookAgentID(ctx context.Context, request Request) (string, error) {
+	if sessionID := strings.TrimSpace(request.SessionID); sessionID != "" {
+		agent, err := s.registry.FindAgentBySessionID(ctx, sessionID)
+		if err == nil {
+			return agent.ID, nil
+		}
+	}
+	if agentID := strings.TrimSpace(request.AgentID); agentID != "" {
+		return agentID, nil
+	}
+	return "", fmt.Errorf("hook request requires HAM_AGENT_ID or a known session_id")
 }
