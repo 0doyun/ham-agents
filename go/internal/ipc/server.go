@@ -428,6 +428,17 @@ func (s *Server) resolveHookAgentID(ctx context.Context, request Request) (strin
 		if err == nil {
 			return agent.ID, nil
 		}
+		// Auto-register a new agent when SessionStart fires with an unknown session.
+		// This lets plain `claude` sessions get tracked without `ham run claude`.
+		if request.Command == CommandHookSessionStart {
+			newAgent, regErr := s.registry.RegisterManaged(ctx, hamruntime.RegisterManagedInput{
+				Provider: "claude",
+			})
+			if regErr != nil {
+				return "", fmt.Errorf("auto-register agent for session %q: %w", sessionID, regErr)
+			}
+			return newAgent.ID, nil
+		}
 	}
 	if agentID := strings.TrimSpace(request.AgentID); agentID != "" {
 		return agentID, nil
