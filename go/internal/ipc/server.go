@@ -302,6 +302,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{Settings: &settings}, nil
 	case CommandHookToolStart:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookToolStart(ctx, request.AgentID, request.ToolName, request.ToolInputPreview, request.OmcMode); err != nil {
@@ -310,6 +313,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{}, nil
 	case CommandHookToolDone:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookToolDone(ctx, request.AgentID, request.ToolName, request.ToolInputPreview, request.OmcMode); err != nil {
@@ -318,6 +324,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{}, nil
 	case CommandHookNotification:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookNotification(ctx, request.AgentID, request.NotificationType, request.OmcMode); err != nil {
@@ -326,6 +335,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{}, nil
 	case CommandHookStopFailure:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookStopFailure(ctx, request.AgentID, request.ErrorType, request.OmcMode); err != nil {
@@ -334,6 +346,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{}, nil
 	case CommandHookSessionStart:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookSessionStart(ctx, request.AgentID, request.SessionID, request.OmcMode); err != nil {
@@ -342,6 +357,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{}, nil
 	case CommandHookSessionEnd:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookSessionEnd(ctx, request.AgentID, request.OmcMode); err != nil {
@@ -350,6 +368,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{}, nil
 	case CommandHookAgentSpawned:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookAgentSpawned(ctx, request.AgentID, request.Description, request.OmcMode); err != nil {
@@ -358,6 +379,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{}, nil
 	case CommandHookAgentFinished:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookAgentFinished(ctx, request.AgentID, request.Description, request.OmcMode); err != nil {
@@ -366,6 +390,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{}, nil
 	case CommandHookStop:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookStop(ctx, request.AgentID, request.OmcMode); err != nil {
@@ -374,6 +401,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{}, nil
 	case CommandHookTeammateIdle:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookTeammateIdle(ctx, request.AgentID, request.TeammateName, request.TeamRole, request.OmcMode); err != nil {
@@ -382,6 +412,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{}, nil
 	case CommandHookTaskCreated:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookTaskCreated(ctx, request.AgentID, request.TaskName, request.TaskDescription, request.OmcMode); err != nil {
@@ -390,6 +423,9 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		return Response{}, nil
 	case CommandHookTaskCompleted:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookTaskCompleted(ctx, request.AgentID, request.TaskName, request.OmcMode); err != nil {
@@ -425,6 +461,9 @@ func (s *Server) prepareHookRequest(ctx context.Context, request *Request) error
 	resolvedAgentID, err := s.resolveHookAgentID(ctx, *request)
 	if err != nil {
 		return err
+	}
+	if resolvedAgentID == "" {
+		return errNoAgent
 	}
 	request.AgentID = resolvedAgentID
 	if strings.TrimSpace(request.SessionID) != "" {
@@ -463,5 +502,12 @@ func (s *Server) resolveHookAgentID(ctx context.Context, request Request) (strin
 	if agentID := strings.TrimSpace(request.AgentID); agentID != "" {
 		return agentID, nil
 	}
-	return "", fmt.Errorf("hook request requires HAM_AGENT_ID or a known session_id")
+	// For non-SessionStart hooks, silently ignore if no agent is found.
+	// This avoids errors when e.g. a Stop hook fires after the agent was removed.
+	return "", errNoAgent
 }
+
+// errNoAgent is returned when a hook fires but no matching agent exists.
+// The server treats this as a no-op rather than an error.
+var errNoAgent = fmt.Errorf("no matching agent")
+
