@@ -422,7 +422,26 @@ func (r *Registry) RecordHookTaskCreated(ctx context.Context, agentID string, ta
 }
 
 func (r *Registry) RecordHookTaskCompleted(ctx context.Context, agentID string, taskName string, omcMode string) error {
-	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+	// If this agent has no tasks, find the team lead (agent with tasks) in the same project.
+	targetID := agentID
+	agents, _ := r.store.LoadAgents(ctx)
+	var thisAgent *core.Agent
+	for i := range agents {
+		if agents[i].ID == agentID {
+			thisAgent = &agents[i]
+			break
+		}
+	}
+	if thisAgent != nil && thisAgent.TeamTaskTotal == 0 {
+		for _, a := range agents {
+			if a.ID != agentID && a.TeamTaskTotal > 0 && a.ProjectPath == thisAgent.ProjectPath {
+				targetID = a.ID
+				break
+			}
+		}
+	}
+
+	_, err := r.mutateAgent(ctx, targetID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
 		applyOmcMode(agent, omcMode)
 		if agent.TeamTaskCompleted < agent.TeamTaskTotal {
 			agent.TeamTaskCompleted++
