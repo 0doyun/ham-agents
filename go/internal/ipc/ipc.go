@@ -51,6 +51,7 @@ const (
 	CommandHookSessionEnd        Command = "hook.session-end"
 	CommandHookAgentSpawned      Command = "hook.agent-spawned"
 	CommandHookAgentFinished     Command = "hook.agent-finished"
+	CommandHookStop              Command = "hook.stop"
 	CommandHookTeammateIdle      Command = "hook.teammate-idle"
 	CommandHookTaskCreated       Command = "hook.task-created"
 	CommandHookTaskCompleted     Command = "hook.task-completed"
@@ -438,6 +439,11 @@ func (c *Client) HookAgentSpawned(ctx context.Context, agentID string, sessionID
 
 func (c *Client) HookAgentFinished(ctx context.Context, agentID string, sessionID string, description string, omcMode string) error {
 	_, err := c.request(ctx, Request{Command: CommandHookAgentFinished, AgentID: agentID, SessionID: sessionID, Description: description, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookStop(ctx context.Context, agentID string, sessionID string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookStop, AgentID: agentID, SessionID: sessionID, OmcMode: omcMode})
 	return err
 }
 

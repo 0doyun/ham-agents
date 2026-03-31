@@ -340,6 +340,8 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 		return client.HookStopFailure(ctx, agentID, payload.SessionID, payload.ErrorType, detectOmcMode())
 	case "session-start":
 		return client.HookSessionStart(ctx, agentID, payload.SessionID, detectOmcMode())
+	case "stop":
+		return client.HookStop(ctx, agentID, payload.SessionID, detectOmcMode())
 	case "session-end":
 		return client.HookSessionEnd(ctx, agentID, payload.SessionID, detectOmcMode())
 	case "subagent-start", "agent-spawned":

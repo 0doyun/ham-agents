@@ -79,7 +79,7 @@ func runSetupWith(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	fmt.Fprintln(stdout, "  Notification:  ham hook notification")
 	fmt.Fprintln(stdout, "  StopFailure:   ham hook stop-failure")
 	fmt.Fprintln(stdout, "  SessionStart:  ham hook session-start")
-	fmt.Fprintln(stdout, "  Stop:          ham hook session-end")
+	fmt.Fprintln(stdout, "  Stop:          ham hook stop")
 	fmt.Fprintln(stdout, "  SessionEnd:    ham hook session-end")
 	fmt.Fprintln(stdout, "  SubagentStart: ham hook subagent-start")
 	fmt.Fprintln(stdout, "  SubagentStop:  ham hook subagent-stop")
@@ -201,7 +201,7 @@ func mergeHamHooks(settings map[string]interface{}) {
 		"Notification":  hamHookMatcherGroup("ham hook notification"),
 		"StopFailure":   hamHookMatcherGroup("ham hook stop-failure"),
 		"SessionStart":  hamHookMatcherGroup("ham hook session-start"),
-		"Stop":          hamHookMatcherGroup("ham hook session-end"),
+		"Stop":          hamHookMatcherGroup("ham hook stop"),
 		"SessionEnd":    hamHookMatcherGroup("ham hook session-end"),
 		"SubagentStart": hamHookMatcherGroup("ham hook subagent-start"),
 		"SubagentStop":  hamHookMatcherGroup("ham hook subagent-stop"),
