@@ -510,6 +510,18 @@ func runStop(ctx context.Context, client *ipc.Client, args []string) error {
 	return renderStopResult(os.Stdout, agentID, asJSON)
 }
 
+func runRename(ctx context.Context, client *ipc.Client, args []string) error {
+	if len(args) < 2 {
+		return fmt.Errorf("usage: ham rename <agent-id> <new-name>")
+	}
+	agent, err := client.RenameAgent(ctx, args[0], strings.Join(args[1:], " "))
+	if err != nil {
+		return err
+	}
+	fmt.Printf("renamed to %s\n", agent.DisplayName)
+	return nil
+}
+
 func runDown(_ context.Context, client *ipc.Client, _ []string) error {
 	ctx := context.Background()
 
