@@ -364,6 +364,14 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{}, nil
+	case CommandHookStop:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookStop(ctx, request.AgentID, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
 	case CommandHookTeammateIdle:
 		if err := s.prepareHookRequest(ctx, &request); err != nil {
 			return Response{}, err

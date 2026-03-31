@@ -263,6 +263,27 @@ func (r *Registry) RecordHookSessionStart(ctx context.Context, agentID string, s
 	return err
 }
 
+func (r *Registry) RecordHookStop(ctx context.Context, agentID string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.Status = core.AgentStatusIdle
+		agent.StatusConfidence = 1
+		agent.StatusReason = "Hook: response completed."
+		agent.LastUserVisibleSummary = "Waiting for next prompt."
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentStatusUpdated,
+			Summary:             "Response completed, waiting for input.",
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
 func (r *Registry) RecordHookSessionEnd(ctx context.Context, agentID string, omcMode string) error {
 	agents, err := r.store.LoadAgents(ctx)
 	if err != nil {
