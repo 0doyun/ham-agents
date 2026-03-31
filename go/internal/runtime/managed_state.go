@@ -453,6 +453,13 @@ func (r *Registry) RecordHookTaskCompleted(ctx context.Context, agentID string, 
 		}
 		agent.LastUserVisibleSummary = summary
 		pushRecentTool(agent, summary)
+		// Reset team data when all tasks are done.
+		if agent.TeamTaskCompleted >= agent.TeamTaskTotal && agent.TeamTaskTotal > 0 {
+			agent.TeamRole = ""
+			agent.TeamTaskTotal = 0
+			agent.TeamTaskCompleted = 0
+			summary = fmt.Sprintf("All tasks completed (%s)", summary)
+		}
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeTeamTaskCompleted,
