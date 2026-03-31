@@ -531,7 +531,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookToolStart should transition agent to a tool-related status.
-	if err := client.HookToolStart(context.Background(), agent.ID, "", "Read", "go/internal/ipc/server.go", "ralph"); err != nil {
+	if err := client.HookToolStart(context.Background(), agent.ID, "", "", "Read", "go/internal/ipc/server.go", "ralph"); err != nil {
 		t.Fatalf("hook tool-start: %v", err)
 	}
 	snapshot, err := client.Status(context.Background())
@@ -559,7 +559,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookToolDone should transition back to thinking.
-	if err := client.HookToolDone(context.Background(), agent.ID, "", "Read", "go/internal/ipc/server.go", "ralph"); err != nil {
+	if err := client.HookToolDone(context.Background(), agent.ID, "", "", "Read", "go/internal/ipc/server.go", "ralph"); err != nil {
 		t.Fatalf("hook tool-done: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -570,7 +570,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 		t.Fatalf("expected thinking status after tool-done, got %q", snapshot.Agents[0].Status)
 	}
 
-	if err := client.HookNotification(context.Background(), agent.ID, "session-1", "permission_prompt", "ralph"); err != nil {
+	if err := client.HookNotification(context.Background(), agent.ID, "session-1", "iterm2://session/agent-1", "permission_prompt", "ralph"); err != nil {
 		t.Fatalf("hook notification: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -585,7 +585,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookAgentSpawned should increment SubAgentCount.
-	if err := client.HookAgentSpawned(context.Background(), agent.ID, "session-1", "sub-task", "ralph"); err != nil {
+	if err := client.HookAgentSpawned(context.Background(), agent.ID, "session-1", "iterm2://session/agent-1", "sub-task", "ralph"); err != nil {
 		t.Fatalf("hook agent-spawned: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -597,7 +597,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookAgentFinished should decrement SubAgentCount.
-	if err := client.HookAgentFinished(context.Background(), agent.ID, "session-1", "sub-task", "ralph"); err != nil {
+	if err := client.HookAgentFinished(context.Background(), agent.ID, "session-1", "iterm2://session/agent-1", "sub-task", "ralph"); err != nil {
 		t.Fatalf("hook agent-finished: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -608,7 +608,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 		t.Fatalf("expected SubAgentCount 0, got %d", snapshot.Agents[0].SubAgentCount)
 	}
 
-	if err := client.HookStopFailure(context.Background(), "", "session-1", "rate_limit", "ralph"); err != nil {
+	if err := client.HookStopFailure(context.Background(), "", "session-1", "iterm2://session/agent-1", "rate_limit", "ralph"); err != nil {
 		t.Fatalf("hook stop-failure: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -622,7 +622,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 		t.Fatalf("expected error type rate_limit, got %q", snapshot.Agents[0].ErrorType)
 	}
 
-	if err := client.HookSessionStart(context.Background(), agent.ID, "session-1", "ralph"); err != nil {
+	if err := client.HookSessionStart(context.Background(), agent.ID, "session-1", "iterm2://session/agent-1", "/tmp/project", "ralph"); err != nil {
 		t.Fatalf("hook session-start: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -633,7 +633,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 		t.Fatalf("expected booting after session-start, got %q", snapshot.Agents[0].Status)
 	}
 
-	if err := client.HookSessionEnd(context.Background(), "", "session-1", "ralph"); err != nil {
+	if err := client.HookSessionEnd(context.Background(), "", "session-1", "iterm2://session/agent-1", "ralph"); err != nil {
 		t.Fatalf("hook session-end: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -704,7 +704,8 @@ func TestSessionStartAutoRegistersAgent(t *testing.T) {
 
 	// No agent registered yet. SessionStart with a session_id should auto-register.
 	sessionID := "auto-test-session-123"
-	if err := client.HookSessionStart(context.Background(), "", sessionID, ""); err != nil {
+	sessionRef := "iterm2://session/auto-test-session-123"
+	if err := client.HookSessionStart(context.Background(), "", sessionID, sessionRef, "/tmp/auto-project", ""); err != nil {
 		t.Fatalf("hook session-start (auto-register): %v", err)
 	}
 
@@ -723,9 +724,15 @@ func TestSessionStartAutoRegistersAgent(t *testing.T) {
 	if autoAgent.SessionID != sessionID {
 		t.Fatalf("expected session_id=%q, got %q", sessionID, autoAgent.SessionID)
 	}
+	if autoAgent.SessionRef != sessionRef {
+		t.Fatalf("expected session_ref=%q, got %q", sessionRef, autoAgent.SessionRef)
+	}
+	if autoAgent.ProjectPath != "/tmp/auto-project" {
+		t.Fatalf("expected project_path=/tmp/auto-project, got %q", autoAgent.ProjectPath)
+	}
 
 	// Subsequent hooks should find the auto-registered agent by agent ID.
-	if err := client.HookToolStart(context.Background(), autoAgent.ID, sessionID, "Edit", "main.go", ""); err != nil {
+	if err := client.HookToolStart(context.Background(), autoAgent.ID, sessionID, sessionRef, "Edit", "main.go", ""); err != nil {
 		t.Fatalf("hook tool-start after auto-register: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -740,7 +747,7 @@ func TestSessionStartAutoRegistersAgent(t *testing.T) {
 	}
 
 	// SessionEnd should remove the auto-registered agent.
-	if err := client.HookSessionEnd(context.Background(), "", sessionID, ""); err != nil {
+	if err := client.HookSessionEnd(context.Background(), "", sessionID, sessionRef, ""); err != nil {
 		t.Fatalf("hook session-end: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())

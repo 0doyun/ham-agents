@@ -25,14 +25,17 @@ func TestQuickMessageSenderUsesTerminalWriteWhenCommandsSucceed(t *testing.T) {
 	if result != "sent via iTerm automation" {
 		t.Fatalf("unexpected result %q", result)
 	}
-	if len(runner.calls) != 2 {
-		t.Fatalf("expected 2 calls, got %d", len(runner.calls))
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected 1 osascript call plus no fallback, got %d", len(runner.calls))
 	}
-	if runner.calls[0].name != "open" || runner.calls[1].name != "osascript" {
+	if runner.calls[0].name != "osascript" {
 		t.Fatalf("unexpected calls %#v", runner.calls)
 	}
-	if len(runner.calls[1].args) < 2 || !strings.Contains(runner.calls[1].args[1], `id of aSession is "abc"`) {
-		t.Fatalf("expected targeted iTerm session script, got %#v", runner.calls[1].args)
+	if len(runner.calls[0].args) < 2 || !strings.Contains(runner.calls[0].args[1], `(id of aSession as string) is "abc"`) {
+		t.Fatalf("expected targeted iTerm session script, got %#v", runner.calls[0].args)
+	}
+	if strings.Contains(runner.calls[0].args[1], `tell current window`) {
+		t.Fatalf("expected no fallback current-session write, got %#v", runner.calls[0].args)
 	}
 }
 

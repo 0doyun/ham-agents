@@ -323,6 +323,7 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 
 	payload := readHookPayload(os.Stdin)
 	agentID := os.Getenv("HAM_AGENT_ID")
+	sessionRef := detectSessionRef()
 	if agentID == "" && payload.SessionID == "" {
 		return fmt.Errorf("HAM_AGENT_ID environment variable is required")
 	}
@@ -330,38 +331,38 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 	switch args[0] {
 	case "tool-start":
 		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
-		return client.HookToolStart(ctx, agentID, payload.SessionID, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
+		return client.HookToolStart(ctx, agentID, payload.SessionID, sessionRef, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
 	case "tool-done":
 		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
-		return client.HookToolDone(ctx, agentID, payload.SessionID, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
+		return client.HookToolDone(ctx, agentID, payload.SessionID, sessionRef, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
 	case "notification":
-		return client.HookNotification(ctx, agentID, payload.SessionID, payload.NotificationType, detectOmcMode())
+		return client.HookNotification(ctx, agentID, payload.SessionID, sessionRef, payload.NotificationType, detectOmcMode())
 	case "stop-failure":
-		return client.HookStopFailure(ctx, agentID, payload.SessionID, payload.ErrorType, detectOmcMode())
+		return client.HookStopFailure(ctx, agentID, payload.SessionID, sessionRef, payload.ErrorType, detectOmcMode())
 	case "session-start":
-		return client.HookSessionStart(ctx, agentID, payload.SessionID, detectOmcMode())
+		return client.HookSessionStart(ctx, agentID, payload.SessionID, sessionRef, payload.Cwd, detectOmcMode())
 	case "stop":
-		return client.HookStop(ctx, agentID, payload.SessionID, detectOmcMode())
+		return client.HookStop(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
 	case "session-end":
-		return client.HookSessionEnd(ctx, agentID, payload.SessionID, detectOmcMode())
+		return client.HookSessionEnd(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
 	case "subagent-start", "agent-spawned":
 		description := parseHookDescription(args[1:])
 		if description == "" {
 			description = payload.subagentDescription()
 		}
-		return client.HookAgentSpawned(ctx, agentID, payload.SessionID, description, detectOmcMode())
+		return client.HookAgentSpawned(ctx, agentID, payload.SessionID, sessionRef, description, detectOmcMode())
 	case "subagent-stop", "agent-finished":
 		description := parseHookDescription(args[1:])
 		if description == "" {
 			description = payload.subagentCompletionDescription()
 		}
-		return client.HookAgentFinished(ctx, agentID, payload.SessionID, description, detectOmcMode())
+		return client.HookAgentFinished(ctx, agentID, payload.SessionID, sessionRef, description, detectOmcMode())
 	case "teammate-idle":
-		return client.HookTeammateIdle(ctx, agentID, payload.SessionID, payload.TeammateName, payload.TeamRole, detectOmcMode())
+		return client.HookTeammateIdle(ctx, agentID, payload.SessionID, sessionRef, payload.TeammateName, payload.TeamRole, detectOmcMode())
 	case "task-created":
-		return client.HookTaskCreated(ctx, agentID, payload.SessionID, payload.TaskName, payload.TaskDescription, detectOmcMode())
+		return client.HookTaskCreated(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, payload.TaskDescription, detectOmcMode())
 	case "task-completed":
-		return client.HookTaskCompleted(ctx, agentID, payload.SessionID, payload.TaskName, detectOmcMode())
+		return client.HookTaskCompleted(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, detectOmcMode())
 	default:
 		return fmt.Errorf("unsupported hook subcommand %q", args[0])
 	}
@@ -378,6 +379,7 @@ func parseHookDescription(args []string) string {
 
 type hookPayload struct {
 	SessionID           string         `json:"session_id"`
+	Cwd                 string         `json:"cwd"`
 	ToolName            string         `json:"tool_name"`
 	ToolInput           map[string]any `json:"tool_input"`
 	NotificationType    string         `json:"notification_type"`

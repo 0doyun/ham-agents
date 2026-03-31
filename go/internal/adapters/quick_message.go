@@ -75,9 +75,6 @@ func (s QuickMessageSender) tryTerminalWrite(target core.OpenTarget, message str
 		}
 		return s.runner.Run("osascript", "-e", appleScriptWrite(message))
 	case core.OpenTargetKindItermSession:
-		if err := s.runner.Run("open", target.Value); err != nil {
-			return err
-		}
 		return s.runner.Run("osascript", "-e", appleScriptWriteToSession(target.SessionID, message))
 	case core.OpenTargetKindWorkspace:
 		if err := s.runner.Run("open", "-a", "iTerm", target.Value); err != nil {
@@ -144,18 +141,14 @@ func appleScriptWriteToSession(sessionID string, message string) string {
 	script.WriteString(`    repeat with aWindow in windows` + "\n")
 	script.WriteString(`        repeat with aTab in tabs of aWindow` + "\n")
 	script.WriteString(`            repeat with aSession in sessions of aTab` + "\n")
-	script.WriteString(`                if id of aSession is "` + escapedSessionID + `" then` + "\n")
+	script.WriteString(`                if (id of aSession as string) is "` + escapedSessionID + `" then` + "\n")
 	script.WriteString(`                    tell aSession to write text "` + escapedMessage + `"` + "\n")
 	script.WriteString(`                    return` + "\n")
 	script.WriteString(`                end if` + "\n")
 	script.WriteString(`            end repeat` + "\n")
 	script.WriteString(`        end repeat` + "\n")
 	script.WriteString(`    end repeat` + "\n")
-	script.WriteString(`    tell current window` + "\n")
-	script.WriteString(`        tell current session` + "\n")
-	script.WriteString(`            write text "` + escapedMessage + `"` + "\n")
-	script.WriteString(`        end tell` + "\n")
-	script.WriteString(`    end tell` + "\n")
+	script.WriteString(`    error "session not found" number 1` + "\n")
 	script.WriteString(`end tell`)
 	return script.String()
 }

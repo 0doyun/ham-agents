@@ -427,6 +427,16 @@ func (s *Server) prepareHookRequest(ctx context.Context, request *Request) error
 		return err
 	}
 	request.AgentID = resolvedAgentID
+	if strings.TrimSpace(request.SessionID) != "" {
+		if err := s.registry.RecordHookSessionSeen(ctx, request.AgentID, request.SessionID); err != nil {
+			return err
+		}
+	}
+	if strings.TrimSpace(request.SessionRef) != "" {
+		if err := s.registry.RecordHookSessionRefSeen(ctx, request.AgentID, request.SessionRef); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -440,7 +450,9 @@ func (s *Server) resolveHookAgentID(ctx context.Context, request Request) (strin
 		// This lets plain `claude` sessions get tracked without `ham run claude`.
 		if request.Command == CommandHookSessionStart {
 			newAgent, regErr := s.registry.RegisterManaged(ctx, hamruntime.RegisterManagedInput{
-				Provider: "claude",
+				Provider:    "claude",
+				ProjectPath: request.ProjectPath,
+				SessionRef:  request.SessionRef,
 			})
 			if regErr != nil {
 				return "", fmt.Errorf("auto-register agent for session %q: %w", sessionID, regErr)

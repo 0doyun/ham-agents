@@ -402,63 +402,63 @@ func (c *Client) Shutdown(ctx context.Context) error {
 	return err
 }
 
-func (c *Client) HookToolStart(ctx context.Context, agentID string, sessionID string, toolName string, toolInputPreview string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookToolStart, AgentID: agentID, SessionID: sessionID, ToolName: toolName, ToolInputPreview: toolInputPreview, OmcMode: omcMode})
+func (c *Client) HookToolStart(ctx context.Context, agentID string, sessionID string, sessionRef string, toolName string, toolInputPreview string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookToolStart, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, ToolName: toolName, ToolInputPreview: toolInputPreview, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookToolDone(ctx context.Context, agentID string, sessionID string, toolName string, toolInputPreview string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookToolDone, AgentID: agentID, SessionID: sessionID, ToolName: toolName, ToolInputPreview: toolInputPreview, OmcMode: omcMode})
+func (c *Client) HookToolDone(ctx context.Context, agentID string, sessionID string, sessionRef string, toolName string, toolInputPreview string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookToolDone, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, ToolName: toolName, ToolInputPreview: toolInputPreview, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookNotification(ctx context.Context, agentID string, sessionID string, notificationType string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookNotification, AgentID: agentID, SessionID: sessionID, NotificationType: notificationType, OmcMode: omcMode})
+func (c *Client) HookNotification(ctx context.Context, agentID string, sessionID string, sessionRef string, notificationType string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookNotification, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, NotificationType: notificationType, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookStopFailure(ctx context.Context, agentID string, sessionID string, errorType string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookStopFailure, AgentID: agentID, SessionID: sessionID, ErrorType: errorType, OmcMode: omcMode})
+func (c *Client) HookStopFailure(ctx context.Context, agentID string, sessionID string, sessionRef string, errorType string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookStopFailure, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, ErrorType: errorType, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookSessionStart(ctx context.Context, agentID string, sessionID string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookSessionStart, AgentID: agentID, SessionID: sessionID, OmcMode: omcMode})
+func (c *Client) HookSessionStart(ctx context.Context, agentID string, sessionID string, sessionRef string, projectPath string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookSessionStart, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, ProjectPath: projectPath, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookSessionEnd(ctx context.Context, agentID string, sessionID string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookSessionEnd, AgentID: agentID, SessionID: sessionID, OmcMode: omcMode})
+func (c *Client) HookSessionEnd(ctx context.Context, agentID string, sessionID string, sessionRef string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookSessionEnd, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookAgentSpawned(ctx context.Context, agentID string, sessionID string, description string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookAgentSpawned, AgentID: agentID, SessionID: sessionID, Description: description, OmcMode: omcMode})
+func (c *Client) HookAgentSpawned(ctx context.Context, agentID string, sessionID string, sessionRef string, description string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookAgentSpawned, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, Description: description, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookAgentFinished(ctx context.Context, agentID string, sessionID string, description string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookAgentFinished, AgentID: agentID, SessionID: sessionID, Description: description, OmcMode: omcMode})
+func (c *Client) HookAgentFinished(ctx context.Context, agentID string, sessionID string, sessionRef string, description string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookAgentFinished, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, Description: description, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookStop(ctx context.Context, agentID string, sessionID string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookStop, AgentID: agentID, SessionID: sessionID, OmcMode: omcMode})
+func (c *Client) HookStop(ctx context.Context, agentID string, sessionID string, sessionRef string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookStop, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookTeammateIdle(ctx context.Context, agentID string, sessionID string, teammateName string, teamRole string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookTeammateIdle, AgentID: agentID, SessionID: sessionID, TeammateName: teammateName, TeamRole: teamRole, OmcMode: omcMode})
+func (c *Client) HookTeammateIdle(ctx context.Context, agentID string, sessionID string, sessionRef string, teammateName string, teamRole string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookTeammateIdle, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, TeammateName: teammateName, TeamRole: teamRole, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookTaskCreated(ctx context.Context, agentID string, sessionID string, taskName string, taskDescription string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookTaskCreated, AgentID: agentID, SessionID: sessionID, TaskName: taskName, TaskDescription: taskDescription, OmcMode: omcMode})
+func (c *Client) HookTaskCreated(ctx context.Context, agentID string, sessionID string, sessionRef string, taskName string, taskDescription string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookTaskCreated, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, TaskName: taskName, TaskDescription: taskDescription, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookTaskCompleted(ctx context.Context, agentID string, sessionID string, taskName string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookTaskCompleted, AgentID: agentID, SessionID: sessionID, TaskName: taskName, OmcMode: omcMode})
+func (c *Client) HookTaskCompleted(ctx context.Context, agentID string, sessionID string, sessionRef string, taskName string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookTaskCompleted, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, TaskName: taskName, OmcMode: omcMode})
 	return err
 }
 
