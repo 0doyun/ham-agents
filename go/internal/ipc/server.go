@@ -488,8 +488,10 @@ func (s *Server) resolveHookAgentID(ctx context.Context, request Request) (strin
 		// Auto-register a new agent when SessionStart fires with an unknown session.
 		// This lets plain `claude` sessions get tracked without `ham run claude`.
 		if request.Command == CommandHookSessionStart {
+			displayName := autoDisplayName(request.ProjectPath, s.registry, ctx)
 			newAgent, regErr := s.registry.RegisterManaged(ctx, hamruntime.RegisterManagedInput{
 				Provider:    "claude",
+				DisplayName: displayName,
 				ProjectPath: request.ProjectPath,
 				SessionRef:  request.SessionRef,
 			})
@@ -505,6 +507,39 @@ func (s *Server) resolveHookAgentID(ctx context.Context, request Request) (strin
 	// For non-SessionStart hooks, silently ignore if no agent is found.
 	// This avoids errors when e.g. a Stop hook fires after the agent was removed.
 	return "", errNoAgent
+}
+
+// autoDisplayName derives a display name from the project path (e.g. "/Users/gong/projects/ham-agents" → "ham-agents").
+// If an agent with the same name already exists, appends a number suffix.
+func autoDisplayName(projectPath string, registry *hamruntime.Registry, ctx context.Context) string {
+	base := "claude"
+	if projectPath != "" {
+		parts := strings.Split(strings.TrimRight(projectPath, "/"), "/")
+		if len(parts) > 0 && parts[len(parts)-1] != "" {
+			base = parts[len(parts)-1]
+		}
+	}
+
+	agents, err := registry.List(ctx)
+	if err != nil {
+		return base
+	}
+
+	taken := make(map[string]bool)
+	for _, a := range agents {
+		taken[a.DisplayName] = true
+	}
+
+	if !taken[base] {
+		return base
+	}
+	for i := 2; i <= 99; i++ {
+		candidate := fmt.Sprintf("%s-%d", base, i)
+		if !taken[candidate] {
+			return candidate
+		}
+	}
+	return base
 }
 
 // errNoAgent is returned when a hook fires but no matching agent exists.
