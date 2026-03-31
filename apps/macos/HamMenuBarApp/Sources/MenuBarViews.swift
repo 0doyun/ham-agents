@@ -116,43 +116,16 @@ struct MenuBarContentView: View {
                 } else {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(filteredNonAttentionAgents) { agent in
-                            Button {
-                                selectedAgentID = agent.id
-                                viewModel.selectedAgentID = agent.id
-                            } label: {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    HStack(spacing: 6) {
-                                        Text(agent.displayName)
-                                            .font(.body.weight(.medium))
-                                        if let teamRole = agent.teamRole, !teamRole.isEmpty {
-                                            TeamRoleBadge(role: teamRole)
-                                        }
-                                        if let omcMode = agent.omcMode, !omcMode.isEmpty {
-                                            OmcModeBadge(mode: omcMode)
-                                        }
-                                        if let progress = teamTaskProgressText(for: agent) {
-                                            Text(progress)
-                                                .font(.caption2.monospacedDigit())
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                    Text("\(viewModel.statusDisplayText(for: agent)) · \(agent.mode.rawValue) · \(viewModel.confidenceLevelText(for: agent)) \(viewModel.confidenceText(for: agent))")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                    if let summary = agent.lastUserVisibleSummary, !summary.isEmpty {
-                                        Text(summary)
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary.opacity(0.7))
-                                            .lineLimit(2)
-                                    }
+                            AgentListCard(
+                                agent: agent,
+                                isSelected: selectedAgentID == agent.id,
+                                statusText: "\(viewModel.statusDisplayText(for: agent)) · \(agent.mode.rawValue) · \(viewModel.confidenceLevelText(for: agent)) \(viewModel.confidenceText(for: agent))",
+                                progressText: teamTaskProgressText(for: agent),
+                                onSelect: {
+                                    selectedAgentID = agent.id
+                                    viewModel.selectedAgentID = agent.id
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(6)
-                                .background(selectedAgentID == agent.id ? Color.accentColor.opacity(0.15) : Color.clear)
-                                .clipShape(RoundedRectangle(cornerRadius: 6))
-                            }
-                            .buttonStyle(.plain)
+                            )
                         }
                     }
                 }
@@ -1036,6 +1009,58 @@ private func eventBadgeBackground(for emphasis: AgentEventEmphasis) -> Color {
         return .blue.opacity(0.18)
     case .neutral:
         return .gray.opacity(0.18)
+    }
+}
+
+private struct AgentListCard: View {
+    let agent: Agent
+    let isSelected: Bool
+    let statusText: String
+    let progressText: String?
+    let onSelect: () -> Void
+
+    @State private var isHovered = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Text(agent.displayName)
+                    .font(.body.weight(.medium))
+                if let teamRole = agent.teamRole, !teamRole.isEmpty {
+                    TeamRoleBadge(role: teamRole)
+                }
+                if let omcMode = agent.omcMode, !omcMode.isEmpty {
+                    OmcModeBadge(mode: omcMode)
+                }
+                if let progress = progressText {
+                    Text(progress)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Text(statusText)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            if let summary = agent.lastUserVisibleSummary, !summary.isEmpty {
+                Text(summary)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary.opacity(0.7))
+                    .lineLimit(2)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(6)
+        .background(
+            isSelected
+                ? Color.accentColor.opacity(0.15)
+                : isHovered ? Color.primary.opacity(0.06) : Color.clear
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
+        .onTapGesture { onSelect() }
+        .animation(.easeInOut(duration: 0.12), value: isHovered)
     }
 }
 

@@ -340,6 +340,9 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 	case "stop-failure":
 		return client.HookStopFailure(ctx, agentID, payload.SessionID, sessionRef, payload.ErrorType, detectOmcMode())
 	case "session-start":
+		if err := ensureUIRunning(); err != nil {
+			fmt.Fprintf(os.Stderr, "ham: warning: unable to auto-launch ham ui: %v\n", err)
+		}
 		return client.HookSessionStart(ctx, agentID, payload.SessionID, sessionRef, payload.Cwd, detectOmcMode())
 	case "stop":
 		return client.HookStop(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())

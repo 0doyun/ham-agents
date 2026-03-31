@@ -53,6 +53,8 @@ struct PixelOfficeView: View {
     let deskTheme: String
     var onSelectAgent: ((String) -> Void)? = nil
 
+    @State private var hoveredAgentID: String?
+
     private let wallHeight: CGFloat = 50
     private let rowHeight: CGFloat = 110
     private let colCount = 3
@@ -80,10 +82,16 @@ struct PixelOfficeView: View {
                 ForEach(cells) { cell in
                     hamsterCell(occupant: cell.occupant, cellWidth: cell.cellWidth)
                         .frame(width: cell.cellWidth, height: rowHeight)
-                        .position(x: cell.centerX, y: cell.centerY)
+                        .contentShape(Rectangle())
+                        .onHover { isHovered in
+                            hoveredAgentID = isHovered ? cell.occupant.agent.id : nil
+                        }
+                        .brightness(hoveredAgentID == cell.occupant.agent.id ? 0.08 : 0)
+                        .animation(.easeInOut(duration: 0.15), value: hoveredAgentID)
                         .onTapGesture {
                             onSelectAgent?(cell.occupant.agent.id)
                         }
+                        .position(x: cell.centerX, y: cell.centerY)
                 }
             }
             .frame(width: officeWidth, height: officeHeight)
