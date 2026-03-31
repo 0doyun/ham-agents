@@ -4,6 +4,7 @@
 DerivedData/
 Packages/
 
+.omc/
 .omx/logs/
 .omx/metrics.json
 .omx/state/
@@ -11,3 +12,8 @@ Packages/
 .omx/context/
 .omx/interviews/
 .omx/tmux-hook.json
+
+# Build artifacts
+bin/ham
+bin/hamd
+bin/ham-menubar

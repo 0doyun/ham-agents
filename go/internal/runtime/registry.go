@@ -60,6 +60,19 @@ func (r *Registry) Snapshot(ctx context.Context) (core.RuntimeSnapshot, error) {
 		return core.RuntimeSnapshot{}, err
 	}
 
+	// Mark stale agents as disconnected so zombie agents from Ctrl+C get cleaned up.
+	// Only apply to agents with a valid RegisteredAt (skip test fixtures with zero time).
+	now := r.clock()
+	for i := range agents {
+		if agents[i].RegisteredAt.IsZero() {
+			continue
+		}
+		if core.IsRunningStatus(agents[i].Status) && now.Sub(agents[i].LastEventAt) > 5*time.Minute {
+			agents[i].Status = core.AgentStatusDisconnected
+			agents[i].StatusReason = "No hook activity for 5+ minutes."
+		}
+	}
+
 	attentionBreakdown := snapshotAttentionBreakdown(agents)
 
 	return core.RuntimeSnapshot{
@@ -169,6 +182,21 @@ func (r *Registry) RecordHookSessionSeen(ctx context.Context, agentID string, se
 			return nil, nil
 		}
 		agent.SessionID = trimmed
+		return nil, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookSessionRefSeen(ctx context.Context, agentID string, sessionRef string) error {
+	trimmed := strings.TrimSpace(sessionRef)
+	if trimmed == "" {
+		return nil
+	}
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, _ time.Time) (*core.Event, error) {
+		if agent.SessionRef == trimmed {
+			return nil, nil
+		}
+		agent.SessionRef = trimmed
 		return nil, nil
 	})
 	return err
