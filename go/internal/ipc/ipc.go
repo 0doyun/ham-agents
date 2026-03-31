@@ -401,13 +401,13 @@ func (c *Client) Shutdown(ctx context.Context) error {
 	return err
 }
 
-func (c *Client) HookToolStart(ctx context.Context, agentID string, toolName string, toolInputPreview string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookToolStart, AgentID: agentID, ToolName: toolName, ToolInputPreview: toolInputPreview, OmcMode: omcMode})
+func (c *Client) HookToolStart(ctx context.Context, agentID string, sessionID string, toolName string, toolInputPreview string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookToolStart, AgentID: agentID, SessionID: sessionID, ToolName: toolName, ToolInputPreview: toolInputPreview, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookToolDone(ctx context.Context, agentID string, toolName string, toolInputPreview string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookToolDone, AgentID: agentID, ToolName: toolName, ToolInputPreview: toolInputPreview, OmcMode: omcMode})
+func (c *Client) HookToolDone(ctx context.Context, agentID string, sessionID string, toolName string, toolInputPreview string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookToolDone, AgentID: agentID, SessionID: sessionID, ToolName: toolName, ToolInputPreview: toolInputPreview, OmcMode: omcMode})
 	return err
 }
 

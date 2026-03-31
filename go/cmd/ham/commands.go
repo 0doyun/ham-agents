@@ -330,10 +330,10 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 	switch args[0] {
 	case "tool-start":
 		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
-		return client.HookToolStart(ctx, agentID, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
+		return client.HookToolStart(ctx, agentID, payload.SessionID, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
 	case "tool-done":
 		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
-		return client.HookToolDone(ctx, agentID, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
+		return client.HookToolDone(ctx, agentID, payload.SessionID, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
 	case "notification":
 		return client.HookNotification(ctx, agentID, payload.SessionID, payload.NotificationType, detectOmcMode())
 	case "stop-failure":
