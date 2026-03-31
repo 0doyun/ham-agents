@@ -5,13 +5,15 @@ DerivedData/
 Packages/
 
 .omc/
-.omx/logs/
-.omx/metrics.json
-.omx/state/
-.omx/notepad.md
-.omx/context/
-.omx/interviews/
-.omx/tmux-hook.json
+.omx/
+
+AGENTS.md
+spec.md
+tasks.md
+roadmap.md
+generate_office_bg.py
+docs/assumptions.md
+docs/progress.md
 
 # Build artifacts
 bin/ham
