@@ -119,6 +119,10 @@ Claude Code              agent registry
 
 ## Development
 
+> **Just want to use ham-agents?** Use `brew install` above. This section is for contributing to the project.
+
+Requires Go 1.21+, Swift 5.10+, and Xcode (for Swift compilation).
+
 ```bash
 git clone https://github.com/0doyun/ham-agents.git
 cd ham-agents
