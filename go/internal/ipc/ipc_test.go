@@ -531,7 +531,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookToolStart should transition agent to a tool-related status.
-	if err := client.HookToolStart(context.Background(), agent.ID, "Read", "go/internal/ipc/server.go", "ralph"); err != nil {
+	if err := client.HookToolStart(context.Background(), agent.ID, "", "Read", "go/internal/ipc/server.go", "ralph"); err != nil {
 		t.Fatalf("hook tool-start: %v", err)
 	}
 	snapshot, err := client.Status(context.Background())
@@ -559,7 +559,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookToolDone should transition back to thinking.
-	if err := client.HookToolDone(context.Background(), agent.ID, "Read", "go/internal/ipc/server.go", "ralph"); err != nil {
+	if err := client.HookToolDone(context.Background(), agent.ID, "", "Read", "go/internal/ipc/server.go", "ralph"); err != nil {
 		t.Fatalf("hook tool-done: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -725,7 +725,7 @@ func TestSessionStartAutoRegistersAgent(t *testing.T) {
 	}
 
 	// Subsequent hooks should find the auto-registered agent by agent ID.
-	if err := client.HookToolStart(context.Background(), autoAgent.ID, "Edit", "main.go", ""); err != nil {
+	if err := client.HookToolStart(context.Background(), autoAgent.ID, sessionID, "Edit", "main.go", ""); err != nil {
 		t.Fatalf("hook tool-start after auto-register: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
