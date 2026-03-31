@@ -280,6 +280,12 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{Agent: &agent}, nil
+	case CommandRenameAgent:
+		agent, err := s.registry.Rename(ctx, request.AgentID, request.DisplayName)
+		if err != nil {
+			return Response{}, err
+		}
+		return Response{Agent: &agent}, nil
 	case CommandRemoveAgent:
 		if err := s.registry.Remove(ctx, request.AgentID); err != nil {
 			return Response{}, err

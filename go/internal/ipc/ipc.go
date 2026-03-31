@@ -39,6 +39,7 @@ const (
 	CommandFollowEvents          Command = "events.follow"
 	CommandSetNotificationPolicy Command = "agents.set_notification_policy"
 	CommandSetRole               Command = "agents.set_role"
+	CommandRenameAgent           Command = "agents.rename"
 	CommandRemoveAgent           Command = "agents.remove"
 	CommandGetSettings           Command = "settings.get"
 	CommandUpdateSettings        Command = "settings.update"
@@ -372,6 +373,17 @@ func (c *Client) UpdateRole(ctx context.Context, agentID string, role string) (c
 		AgentID: agentID,
 		Role:    role,
 	})
+	if err != nil {
+		return core.Agent{}, err
+	}
+	if response.Agent == nil {
+		return core.Agent{}, fmt.Errorf("daemon response missing agent payload")
+	}
+	return *response.Agent, nil
+}
+
+func (c *Client) RenameAgent(ctx context.Context, agentID string, displayName string) (core.Agent, error) {
+	response, err := c.request(ctx, Request{Command: CommandRenameAgent, AgentID: agentID, DisplayName: displayName})
 	if err != nil {
 		return core.Agent{}, err
 	}

@@ -101,6 +101,23 @@ func (r *Registry) UpdateNotificationPolicy(ctx context.Context, agentID string,
 	})
 }
 
+func (r *Registry) Rename(ctx context.Context, agentID string, displayName string) (core.Agent, error) {
+	trimmed := strings.TrimSpace(displayName)
+	if trimmed == "" {
+		return core.Agent{}, fmt.Errorf("display name is required")
+	}
+	return r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		old := agent.DisplayName
+		agent.DisplayName = trimmed
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID: agent.ID,
+			Type:    core.EventTypeAgentStatusUpdated,
+			Summary: fmt.Sprintf("Renamed from %s to %s.", old, trimmed),
+		}, nil
+	})
+}
+
 func (r *Registry) UpdateRole(ctx context.Context, agentID string, role string) (core.Agent, error) {
 	trimmedRole := strings.TrimSpace(role)
 	return r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {

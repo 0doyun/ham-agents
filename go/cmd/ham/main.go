@@ -76,6 +76,8 @@ func run(args []string) error {
 		return runStatus(ctx, client, args[1:])
 	case "events":
 		return runEvents(ctx, client, args[1:])
+	case "rename":
+		return runRename(ctx, client, args[1:])
 	case "down":
 		return runDown(ctx, client, args[1:])
 	default:
@@ -97,6 +99,7 @@ Usage:
   ham observe <source-ref> [name] [--project path] [--role role] [--provider provider]
   ham open <agent-id> [--json] [--print]
   ham ask <agent-or-team> <message>
+  ham rename <agent-id> <new-name>
   ham stop <agent-id> [--json]
   ham detach <agent-id> [--json]
   ham logs <agent-id> [--json] [--limit N] [--export path]
