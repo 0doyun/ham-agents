@@ -397,6 +397,9 @@ func (r *Registry) RecordHookTeammateIdle(ctx context.Context, agentID string, t
 func (r *Registry) RecordHookTaskCreated(ctx context.Context, agentID string, taskName string, taskDescription string, omcMode string) error {
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
 		applyOmcMode(agent, omcMode)
+		if agent.TeamRole == "" {
+			agent.TeamRole = "lead"
+		}
 		agent.TeamTaskTotal++
 		agent.LastEventAt = now
 		summary := "Team task created"
