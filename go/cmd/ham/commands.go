@@ -321,10 +321,17 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 		return fmt.Errorf("hook subcommand required: tool-start, tool-done, notification, stop-failure, session-start, session-end, subagent-start, subagent-stop, teammate-idle, task-created, task-completed")
 	}
 
+	// Launch menubar early for session-start so it runs even without an agent ID.
+	if args[0] == "session-start" {
+		if err := ensureUIRunning(); err != nil {
+			fmt.Fprintf(os.Stderr, "ham: warning: unable to auto-launch ham ui: %v\n", err)
+		}
+	}
+
 	payload := readHookPayload(os.Stdin)
 	agentID := os.Getenv("HAM_AGENT_ID")
 	sessionRef := detectSessionRef()
-	if agentID == "" && payload.SessionID == "" {
+	if agentID == "" && payload.SessionID == "" && args[0] != "session-start" {
 		return fmt.Errorf("HAM_AGENT_ID environment variable is required")
 	}
 
@@ -340,10 +347,12 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 	case "stop-failure":
 		return client.HookStopFailure(ctx, agentID, payload.SessionID, sessionRef, payload.ErrorType, detectOmcMode())
 	case "session-start":
-		if err := ensureUIRunning(); err != nil {
-			fmt.Fprintf(os.Stderr, "ham: warning: unable to auto-launch ham ui: %v\n", err)
+		err := client.HookSessionStart(ctx, agentID, payload.SessionID, sessionRef, payload.Cwd, detectOmcMode())
+		if err != nil && agentID == "" {
+			// No agent registered yet — menubar is already launched, silently succeed.
+			return nil
 		}
-		return client.HookSessionStart(ctx, agentID, payload.SessionID, sessionRef, payload.Cwd, detectOmcMode())
+		return err
 	case "stop":
 		return client.HookStop(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
 	case "session-end":
