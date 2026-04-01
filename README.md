@@ -26,15 +26,19 @@ brew install ham
 ham setup
 ```
 
-That's it. Next time you start Claude Code, the hamster office appears in your menu bar.
+Done. Now open a terminal and run `claude` — a pixel hamster office appears in your menu bar.
+
+No extra commands needed. Every Claude Code session automatically becomes a hamster at a desk.
 
 > **Requirements:** macOS 13+ (Apple Silicon) · [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 
 ## How it works
 
-1. **`ham setup`** registers hooks in Claude Code so every tool use, notification, and session event is tracked
-2. **`hamd`** (daemon) starts automatically and maintains agent state locally
-3. **`ham-menubar`** launches on session start — a pixel office where each hamster is one of your agents
+ham-agents is **fully hook-based**. It plugs into Claude Code's hook system so everything is tracked without changing how you work.
+
+1. **`ham setup`** registers hooks in Claude Code and starts the daemon — this is the only setup you need
+2. **You run `claude` as usual** — the session-start hook automatically launches the menu bar and registers your session as a hamster
+3. **Every tool use, notification, and error** is tracked in real time via hooks and reflected in the pixel office
 
 Each hamster sits at their own desk. What's on the desk tells you what they're doing:
 
@@ -82,18 +86,28 @@ All state is stored in `~/Library/Application Support/ham-agents/`. Nothing leav
 ## CLI
 
 ```
-ham run <provider>              # start an agent
-ham setup                       # configure Claude Code hooks
+ham setup                       # configure Claude Code hooks + start daemon
 ham list                        # list all tracked agents
 ham status                      # summary with attention counts
 ham ask <agent> "message"       # send a message to an agent
 ham stop <agent>                # stop a managed agent
-ham attach --pick-iterm-session # attach to an existing iTerm session
 ham doctor                      # check daemon, hooks, socket status
 ham ui                          # launch the menu bar app manually
 ham team create <name>          # create a team
 ham team add <team> <agent>     # add agent to team
 ```
+
+After `ham setup`, just use `claude` as usual — agents are tracked automatically via hooks.
+
+<details>
+<summary>Advanced: manual agent management</summary>
+
+```
+ham run <provider>              # start an agent wrapped in a PTY (richer state inference)
+ham attach --pick-iterm-session # attach to an existing iTerm session
+```
+
+</details>
 
 ## Architecture
 
@@ -113,7 +127,7 @@ Claude Code              agent registry
 
 | Component | Language | Role |
 |---|---|---|
-| `ham` | Go | CLI — wraps providers, forwards hook events |
+| `ham` | Go | CLI — setup, hooks, agent management |
 | `hamd` | Go | Daemon — agent state, IPC server, launchd managed |
 | `ham-menubar` | Swift | Menu bar UI — pixel office, notifications, quick actions |
 
