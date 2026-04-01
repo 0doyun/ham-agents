@@ -18,7 +18,8 @@ func fakeSetupDeps(home string) setupDependencies {
 		writeFile:     os.WriteFile,
 		mkdirAll:      os.MkdirAll,
 		stat:          os.Stat,
-		launchdStatus: func() string { return "running" },
+		launchdStatus:    func() string { return "running" },
+		launchdKickstart: func() error { return nil },
 	}
 }
 
@@ -382,7 +383,7 @@ func TestSetupLaunchdAdvice(t *testing.T) {
 	}{
 		{"running", "running via launchd"},
 		{"not_installed", "not installed via launchd"},
-		{"installed_not_running", "installed via launchd but not running"},
+		{"installed_not_running", "started"},
 	}
 
 	for _, tc := range cases {

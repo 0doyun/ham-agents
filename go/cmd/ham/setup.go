@@ -19,7 +19,8 @@ type setupDependencies struct {
 	writeFile     func(string, []byte, os.FileMode) error
 	mkdirAll      func(string, os.FileMode) error
 	stat          func(string) (os.FileInfo, error)
-	launchdStatus func() string
+	launchdStatus    func() string
+	launchdKickstart func() error
 }
 
 func defaultSetupDependencies() setupDependencies {
@@ -31,6 +32,9 @@ func defaultSetupDependencies() setupDependencies {
 		mkdirAll:      os.MkdirAll,
 		stat:          os.Stat,
 		launchdStatus: inspectLaunchdStatus,
+		launchdKickstart: func() error {
+			return exec.Command("launchctl", "kickstart", fmt.Sprintf("gui/%d/%s", os.Getuid(), launchdLabel)).Run()
+		},
 	}
 }
 
@@ -255,8 +259,12 @@ func printLaunchdAdvice(out io.Writer, deps setupDependencies) {
 	case "running":
 		fmt.Fprintln(out, "hamd: running via launchd ✓")
 	case "installed_not_running":
-		fmt.Fprintln(out, "hamd: installed via launchd but not running.")
-		fmt.Fprintln(out, "  Start it with: launchctl kickstart gui/$(id -u)/com.ham-agents.hamd")
+		fmt.Fprint(out, "hamd: starting via launchd... ")
+		if err := deps.launchdKickstart(); err != nil {
+			fmt.Fprintf(out, "failed: %v\n", err)
+		} else {
+			fmt.Fprintln(out, "started ✓")
+		}
 	case "not_installed":
 		fmt.Fprintln(out, "hamd: not installed via launchd.")
 		fmt.Fprintln(out, "  The daemon will auto-start when you run `ham run`, or install it manually.")
