@@ -25,7 +25,13 @@ public struct QuickMessagePlanner: Sendable {
 
     public func plan(message: String, for agent: Agent, supportsTerminalAutomation: Bool) -> QuickMessagePlan {
         if supportsTerminalAutomation {
-            return .terminalWrite(target: sessionTargetPlanner.target(for: agent), message: message)
+            let target = sessionTargetPlanner.target(for: agent)
+            switch target {
+            case .itermSession, .tmuxPane:
+                return .terminalWrite(target: target, message: message)
+            case .externalURL, .workspace:
+                break
+            }
         }
 
         return .clipboardHandoff(message: message)

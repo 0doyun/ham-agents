@@ -145,25 +145,7 @@ struct ItermSessionOpener: SessionOpening {
     }
 
     private func focusSession(id sessionID: String) -> Bool {
-        let source = """
-        tell application "iTerm"
-            activate
-            repeat with aWindow in windows
-                repeat with aTab in tabs of aWindow
-                    repeat with aSession in sessions of aTab
-                        if id of aSession is "\(appleScriptEscaped(sessionID))" then
-                            select aTab
-                            select aSession
-                            set index of aWindow to 1
-                            return
-                        end if
-                    end repeat
-                end repeat
-            end repeat
-        end tell
-        """
-
-        return executeAppleScript(source)
+        executeAppleScript(ItermAppleScripts.focusSession(sessionID))
     }
 
     private func focusTmuxPane(target: String, sessionName: String, windowIndex: Int, paneIndex: Int) -> Bool {
@@ -203,8 +185,11 @@ struct ItermQuickMessageSender: QuickMessageSending {
 
         switch target {
         case .itermSession(let sessionID, let url):
+            if executeAppleScript(ItermAppleScripts.focusSession(sessionID)) {
+                return executeAppleScript(ItermAppleScripts.writeToSession(sessionID, message: message))
+            }
             workspace.open(url)
-            return executeAppleScript(targetedWriteSource(message: message, sessionID: sessionID))
+            return false
         case .tmuxPane(let target, _, _, _):
             let safe = message.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: "")
             return executeProcess(["tmux", "send-keys", "-t", target, "-l", safe]) &&
@@ -219,7 +204,7 @@ struct ItermQuickMessageSender: QuickMessageSending {
             workspace.open([URL(fileURLWithPath: path)], withApplicationAt: appURL, configuration: configuration) { _, _ in }
         }
 
-        return executeAppleScript(defaultWriteSource(message: message))
+        return false
     }
 
     private func copyToClipboard(_ message: String) {
@@ -228,41 +213,6 @@ struct ItermQuickMessageSender: QuickMessageSending {
         pasteboard.setString(message, forType: .string)
     }
 
-    private func defaultWriteSource(message: String) -> String {
-        """
-        tell application "iTerm"
-            activate
-            tell current window
-                tell current session
-                    write text "\(appleScriptEscaped(message))"
-                end tell
-            end tell
-        end tell
-        """
-    }
-
-    private func targetedWriteSource(message: String, sessionID: String) -> String {
-        """
-        tell application "iTerm"
-            activate
-            repeat with aWindow in windows
-                repeat with aTab in tabs of aWindow
-                    repeat with aSession in sessions of aTab
-                        if id of aSession is "\(appleScriptEscaped(sessionID))" then
-                            tell aSession to write text "\(appleScriptEscaped(message))"
-                            return
-                        end if
-                    end repeat
-                end repeat
-            end repeat
-            tell current window
-                tell current session
-                    write text "\(appleScriptEscaped(message))"
-                end tell
-            end tell
-        end tell
-        """
-    }
 }
 
 @discardableResult
@@ -288,10 +238,4 @@ private func executeAppleScript(_ source: String) -> Bool {
     var error: NSDictionary?
     script.executeAndReturnError(&error)
     return error == nil
-}
-
-private func appleScriptEscaped(_ text: String) -> String {
-    text
-        .replacingOccurrences(of: "\\", with: "\\\\")
-        .replacingOccurrences(of: "\"", with: "\\\"")
 }

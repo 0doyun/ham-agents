@@ -48,4 +48,23 @@ final class QuickMessagePlannerTests: XCTestCase {
 
         XCTAssertEqual(plan, .clipboardHandoff(message: "hello"))
     }
+
+    func testClipboardFallbackWhenSessionRefMissingEvenIfAutomationAvailable() {
+        let planner = QuickMessagePlanner()
+        let agent = Agent(
+            id: "agent-1",
+            displayName: "builder",
+            provider: "claude",
+            host: "localhost",
+            mode: .managed,
+            projectPath: "/tmp/app",
+            status: .thinking,
+            statusConfidence: 1,
+            lastEventAt: Date(timeIntervalSince1970: 1)
+        )
+
+        let plan = planner.plan(message: "hello", for: agent, supportsTerminalAutomation: true)
+
+        XCTAssertEqual(plan, .clipboardHandoff(message: "hello"))
+    }
 }
