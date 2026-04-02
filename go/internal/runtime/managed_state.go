@@ -191,16 +191,18 @@ func (r *Registry) RecordHookNotification(ctx context.Context, agentID string, n
 			summary = fmt.Sprintf("Notification: %s", trimmedType)
 			reason = fmt.Sprintf("Hook: notification received: %s", trimmedType)
 		}
-		agent.LastUserVisibleSummary = summary
 		agent.StatusConfidence = 1
 		agent.ErrorType = ""
 		if trimmedType == "permission_prompt" {
 			agent.Status = core.AgentStatusWaitingInput
 			agent.StatusReason = reason
+			// Keep existing summary so the user sees what Claude was doing, not "Hook: ..."
 		} else if trimmedType == "idle_prompt" {
 			agent.Status = core.AgentStatusIdle
 			agent.StatusReason = reason
+			// Keep existing summary — idle_prompt is just a nudge, not new info
 		} else {
+			agent.LastUserVisibleSummary = summary
 			agent.StatusReason = reason
 		}
 		return &core.Event{
@@ -588,12 +590,12 @@ func (r *Registry) RecordHookPermissionRequest(ctx context.Context, agentID stri
 		applyOmcMode(agent, omcMode)
 		agent.Status = core.AgentStatusWaitingInput
 		agent.StatusConfidence = 1
-		reason := "Hook: permission needed."
+		reason := "Permission needed."
 		if toolName != "" {
-			reason = fmt.Sprintf("Hook: permission needed for %s", toolName)
+			reason = fmt.Sprintf("Approve %s?", toolName)
 		}
 		agent.StatusReason = reason
-		agent.LastUserVisibleSummary = reason
+		// Keep existing summary for context; statusReason shows the permission prompt
 		agent.LastEventAt = now
 		return &core.Event{
 			AgentID:             agent.ID,
