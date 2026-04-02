@@ -482,7 +482,7 @@ func (r *Registry) RecordHookTaskCompleted(ctx context.Context, agentID string, 
 		}
 	}
 
-	_, err := r.mutateAgent(ctx, targetID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+	taskCompletedMutator := func(agent *core.Agent, now time.Time) (*core.Event, error) {
 		applyOmcMode(agent, omcMode)
 		if agent.TeamTaskCompleted < agent.TeamTaskTotal {
 			agent.TeamTaskCompleted++
@@ -510,7 +510,11 @@ func (r *Registry) RecordHookTaskCompleted(ctx context.Context, agentID string, 
 			LifecycleReason:     agent.StatusReason,
 			LifecycleConfidence: agent.StatusConfidence,
 		}, nil
-	})
+	}
+	_, err := r.mutateAgent(ctx, targetID, taskCompletedMutator)
+	if err != nil && targetID != agentID {
+		_, err = r.mutateAgent(ctx, agentID, taskCompletedMutator)
+	}
 	return err
 }
 
