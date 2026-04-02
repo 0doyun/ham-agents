@@ -1684,3 +1684,78 @@ func TestRecordHookElicitation(t *testing.T) {
 		t.Fatalf("expected thinking after elicitation result, got %q", snap.Agents[0].Status)
 	}
 }
+
+func TestRecordHookAgentFinishedNeverNegative(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	agentStore := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json"))
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(filepath.Join(root, "events.jsonl")))
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "test", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	// SubAgentCount starts at 0. Call AgentFinished without any Spawned.
+	if err := registry.RecordHookAgentFinished(ctx, agent.ID, "orphan", "", ""); err != nil {
+		t.Fatalf("agent finished: %v", err)
+	}
+	snap, _ := registry.Snapshot(ctx)
+	if snap.Agents[0].SubAgentCount != 0 {
+		t.Fatalf("expected SubAgentCount 0, got %d", snap.Agents[0].SubAgentCount)
+	}
+}
+
+func TestRecordHookAgentSpawnedAndFinishedSequence(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	agentStore := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json"))
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(filepath.Join(root, "events.jsonl")))
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "test", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	// Spawn 3 agents.
+	for i := 0; i < 3; i++ {
+		if err := registry.RecordHookAgentSpawned(ctx, agent.ID, "sub", ""); err != nil {
+			t.Fatalf("spawn %d: %v", i, err)
+		}
+	}
+	snap, _ := registry.Snapshot(ctx)
+	if snap.Agents[0].SubAgentCount != 3 {
+		t.Fatalf("expected SubAgentCount 3, got %d", snap.Agents[0].SubAgentCount)
+	}
+	if len(snap.Agents[0].SubAgents) != 3 {
+		t.Fatalf("expected 3 SubAgents, got %d", len(snap.Agents[0].SubAgents))
+	}
+
+	// Finish 3 agents.
+	for i := 0; i < 3; i++ {
+		if err := registry.RecordHookAgentFinished(ctx, agent.ID, "sub", "", ""); err != nil {
+			t.Fatalf("finish %d: %v", i, err)
+		}
+	}
+	snap, _ = registry.Snapshot(ctx)
+	if snap.Agents[0].SubAgentCount != 0 {
+		t.Fatalf("expected SubAgentCount 0 after finishing all, got %d", snap.Agents[0].SubAgentCount)
+	}
+
+	// Finish 1 more — should stay at 0.
+	if err := registry.RecordHookAgentFinished(ctx, agent.ID, "extra", "", ""); err != nil {
+		t.Fatalf("extra finish: %v", err)
+	}
+	snap, _ = registry.Snapshot(ctx)
+	if snap.Agents[0].SubAgentCount != 0 {
+		t.Fatalf("expected SubAgentCount still 0, got %d", snap.Agents[0].SubAgentCount)
+	}
+}
