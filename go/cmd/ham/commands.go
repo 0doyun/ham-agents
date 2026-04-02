@@ -332,85 +332,92 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 	agentID := os.Getenv("HAM_AGENT_ID")
 	sessionRef := detectSessionRef()
 	if agentID == "" && payload.SessionID == "" && args[0] != "session-start" {
-		return fmt.Errorf("HAM_AGENT_ID environment variable is required")
+		// Exit gracefully — hooks must not fail Claude Code sessions.
+		fmt.Fprintf(os.Stderr, "ham: hook %s: no agent ID or session ID, skipping\n", args[0])
+		return nil
 	}
 
+	var hookErr error
 	switch args[0] {
 	case "tool-start":
 		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
-		return client.HookToolStart(ctx, agentID, payload.SessionID, sessionRef, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
+		hookErr = client.HookToolStart(ctx, agentID, payload.SessionID, sessionRef, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
 	case "tool-done":
 		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
-		return client.HookToolDone(ctx, agentID, payload.SessionID, sessionRef, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
+		hookErr = client.HookToolDone(ctx, agentID, payload.SessionID, sessionRef, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
 	case "notification":
-		return client.HookNotification(ctx, agentID, payload.SessionID, sessionRef, payload.NotificationType, detectOmcMode())
+		hookErr = client.HookNotification(ctx, agentID, payload.SessionID, sessionRef, payload.NotificationType, detectOmcMode())
 	case "stop-failure":
-		return client.HookStopFailure(ctx, agentID, payload.SessionID, sessionRef, payload.ErrorType, detectOmcMode())
+		hookErr = client.HookStopFailure(ctx, agentID, payload.SessionID, sessionRef, payload.ErrorType, detectOmcMode())
 	case "session-start":
-		err := client.HookSessionStart(ctx, agentID, payload.SessionID, sessionRef, payload.Cwd, detectOmcMode())
-		if err != nil && agentID == "" {
+		hookErr = client.HookSessionStart(ctx, agentID, payload.SessionID, sessionRef, payload.Cwd, detectOmcMode())
+		if hookErr != nil && agentID == "" {
 			// No agent registered yet — menubar is already launched, silently succeed.
-			return nil
+			hookErr = nil
 		}
-		return err
 	case "stop":
-		return client.HookStop(ctx, agentID, payload.SessionID, sessionRef, payload.LastMessage, detectOmcMode())
+		hookErr = client.HookStop(ctx, agentID, payload.SessionID, sessionRef, payload.LastMessage, detectOmcMode())
 	case "session-end":
-		return client.HookSessionEnd(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+		hookErr = client.HookSessionEnd(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
 	case "subagent-start", "agent-spawned":
 		description := parseHookDescription(args[1:])
 		if description == "" {
 			description = payload.subagentDescription()
 		}
-		return client.HookAgentSpawned(ctx, agentID, payload.SessionID, sessionRef, description, detectOmcMode())
+		hookErr = client.HookAgentSpawned(ctx, agentID, payload.SessionID, sessionRef, description, detectOmcMode())
 	case "subagent-stop", "agent-finished":
 		description := parseHookDescription(args[1:])
 		if description == "" {
 			description = payload.subagentCompletionDescription()
 		}
-		return client.HookAgentFinished(ctx, agentID, payload.SessionID, sessionRef, description, payload.LastMessage, detectOmcMode())
+		hookErr = client.HookAgentFinished(ctx, agentID, payload.SessionID, sessionRef, description, payload.LastMessage, detectOmcMode())
 	case "teammate-idle":
-		return client.HookTeammateIdle(ctx, agentID, payload.SessionID, sessionRef, payload.TeammateName, payload.TeamRole, detectOmcMode())
+		hookErr = client.HookTeammateIdle(ctx, agentID, payload.SessionID, sessionRef, payload.TeammateName, payload.TeamRole, detectOmcMode())
 	case "task-created":
-		return client.HookTaskCreated(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, payload.TaskDescription, detectOmcMode())
+		hookErr = client.HookTaskCreated(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, payload.TaskDescription, detectOmcMode())
 	case "task-completed":
-		return client.HookTaskCompleted(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, detectOmcMode())
+		hookErr = client.HookTaskCompleted(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, detectOmcMode())
 	case "tool-failed":
 		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
-		return client.HookToolFailed(ctx, agentID, payload.SessionID, sessionRef, toolName, payload.Error, payload.IsInterrupt, detectOmcMode())
+		hookErr = client.HookToolFailed(ctx, agentID, payload.SessionID, sessionRef, toolName, payload.Error, payload.IsInterrupt, detectOmcMode())
 	case "user-prompt":
-		return client.HookUserPrompt(ctx, agentID, payload.SessionID, sessionRef, payload.Prompt, detectOmcMode())
+		hookErr = client.HookUserPrompt(ctx, agentID, payload.SessionID, sessionRef, payload.Prompt, detectOmcMode())
 	case "permission-request":
 		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
-		return client.HookPermissionRequest(ctx, agentID, payload.SessionID, sessionRef, toolName, detectOmcMode())
+		hookErr = client.HookPermissionRequest(ctx, agentID, payload.SessionID, sessionRef, toolName, detectOmcMode())
 	case "permission-denied":
 		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
-		return client.HookPermissionDenied(ctx, agentID, payload.SessionID, sessionRef, toolName, payload.Error, detectOmcMode())
+		hookErr = client.HookPermissionDenied(ctx, agentID, payload.SessionID, sessionRef, toolName, payload.Error, detectOmcMode())
 	case "pre-compact":
-		return client.HookPreCompact(ctx, agentID, payload.SessionID, sessionRef, payload.Trigger, detectOmcMode())
+		hookErr = client.HookPreCompact(ctx, agentID, payload.SessionID, sessionRef, payload.Trigger, detectOmcMode())
 	case "post-compact":
-		return client.HookPostCompact(ctx, agentID, payload.SessionID, sessionRef, payload.Trigger, payload.CompactSummary, detectOmcMode())
+		hookErr = client.HookPostCompact(ctx, agentID, payload.SessionID, sessionRef, payload.Trigger, payload.CompactSummary, detectOmcMode())
 	case "setup":
-		return client.HookSetup(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+		hookErr = client.HookSetup(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
 	case "elicitation":
-		return client.HookElicitation(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+		hookErr = client.HookElicitation(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
 	case "elicitation-result":
-		return client.HookElicitationResult(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+		hookErr = client.HookElicitationResult(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
 	case "config-change":
-		return client.HookConfigChange(ctx, agentID, payload.SessionID, sessionRef, payload.Source, detectOmcMode())
+		hookErr = client.HookConfigChange(ctx, agentID, payload.SessionID, sessionRef, payload.Source, detectOmcMode())
 	case "worktree-create":
-		return client.HookWorktreeCreate(ctx, agentID, payload.SessionID, sessionRef, payload.WorktreeName, detectOmcMode())
+		hookErr = client.HookWorktreeCreate(ctx, agentID, payload.SessionID, sessionRef, payload.WorktreeName, detectOmcMode())
 	case "worktree-remove":
-		return client.HookWorktreeRemove(ctx, agentID, payload.SessionID, sessionRef, payload.WorktreePath, detectOmcMode())
+		hookErr = client.HookWorktreeRemove(ctx, agentID, payload.SessionID, sessionRef, payload.WorktreePath, detectOmcMode())
 	case "instructions-loaded":
-		return client.HookInstructionsLoaded(ctx, agentID, payload.SessionID, sessionRef, payload.FilePath, detectOmcMode())
+		hookErr = client.HookInstructionsLoaded(ctx, agentID, payload.SessionID, sessionRef, payload.FilePath, detectOmcMode())
 	case "cwd-changed":
-		return client.HookCwdChanged(ctx, agentID, payload.SessionID, sessionRef, payload.OldCwd, payload.NewCwd, detectOmcMode())
+		hookErr = client.HookCwdChanged(ctx, agentID, payload.SessionID, sessionRef, payload.OldCwd, payload.NewCwd, detectOmcMode())
 	case "file-changed":
-		return client.HookFileChanged(ctx, agentID, payload.SessionID, sessionRef, payload.FilePath, payload.FileEvent, detectOmcMode())
+		hookErr = client.HookFileChanged(ctx, agentID, payload.SessionID, sessionRef, payload.FilePath, payload.FileEvent, detectOmcMode())
 	default:
-		return fmt.Errorf("unsupported hook subcommand %q", args[0])
+		fmt.Fprintf(os.Stderr, "ham: unsupported hook subcommand %q, skipping\n", args[0])
+		return nil
 	}
+	if hookErr != nil {
+		fmt.Fprintf(os.Stderr, "ham: hook %s: %v\n", args[0], hookErr)
+	}
+	return nil
 }
 
 func parseHookDescription(args []string) string {
