@@ -375,6 +375,39 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 		return client.HookTaskCreated(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, payload.TaskDescription, detectOmcMode())
 	case "task-completed":
 		return client.HookTaskCompleted(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, detectOmcMode())
+	case "tool-failed":
+		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
+		return client.HookToolFailed(ctx, agentID, payload.SessionID, sessionRef, toolName, payload.Error, payload.IsInterrupt, detectOmcMode())
+	case "user-prompt":
+		return client.HookUserPrompt(ctx, agentID, payload.SessionID, sessionRef, payload.Prompt, detectOmcMode())
+	case "permission-request":
+		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
+		return client.HookPermissionRequest(ctx, agentID, payload.SessionID, sessionRef, toolName, detectOmcMode())
+	case "permission-denied":
+		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
+		return client.HookPermissionDenied(ctx, agentID, payload.SessionID, sessionRef, toolName, payload.Error, detectOmcMode())
+	case "pre-compact":
+		return client.HookPreCompact(ctx, agentID, payload.SessionID, sessionRef, payload.Trigger, detectOmcMode())
+	case "post-compact":
+		return client.HookPostCompact(ctx, agentID, payload.SessionID, sessionRef, payload.Trigger, payload.CompactSummary, detectOmcMode())
+	case "setup":
+		return client.HookSetup(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+	case "elicitation":
+		return client.HookElicitation(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+	case "elicitation-result":
+		return client.HookElicitationResult(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+	case "config-change":
+		return client.HookConfigChange(ctx, agentID, payload.SessionID, sessionRef, payload.Source, detectOmcMode())
+	case "worktree-create":
+		return client.HookWorktreeCreate(ctx, agentID, payload.SessionID, sessionRef, payload.WorktreeName, detectOmcMode())
+	case "worktree-remove":
+		return client.HookWorktreeRemove(ctx, agentID, payload.SessionID, sessionRef, payload.WorktreePath, detectOmcMode())
+	case "instructions-loaded":
+		return client.HookInstructionsLoaded(ctx, agentID, payload.SessionID, sessionRef, payload.FilePath, detectOmcMode())
+	case "cwd-changed":
+		return client.HookCwdChanged(ctx, agentID, payload.SessionID, sessionRef, payload.OldCwd, payload.NewCwd, detectOmcMode())
+	case "file-changed":
+		return client.HookFileChanged(ctx, agentID, payload.SessionID, sessionRef, payload.FilePath, payload.FileEvent, detectOmcMode())
 	default:
 		return fmt.Errorf("unsupported hook subcommand %q", args[0])
 	}
@@ -403,6 +436,19 @@ type hookPayload struct {
 	TeamRole            string         `json:"team_role"`
 	TaskName            string         `json:"task_name"`
 	TaskDescription     string         `json:"task_description"`
+	Error               string         `json:"error"`
+	IsInterrupt         bool           `json:"is_interrupt"`
+	Prompt              string         `json:"prompt"`
+	Trigger             string         `json:"trigger"`
+	CompactSummary      string         `json:"compact_summary"`
+	WorktreeName        string         `json:"name"`
+	WorktreePath        string         `json:"worktree_path"`
+	OldCwd              string         `json:"old_cwd"`
+	NewCwd              string         `json:"new_cwd"`
+	FilePath            string         `json:"file_path"`
+	FileEvent           string         `json:"event"`
+	Source              string         `json:"source"`
+	LastMessage         string         `json:"last_assistant_message"`
 }
 
 func readHookPayload(in io.Reader) hookPayload {

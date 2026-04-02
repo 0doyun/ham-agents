@@ -500,6 +500,81 @@ func (c *Client) HookTaskCompleted(ctx context.Context, agentID string, sessionI
 	return err
 }
 
+func (c *Client) HookToolFailed(ctx context.Context, agentID string, sessionID string, sessionRef string, toolName string, errorMsg string, isInterrupt bool, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookToolFailed, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, ToolName: toolName, Description: errorMsg, IsInterrupt: isInterrupt, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookUserPrompt(ctx context.Context, agentID string, sessionID string, sessionRef string, prompt string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookUserPrompt, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, Prompt: prompt, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookPermissionRequest(ctx context.Context, agentID string, sessionID string, sessionRef string, toolName string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookPermissionReq, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, ToolName: toolName, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookPermissionDenied(ctx context.Context, agentID string, sessionID string, sessionRef string, toolName string, reason string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookPermissionDenied, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, ToolName: toolName, Description: reason, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookPreCompact(ctx context.Context, agentID string, sessionID string, sessionRef string, trigger string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookPreCompact, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, CompactTrigger: trigger, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookPostCompact(ctx context.Context, agentID string, sessionID string, sessionRef string, trigger string, compactSummary string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookPostCompact, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, CompactTrigger: trigger, CompactSummary: compactSummary, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookSetup(ctx context.Context, agentID string, sessionID string, sessionRef string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookSetup, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookElicitation(ctx context.Context, agentID string, sessionID string, sessionRef string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookElicitation, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookElicitationResult(ctx context.Context, agentID string, sessionID string, sessionRef string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookElicitationResult, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookConfigChange(ctx context.Context, agentID string, sessionID string, sessionRef string, source string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookConfigChange, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, Description: source, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookWorktreeCreate(ctx context.Context, agentID string, sessionID string, sessionRef string, name string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookWorktreeCreate, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, WorktreeName: name, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookWorktreeRemove(ctx context.Context, agentID string, sessionID string, sessionRef string, worktreePath string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookWorktreeRemove, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, WorktreePath: worktreePath, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookInstructionsLoaded(ctx context.Context, agentID string, sessionID string, sessionRef string, filePath string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookInstructions, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, FilePath: filePath, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookCwdChanged(ctx context.Context, agentID string, sessionID string, sessionRef string, oldCwd string, newCwd string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookCwdChanged, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, OldCwd: oldCwd, NewCwd: newCwd, OmcMode: omcMode})
+	return err
+}
+
+func (c *Client) HookFileChanged(ctx context.Context, agentID string, sessionID string, sessionRef string, filePath string, fileEvent string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookFileChanged, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, FilePath: filePath, FileEvent: fileEvent, OmcMode: omcMode})
+	return err
+}
+
 func (c *Client) request(ctx context.Context, request Request) (Response, error) {
 	dialer := net.Dialer{Timeout: c.timeout}
 	connection, err := dialer.DialContext(ctx, "unix", c.socketPath)
