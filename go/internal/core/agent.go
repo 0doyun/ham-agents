@@ -68,9 +68,19 @@ type Agent struct {
 	AvatarVariant           string             `json:"avatar_variant"`
 	LastAssistantMessage    string             `json:"last_assistant_message,omitempty"`
 	SubAgentCount           int                `json:"sub_agent_count,omitempty"`
+	SubAgents               []SubAgentInfo     `json:"sub_agents,omitempty"`
 	TeamRole                string             `json:"team_role,omitempty"`
 	TeamTaskTotal           int                `json:"team_task_total,omitempty"`
 	TeamTaskCompleted       int                `json:"team_task_completed,omitempty"`
+}
+
+type SubAgentInfo struct {
+	AgentID   string      `json:"agent_id"`
+	AgentType string      `json:"agent_type"`
+	Status    AgentStatus `json:"status"`
+	StartTime time.Time   `json:"start_time"`
+	EndTime   *time.Time  `json:"end_time,omitempty"`
+	Summary   string      `json:"summary,omitempty"`
 }
 
 type RuntimeSnapshot struct {

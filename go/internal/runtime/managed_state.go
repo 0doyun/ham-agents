@@ -342,6 +342,15 @@ func (r *Registry) RecordHookAgentSpawned(ctx context.Context, agentID string, d
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
 		applyOmcMode(agent, omcMode)
 		agent.SubAgentCount++
+		agent.SubAgents = append(agent.SubAgents, core.SubAgentInfo{
+			AgentID:   description,
+			AgentType: description,
+			Status:    core.AgentStatusThinking,
+			StartTime: now,
+		})
+		if len(agent.SubAgents) > 20 {
+			agent.SubAgents = agent.SubAgents[len(agent.SubAgents)-20:]
+		}
 		agent.LastEventAt = now
 		summary := "Agent spawned"
 		if description != "" {
@@ -370,6 +379,17 @@ func (r *Registry) RecordHookAgentFinished(ctx context.Context, agentID string, 
 		}
 		if lastMessage != "" {
 			agent.LastAssistantMessage = lastMessage
+		}
+		for i := len(agent.SubAgents) - 1; i >= 0; i-- {
+			if agent.SubAgents[i].EndTime == nil {
+				endTime := now
+				agent.SubAgents[i].EndTime = &endTime
+				agent.SubAgents[i].Status = core.AgentStatusDone
+				if lastMessage != "" {
+					agent.SubAgents[i].Summary = lastMessage
+				}
+				break
+			}
 		}
 		agent.LastEventAt = now
 		summary := "Agent finished"
