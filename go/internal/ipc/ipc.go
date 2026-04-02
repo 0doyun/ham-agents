@@ -55,7 +55,22 @@ const (
 	CommandHookStop              Command = "hook.stop"
 	CommandHookTeammateIdle      Command = "hook.teammate-idle"
 	CommandHookTaskCreated       Command = "hook.task-created"
-	CommandHookTaskCompleted     Command = "hook.task-completed"
+	CommandHookTaskCompleted      Command = "hook.task-completed"
+	CommandHookToolFailed        Command = "hook.tool-failed"
+	CommandHookUserPrompt        Command = "hook.user-prompt"
+	CommandHookPermissionReq     Command = "hook.permission-request"
+	CommandHookPermissionDenied  Command = "hook.permission-denied"
+	CommandHookPreCompact        Command = "hook.pre-compact"
+	CommandHookPostCompact       Command = "hook.post-compact"
+	CommandHookSetup             Command = "hook.setup"
+	CommandHookElicitation       Command = "hook.elicitation"
+	CommandHookElicitationResult Command = "hook.elicitation-result"
+	CommandHookConfigChange      Command = "hook.config-change"
+	CommandHookWorktreeCreate    Command = "hook.worktree-create"
+	CommandHookWorktreeRemove    Command = "hook.worktree-remove"
+	CommandHookInstructions      Command = "hook.instructions-loaded"
+	CommandHookCwdChanged        Command = "hook.cwd-changed"
+	CommandHookFileChanged       Command = "hook.file-changed"
 )
 
 type Request struct {
@@ -87,6 +102,17 @@ type Request struct {
 	TeamRole         string         `json:"team_role,omitempty"`
 	TaskName         string         `json:"task_name,omitempty"`
 	TaskDescription  string         `json:"task_description,omitempty"`
+	IsInterrupt      bool           `json:"is_interrupt,omitempty"`
+	Prompt           string         `json:"prompt,omitempty"`
+	CompactSummary   string         `json:"compact_summary,omitempty"`
+	CompactTrigger   string         `json:"compact_trigger,omitempty"`
+	WorktreeName     string         `json:"worktree_name,omitempty"`
+	WorktreePath     string         `json:"worktree_path,omitempty"`
+	OldCwd           string         `json:"old_cwd,omitempty"`
+	NewCwd           string         `json:"new_cwd,omitempty"`
+	FilePath         string         `json:"file_path,omitempty"`
+	FileEvent        string         `json:"file_event,omitempty"`
+	LastMessage      string         `json:"last_message,omitempty"`
 }
 
 type Response struct {
