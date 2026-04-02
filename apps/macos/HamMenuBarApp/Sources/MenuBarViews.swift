@@ -104,7 +104,12 @@ struct MenuBarContentView: View {
                         ForEach(filteredAttentionAgents) { agent in
                             AttentionAgentRow(
                                 name: agent.displayName,
-                                subtitle: viewModel.attentionSubtitle(for: agent)
+                                subtitle: viewModel.attentionSubtitle(for: agent),
+                                isSelected: selectedAgentID == agent.id,
+                                onSelect: {
+                                    selectedAgentID = agent.id
+                                    viewModel.selectedAgentID = agent.id
+                                }
                             )
                         }
                     }
@@ -316,6 +321,10 @@ private func canOpenSession(for agent: Agent?, itermEnabled: Bool) -> Bool {
 private struct AttentionAgentRow: View {
     let name: String
     let subtitle: String
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    @State private var isHovered = false
 
     var body: some View {
         HStack {
@@ -330,8 +339,11 @@ private struct AttentionAgentRow: View {
             Spacer()
         }
         .padding(6)
-        .background(Color.orange.opacity(0.12))
+        .background(isSelected ? Color.accentColor.opacity(0.18) : isHovered ? Color.orange.opacity(0.2) : Color.orange.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+        .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
+        .onTapGesture { onSelect() }
     }
 }
 

@@ -390,7 +390,7 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			}
 			return Response{}, err
 		}
-		if err := s.registry.RecordHookAgentFinished(ctx, request.AgentID, request.Description, request.OmcMode); err != nil {
+		if err := s.registry.RecordHookAgentFinished(ctx, request.AgentID, request.Description, request.LastMessage, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
@@ -401,7 +401,7 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			}
 			return Response{}, err
 		}
-		if err := s.registry.RecordHookStop(ctx, request.AgentID, request.OmcMode); err != nil {
+		if err := s.registry.RecordHookStop(ctx, request.AgentID, request.LastMessage, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
@@ -435,6 +435,171 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		if err := s.registry.RecordHookTaskCompleted(ctx, request.AgentID, request.TaskName, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookToolFailed:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookToolFailed(ctx, request.AgentID, request.ToolName, request.Description, request.IsInterrupt, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookUserPrompt:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookUserPrompt(ctx, request.AgentID, request.Prompt, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookPermissionReq:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookPermissionRequest(ctx, request.AgentID, request.ToolName, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookPermissionDenied:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookPermissionDenied(ctx, request.AgentID, request.ToolName, request.Description, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookPreCompact:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookPreCompact(ctx, request.AgentID, request.CompactTrigger, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookPostCompact:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookPostCompact(ctx, request.AgentID, request.CompactTrigger, request.CompactSummary, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookSetup:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookSetup(ctx, request.AgentID, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookElicitation:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookElicitation(ctx, request.AgentID, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookElicitationResult:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookElicitationResult(ctx, request.AgentID, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookConfigChange:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookConfigChange(ctx, request.AgentID, request.Description, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookWorktreeCreate:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookWorktreeCreate(ctx, request.AgentID, request.WorktreeName, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookWorktreeRemove:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookWorktreeRemove(ctx, request.AgentID, request.WorktreePath, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookInstructions:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookInstructionsLoaded(ctx, request.AgentID, request.FilePath, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookCwdChanged:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookCwdChanged(ctx, request.AgentID, request.OldCwd, request.NewCwd, request.OmcMode); err != nil {
+			return Response{}, err
+		}
+		return Response{}, nil
+	case CommandHookFileChanged:
+		if err := s.prepareHookRequest(ctx, &request); err != nil {
+			if errors.Is(err, errNoAgent) {
+				return Response{}, nil
+			}
+			return Response{}, err
+		}
+		if err := s.registry.RecordHookFileChanged(ctx, request.AgentID, request.FilePath, request.FileEvent, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil

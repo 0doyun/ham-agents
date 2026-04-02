@@ -597,7 +597,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookAgentFinished should decrement SubAgentCount.
-	if err := client.HookAgentFinished(context.Background(), agent.ID, "session-1", "iterm2://session/agent-1", "sub-task", "ralph"); err != nil {
+	if err := client.HookAgentFinished(context.Background(), agent.ID, "session-1", "iterm2://session/agent-1", "sub-task", "", "ralph"); err != nil {
 		t.Fatalf("hook agent-finished: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())
@@ -742,8 +742,8 @@ func TestSessionStartAutoRegistersAgent(t *testing.T) {
 	if len(snapshot.Agents) != 1 {
 		t.Fatalf("expected still 1 agent, got %d", len(snapshot.Agents))
 	}
-	if snapshot.Agents[0].Status != core.AgentStatusRunningTool {
-		t.Fatalf("expected running_tool after Edit tool-start, got %q", snapshot.Agents[0].Status)
+	if snapshot.Agents[0].Status != core.AgentStatusWriting {
+		t.Fatalf("expected writing after Edit tool-start, got %q", snapshot.Agents[0].Status)
 	}
 
 	// SessionEnd should remove the auto-registered agent.

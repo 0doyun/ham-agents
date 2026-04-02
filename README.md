@@ -32,13 +32,29 @@ No extra commands needed. Every Claude Code session automatically becomes a hams
 
 > **Requirements:** macOS 13+ (Apple Silicon) · [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 
+## Update
+
+```bash
+brew upgrade ham
+ham setup              # re-register hooks for the new version
+```
+
+## Uninstall
+
+```bash
+ham uninstall          # remove hooks, stop daemon, unload launchd
+brew uninstall ham     # remove binaries
+```
+
 ## How it works
 
 ham-agents is **fully hook-based**. It plugs into Claude Code's hook system so everything is tracked without changing how you work.
 
-1. **`ham setup`** registers hooks in Claude Code and starts the daemon — this is the only setup you need
+1. **`ham setup`** detects your Claude Code version and registers up to 27 hook types — this is the only setup you need
 2. **You run `claude` as usual** — the session-start hook automatically launches the menu bar and registers your session as a hamster
 3. **Every tool use, notification, and error** is tracked in real time via hooks and reflected in the pixel office
+
+> **Upgrading from v0.1.x?** Run `ham setup` again to register the 15 new hook types added in v0.2.0.
 
 Each hamster sits at their own desk. What's on the desk tells you what they're doing:
 
@@ -46,6 +62,9 @@ Each hamster sits at their own desk. What's on the desk tells you what they're d
 |---|---|---|
 | Thinking / Running tool | iMac + coffee mug | Yellow glow |
 | Reading files | Book stack | — |
+| Writing / Editing files | Pencil + paper | — |
+| Searching (web) | Magnifying glass | — |
+| Spawning sub-agent | Mini hamster spawning | — |
 | Waiting for input | Orange glow monitor | ❓ above hamster |
 | Error / Disconnected | Red glow monitor | Red dot |
 | Idle / Sleeping | Closed laptop | Zzz |
@@ -65,6 +84,7 @@ When you use Claude Agent Teams, ham-agents shows it:
 - **Team lead** gets a crown badge
 - **Task progress** (e.g. `0/3`) displayed per agent
 - **Sub-agents** appear as mini hamsters surrounding their parent
+- **Subagent tree** tracks parent-child relationships with agent IDs, start/end times, and completion summaries
 
 ### Notifications
 
@@ -93,6 +113,8 @@ ham ask <agent> "message"       # send a message to an agent
 ham stop <agent>                # stop a managed agent
 ham doctor                      # check daemon, hooks, socket status
 ham ui                          # launch the menu bar app manually
+ham uninstall                   # remove hooks, stop daemon, unload launchd
+ham uninstall --purge           # same + delete all data without prompting
 ham team create <name>          # create a team
 ham team add <team> <agent>     # add agent to team
 ```

@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -332,52 +333,92 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 	agentID := os.Getenv("HAM_AGENT_ID")
 	sessionRef := detectSessionRef()
 	if agentID == "" && payload.SessionID == "" && args[0] != "session-start" {
-		return fmt.Errorf("HAM_AGENT_ID environment variable is required")
+		// Exit gracefully — hooks must not fail Claude Code sessions.
+		fmt.Fprintf(os.Stderr, "ham: hook %s: no agent ID or session ID, skipping\n", args[0])
+		return nil
 	}
 
+	var hookErr error
 	switch args[0] {
 	case "tool-start":
 		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
-		return client.HookToolStart(ctx, agentID, payload.SessionID, sessionRef, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
+		hookErr = client.HookToolStart(ctx, agentID, payload.SessionID, sessionRef, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
 	case "tool-done":
 		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
-		return client.HookToolDone(ctx, agentID, payload.SessionID, sessionRef, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
+		hookErr = client.HookToolDone(ctx, agentID, payload.SessionID, sessionRef, toolName, hookToolInputPreview(toolName, payload.ToolInput), detectOmcMode())
 	case "notification":
-		return client.HookNotification(ctx, agentID, payload.SessionID, sessionRef, payload.NotificationType, detectOmcMode())
+		hookErr = client.HookNotification(ctx, agentID, payload.SessionID, sessionRef, payload.NotificationType, detectOmcMode())
 	case "stop-failure":
-		return client.HookStopFailure(ctx, agentID, payload.SessionID, sessionRef, payload.ErrorType, detectOmcMode())
+		hookErr = client.HookStopFailure(ctx, agentID, payload.SessionID, sessionRef, payload.ErrorType, detectOmcMode())
 	case "session-start":
-		err := client.HookSessionStart(ctx, agentID, payload.SessionID, sessionRef, payload.Cwd, detectOmcMode())
-		if err != nil && agentID == "" {
+		hookErr = client.HookSessionStart(ctx, agentID, payload.SessionID, sessionRef, payload.Cwd, detectOmcMode())
+		if hookErr != nil && agentID == "" {
 			// No agent registered yet — menubar is already launched, silently succeed.
-			return nil
+			hookErr = nil
 		}
-		return err
 	case "stop":
-		return client.HookStop(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+		hookErr = client.HookStop(ctx, agentID, payload.SessionID, sessionRef, payload.LastMessage, detectOmcMode())
 	case "session-end":
-		return client.HookSessionEnd(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+		hookErr = client.HookSessionEnd(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
 	case "subagent-start", "agent-spawned":
 		description := parseHookDescription(args[1:])
 		if description == "" {
 			description = payload.subagentDescription()
 		}
-		return client.HookAgentSpawned(ctx, agentID, payload.SessionID, sessionRef, description, detectOmcMode())
+		hookErr = client.HookAgentSpawned(ctx, agentID, payload.SessionID, sessionRef, description, detectOmcMode())
 	case "subagent-stop", "agent-finished":
 		description := parseHookDescription(args[1:])
 		if description == "" {
 			description = payload.subagentCompletionDescription()
 		}
-		return client.HookAgentFinished(ctx, agentID, payload.SessionID, sessionRef, description, detectOmcMode())
+		hookErr = client.HookAgentFinished(ctx, agentID, payload.SessionID, sessionRef, description, payload.LastMessage, detectOmcMode())
 	case "teammate-idle":
-		return client.HookTeammateIdle(ctx, agentID, payload.SessionID, sessionRef, payload.TeammateName, payload.TeamRole, detectOmcMode())
+		hookErr = client.HookTeammateIdle(ctx, agentID, payload.SessionID, sessionRef, payload.TeammateName, payload.TeamRole, detectOmcMode())
 	case "task-created":
-		return client.HookTaskCreated(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, payload.TaskDescription, detectOmcMode())
+		hookErr = client.HookTaskCreated(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, payload.TaskDescription, detectOmcMode())
 	case "task-completed":
-		return client.HookTaskCompleted(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, detectOmcMode())
+		hookErr = client.HookTaskCompleted(ctx, agentID, payload.SessionID, sessionRef, payload.TaskName, detectOmcMode())
+	case "tool-failed":
+		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
+		hookErr = client.HookToolFailed(ctx, agentID, payload.SessionID, sessionRef, toolName, payload.Error, payload.IsInterrupt, detectOmcMode())
+	case "user-prompt":
+		hookErr = client.HookUserPrompt(ctx, agentID, payload.SessionID, sessionRef, payload.Prompt, detectOmcMode())
+	case "permission-request":
+		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
+		hookErr = client.HookPermissionRequest(ctx, agentID, payload.SessionID, sessionRef, toolName, detectOmcMode())
+	case "permission-denied":
+		toolName := firstNonEmpty(payload.ToolName, argAt(args, 1))
+		hookErr = client.HookPermissionDenied(ctx, agentID, payload.SessionID, sessionRef, toolName, payload.Error, detectOmcMode())
+	case "pre-compact":
+		hookErr = client.HookPreCompact(ctx, agentID, payload.SessionID, sessionRef, payload.Trigger, detectOmcMode())
+	case "post-compact":
+		hookErr = client.HookPostCompact(ctx, agentID, payload.SessionID, sessionRef, payload.Trigger, payload.CompactSummary, detectOmcMode())
+	case "setup":
+		hookErr = client.HookSetup(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+	case "elicitation":
+		hookErr = client.HookElicitation(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+	case "elicitation-result":
+		hookErr = client.HookElicitationResult(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+	case "config-change":
+		hookErr = client.HookConfigChange(ctx, agentID, payload.SessionID, sessionRef, payload.Source, detectOmcMode())
+	case "worktree-create":
+		hookErr = client.HookWorktreeCreate(ctx, agentID, payload.SessionID, sessionRef, payload.WorktreeName, detectOmcMode())
+	case "worktree-remove":
+		hookErr = client.HookWorktreeRemove(ctx, agentID, payload.SessionID, sessionRef, payload.WorktreePath, detectOmcMode())
+	case "instructions-loaded":
+		hookErr = client.HookInstructionsLoaded(ctx, agentID, payload.SessionID, sessionRef, payload.FilePath, detectOmcMode())
+	case "cwd-changed":
+		hookErr = client.HookCwdChanged(ctx, agentID, payload.SessionID, sessionRef, payload.OldCwd, payload.NewCwd, detectOmcMode())
+	case "file-changed":
+		hookErr = client.HookFileChanged(ctx, agentID, payload.SessionID, sessionRef, payload.FilePath, payload.FileEvent, detectOmcMode())
 	default:
-		return fmt.Errorf("unsupported hook subcommand %q", args[0])
+		fmt.Fprintf(os.Stderr, "ham: unsupported hook subcommand %q, skipping\n", args[0])
+		return nil
 	}
+	if hookErr != nil {
+		fmt.Fprintf(os.Stderr, "ham: hook %s: %v\n", args[0], hookErr)
+	}
+	return nil
 }
 
 func parseHookDescription(args []string) string {
@@ -403,6 +444,19 @@ type hookPayload struct {
 	TeamRole            string         `json:"team_role"`
 	TaskName            string         `json:"task_name"`
 	TaskDescription     string         `json:"task_description"`
+	Error               string         `json:"error"`
+	IsInterrupt         bool           `json:"is_interrupt"`
+	Prompt              string         `json:"prompt"`
+	Trigger             string         `json:"trigger"`
+	CompactSummary      string         `json:"compact_summary"`
+	WorktreeName        string         `json:"name"`
+	WorktreePath        string         `json:"worktree_path"`
+	OldCwd              string         `json:"old_cwd"`
+	NewCwd              string         `json:"new_cwd"`
+	FilePath            string         `json:"file_path"`
+	FileEvent           string         `json:"event"`
+	Source              string         `json:"source"`
+	LastMessage         string         `json:"last_assistant_message"`
 }
 
 func readHookPayload(in io.Reader) hookPayload {
@@ -551,6 +605,91 @@ func runDown(_ context.Context, client *ipc.Client, _ []string) error {
 	_ = uninstallDaemonFromLaunchd()
 
 	fmt.Fprintln(os.Stderr, "ham: everything stopped")
+	return nil
+}
+
+func runUninstall(_ context.Context, client *ipc.Client, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	purge := false
+	for _, arg := range args {
+		if arg == "--purge" {
+			purge = true
+		}
+	}
+
+	fmt.Fprintln(stdout, "Uninstalling ham-agents...")
+
+	// Step 1: Kill menu bar app.
+	if pkillPath, err := exec.LookPath("pkill"); err == nil {
+		_ = exec.Command(pkillPath, "-x", "ham-menubar").Run()
+		fmt.Fprintln(stdout, "  Menu bar app stopped.")
+	}
+
+	// Step 2: Shutdown daemon.
+	if err := client.Shutdown(context.Background()); err != nil {
+		fmt.Fprintf(stderr, "  Daemon shutdown: %v (may already be stopped)\n", err)
+	} else {
+		fmt.Fprintln(stdout, "  Daemon stopped.")
+	}
+
+	// Step 3: Remove launchd plist.
+	_ = uninstallDaemonFromLaunchd()
+	fmt.Fprintln(stdout, "  Launchd agent removed.")
+
+	// Step 4: Remove ham hooks from Claude Code settings.json.
+	home, err := os.UserHomeDir()
+	if err == nil {
+		settingsPath := filepath.Join(home, ".claude", "settings.json")
+		if data, readErr := os.ReadFile(settingsPath); readErr == nil {
+			var settings map[string]interface{}
+			if json.Unmarshal(data, &settings) == nil {
+				removed := removeHamHooks(settings)
+				if removed > 0 {
+					if out, marshalErr := json.MarshalIndent(settings, "", "  "); marshalErr == nil {
+						_ = os.WriteFile(settingsPath, append(out, '\n'), 0o644)
+					}
+					fmt.Fprintf(stdout, "  Removed ham hooks from %d categories in settings.json.\n", removed)
+				} else {
+					fmt.Fprintln(stdout, "  No ham hooks found in settings.json.")
+				}
+			}
+		} else {
+			fmt.Fprintln(stdout, "  No Claude Code settings.json found (skipped).")
+		}
+	}
+
+	// Step 5: Optionally remove ~/.ham-agents/ data directory.
+	if home != "" && !purge {
+		dataDir := filepath.Join(home, ".ham-agents")
+		if _, statErr := os.Stat(dataDir); statErr == nil {
+			fmt.Fprintf(stdout, "\n  Data directory exists: %s\n", dataDir)
+			fmt.Fprint(stdout, "  Remove it? This deletes all agent history and settings. [y/N] ")
+			scanner := bufio.NewScanner(stdin)
+			if scanner.Scan() {
+				answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
+				if answer == "y" || answer == "yes" {
+					if err := os.RemoveAll(dataDir); err != nil {
+						fmt.Fprintf(stderr, "  Failed to remove data directory: %v\n", err)
+					} else {
+						fmt.Fprintln(stdout, "  Data directory removed.")
+					}
+				} else {
+					fmt.Fprintln(stdout, "  Data directory kept.")
+				}
+			}
+		}
+	} else if purge && home != "" {
+		dataDir := filepath.Join(home, ".ham-agents")
+		if err := os.RemoveAll(dataDir); err != nil {
+			fmt.Fprintf(stderr, "  Failed to remove data directory: %v\n", err)
+		} else {
+			fmt.Fprintln(stdout, "  Data directory removed.")
+		}
+	}
+
+	fmt.Fprintln(stdout, "\nham-agents uninstalled (hooks, daemon, launchd removed).")
+	fmt.Fprintln(stdout, "Binaries (ham, hamd) are still installed.")
+	fmt.Fprintln(stdout, "  To reconfigure:    ham setup")
+	fmt.Fprintln(stdout, "  To fully remove:   brew uninstall ham")
 	return nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -1473,5 +1474,288 @@ func TestRecordHookTaskCreatedAndCompleted(t *testing.T) {
 	}
 	if taskEvents != 3 {
 		t.Fatalf("expected 3 team task events, got %d", taskEvents)
+	}
+}
+
+func TestRecordHookToolFailed(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	agentStore := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json"))
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(filepath.Join(root, "events.jsonl")))
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "test", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	// isInterrupt=true → WaitingInput
+	if err := registry.RecordHookToolFailed(ctx, agent.ID, "Bash", "timeout", true, ""); err != nil {
+		t.Fatalf("tool failed interrupt: %v", err)
+	}
+	snap, _ := registry.Snapshot(ctx)
+	if snap.Agents[0].Status != core.AgentStatusWaitingInput {
+		t.Fatalf("expected waiting_input, got %q", snap.Agents[0].Status)
+	}
+
+	// isInterrupt=false → Thinking
+	if err := registry.RecordHookToolFailed(ctx, agent.ID, "Bash", "exit 1", false, ""); err != nil {
+		t.Fatalf("tool failed no interrupt: %v", err)
+	}
+	snap, _ = registry.Snapshot(ctx)
+	if snap.Agents[0].Status != core.AgentStatusThinking {
+		t.Fatalf("expected thinking, got %q", snap.Agents[0].Status)
+	}
+}
+
+func TestRecordHookUserPrompt(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	agentStore := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json"))
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(filepath.Join(root, "events.jsonl")))
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "test", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := registry.RecordHookUserPrompt(ctx, agent.ID, "fix the bug in main.go please", ""); err != nil {
+		t.Fatalf("user prompt: %v", err)
+	}
+	snap, _ := registry.Snapshot(ctx)
+	if snap.Agents[0].Status != core.AgentStatusThinking {
+		t.Fatalf("expected thinking, got %q", snap.Agents[0].Status)
+	}
+	if !strings.Contains(snap.Agents[0].LastUserVisibleSummary, "Prompt:") {
+		t.Fatalf("expected prompt preview in summary, got %q", snap.Agents[0].LastUserVisibleSummary)
+	}
+}
+
+func TestRecordHookPermissionRequest(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	agentStore := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json"))
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(filepath.Join(root, "events.jsonl")))
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "test", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := registry.RecordHookPermissionRequest(ctx, agent.ID, "Bash", ""); err != nil {
+		t.Fatalf("permission request: %v", err)
+	}
+	snap, _ := registry.Snapshot(ctx)
+	if snap.Agents[0].Status != core.AgentStatusWaitingInput {
+		t.Fatalf("expected waiting_input, got %q", snap.Agents[0].Status)
+	}
+}
+
+func TestRecordHookPreCompactPostCompact(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	agentStore := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json"))
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(filepath.Join(root, "events.jsonl")))
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "test", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := registry.RecordHookPreCompact(ctx, agent.ID, "auto", ""); err != nil {
+		t.Fatalf("pre-compact: %v", err)
+	}
+	snap, _ := registry.Snapshot(ctx)
+	if snap.Agents[0].LastUserVisibleSummary != "Compacting context..." {
+		t.Fatalf("expected compacting summary, got %q", snap.Agents[0].LastUserVisibleSummary)
+	}
+
+	if err := registry.RecordHookPostCompact(ctx, agent.ID, "auto", "reduced to 50k tokens", ""); err != nil {
+		t.Fatalf("post-compact: %v", err)
+	}
+	snap, _ = registry.Snapshot(ctx)
+	if snap.Agents[0].Status != core.AgentStatusThinking {
+		t.Fatalf("expected thinking after post-compact, got %q", snap.Agents[0].Status)
+	}
+	if !strings.Contains(snap.Agents[0].LastUserVisibleSummary, "reduced to 50k tokens") {
+		t.Fatalf("expected compact summary, got %q", snap.Agents[0].LastUserVisibleSummary)
+	}
+}
+
+func TestRecordHookWorktreeCreateRemove(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	agentStore := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json"))
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(filepath.Join(root, "events.jsonl")))
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "test", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := registry.RecordHookWorktreeCreate(ctx, agent.ID, "feature-branch", ""); err != nil {
+		t.Fatalf("worktree create: %v", err)
+	}
+	snap, _ := registry.Snapshot(ctx)
+	if !strings.Contains(snap.Agents[0].LastUserVisibleSummary, "Worktree created: feature-branch") {
+		t.Fatalf("expected worktree created summary, got %q", snap.Agents[0].LastUserVisibleSummary)
+	}
+
+	if err := registry.RecordHookWorktreeRemove(ctx, agent.ID, "/tmp/wt", ""); err != nil {
+		t.Fatalf("worktree remove: %v", err)
+	}
+	snap, _ = registry.Snapshot(ctx)
+	if !strings.Contains(snap.Agents[0].LastUserVisibleSummary, "Worktree removed") {
+		t.Fatalf("expected worktree removed summary, got %q", snap.Agents[0].LastUserVisibleSummary)
+	}
+}
+
+func TestRecordHookCwdChanged(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	agentStore := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json"))
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(filepath.Join(root, "events.jsonl")))
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "test", ProjectPath: "/tmp/old",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := registry.RecordHookCwdChanged(ctx, agent.ID, "/tmp/old", "/tmp/new", ""); err != nil {
+		t.Fatalf("cwd changed: %v", err)
+	}
+	snap, _ := registry.Snapshot(ctx)
+	if snap.Agents[0].ProjectPath != "/tmp/new" {
+		t.Fatalf("expected project path updated to /tmp/new, got %q", snap.Agents[0].ProjectPath)
+	}
+}
+
+func TestRecordHookElicitation(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	agentStore := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json"))
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(filepath.Join(root, "events.jsonl")))
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "test", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := registry.RecordHookElicitation(ctx, agent.ID, ""); err != nil {
+		t.Fatalf("elicitation: %v", err)
+	}
+	snap, _ := registry.Snapshot(ctx)
+	if snap.Agents[0].Status != core.AgentStatusWaitingInput {
+		t.Fatalf("expected waiting_input, got %q", snap.Agents[0].Status)
+	}
+
+	if err := registry.RecordHookElicitationResult(ctx, agent.ID, ""); err != nil {
+		t.Fatalf("elicitation result: %v", err)
+	}
+	snap, _ = registry.Snapshot(ctx)
+	if snap.Agents[0].Status != core.AgentStatusThinking {
+		t.Fatalf("expected thinking after elicitation result, got %q", snap.Agents[0].Status)
+	}
+}
+
+func TestRecordHookAgentFinishedNeverNegative(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	agentStore := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json"))
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(filepath.Join(root, "events.jsonl")))
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "test", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	// SubAgentCount starts at 0. Call AgentFinished without any Spawned.
+	if err := registry.RecordHookAgentFinished(ctx, agent.ID, "orphan", "", ""); err != nil {
+		t.Fatalf("agent finished: %v", err)
+	}
+	snap, _ := registry.Snapshot(ctx)
+	if snap.Agents[0].SubAgentCount != 0 {
+		t.Fatalf("expected SubAgentCount 0, got %d", snap.Agents[0].SubAgentCount)
+	}
+}
+
+func TestRecordHookAgentSpawnedAndFinishedSequence(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	root := t.TempDir()
+	agentStore := store.NewFileAgentStore(filepath.Join(root, "managed-agents.json"))
+	registry := runtime.NewRegistry(agentStore, store.NewFileEventStore(filepath.Join(root, "events.jsonl")))
+
+	agent, err := registry.RegisterManaged(ctx, runtime.RegisterManagedInput{
+		Provider: "claude", DisplayName: "test", ProjectPath: "/tmp",
+	})
+	if err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	// Spawn 3 agents.
+	for i := 0; i < 3; i++ {
+		if err := registry.RecordHookAgentSpawned(ctx, agent.ID, "sub", ""); err != nil {
+			t.Fatalf("spawn %d: %v", i, err)
+		}
+	}
+	snap, _ := registry.Snapshot(ctx)
+	if snap.Agents[0].SubAgentCount != 3 {
+		t.Fatalf("expected SubAgentCount 3, got %d", snap.Agents[0].SubAgentCount)
+	}
+	if len(snap.Agents[0].SubAgents) != 3 {
+		t.Fatalf("expected 3 SubAgents, got %d", len(snap.Agents[0].SubAgents))
+	}
+
+	// Finish 3 agents.
+	for i := 0; i < 3; i++ {
+		if err := registry.RecordHookAgentFinished(ctx, agent.ID, "sub", "", ""); err != nil {
+			t.Fatalf("finish %d: %v", i, err)
+		}
+	}
+	snap, _ = registry.Snapshot(ctx)
+	if snap.Agents[0].SubAgentCount != 0 {
+		t.Fatalf("expected SubAgentCount 0 after finishing all, got %d", snap.Agents[0].SubAgentCount)
+	}
+
+	// Finish 1 more — should stay at 0.
+	if err := registry.RecordHookAgentFinished(ctx, agent.ID, "extra", "", ""); err != nil {
+		t.Fatalf("extra finish: %v", err)
+	}
+	snap, _ = registry.Snapshot(ctx)
+	if snap.Agents[0].SubAgentCount != 0 {
+		t.Fatalf("expected SubAgentCount still 0, got %d", snap.Agents[0].SubAgentCount)
 	}
 }
