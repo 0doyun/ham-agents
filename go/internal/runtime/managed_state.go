@@ -881,7 +881,7 @@ func pushRecentTool(agent *core.Agent, summary string) {
 
 	recent := []string{trimmed}
 	for _, existing := range agent.RecentTools {
-		if strings.TrimSpace(existing) == "" || existing == trimmed {
+		if strings.TrimSpace(existing) == "" || strings.EqualFold(existing, trimmed) {
 			continue
 		}
 		recent = append(recent, existing)
