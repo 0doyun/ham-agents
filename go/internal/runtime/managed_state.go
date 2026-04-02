@@ -194,8 +194,11 @@ func (r *Registry) RecordHookNotification(ctx context.Context, agentID string, n
 		agent.LastUserVisibleSummary = summary
 		agent.StatusConfidence = 1
 		agent.ErrorType = ""
-		if trimmedType == "idle_prompt" || trimmedType == "permission_prompt" {
+		if trimmedType == "permission_prompt" {
 			agent.Status = core.AgentStatusWaitingInput
+			agent.StatusReason = reason
+		} else if trimmedType == "idle_prompt" {
+			agent.Status = core.AgentStatusIdle
 			agent.StatusReason = reason
 		} else {
 			agent.StatusReason = reason
