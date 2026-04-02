@@ -742,8 +742,8 @@ func TestSessionStartAutoRegistersAgent(t *testing.T) {
 	if len(snapshot.Agents) != 1 {
 		t.Fatalf("expected still 1 agent, got %d", len(snapshot.Agents))
 	}
-	if snapshot.Agents[0].Status != core.AgentStatusRunningTool {
-		t.Fatalf("expected running_tool after Edit tool-start, got %q", snapshot.Agents[0].Status)
+	if snapshot.Agents[0].Status != core.AgentStatusWriting {
+		t.Fatalf("expected writing after Edit tool-start, got %q", snapshot.Agents[0].Status)
 	}
 
 	// SessionEnd should remove the auto-registered agent.

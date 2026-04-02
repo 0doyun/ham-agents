@@ -119,10 +119,19 @@ func (r *Registry) RecordManagedExit(ctx context.Context, agentID string, exitEr
 
 func (r *Registry) RecordHookToolStart(ctx context.Context, agentID string, toolName string, toolInputPreview string, omcMode string) error {
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
-		status := core.AgentStatusRunningTool
 		lower := strings.ToLower(strings.TrimSpace(toolName))
-		if lower == "read" || lower == "grep" || lower == "glob" {
+		var status core.AgentStatus
+		switch {
+		case lower == "read" || lower == "grep" || lower == "glob":
 			status = core.AgentStatusReading
+		case lower == "write" || lower == "edit" || lower == "notebookedit":
+			status = core.AgentStatusWriting
+		case lower == "webfetch" || lower == "websearch":
+			status = core.AgentStatusSearching
+		case lower == "agent":
+			status = core.AgentStatusSpawning
+		default:
+			status = core.AgentStatusRunningTool
 		}
 		summary := structuredToolSummary(toolName, toolInputPreview)
 		applyOmcMode(agent, omcMode)

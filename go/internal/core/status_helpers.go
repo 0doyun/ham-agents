@@ -4,7 +4,7 @@ import "strings"
 
 func IsRunningStatus(status AgentStatus) bool {
 	switch status {
-	case AgentStatusBooting, AgentStatusThinking, AgentStatusReading, AgentStatusRunningTool:
+	case AgentStatusBooting, AgentStatusThinking, AgentStatusReading, AgentStatusRunningTool, AgentStatusWriting, AgentStatusSearching, AgentStatusSpawning:
 		return true
 	default:
 		return false

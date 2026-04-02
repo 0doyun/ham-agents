@@ -23,6 +23,9 @@ const (
 	AgentStatusError        AgentStatus = "error"
 	AgentStatusDisconnected AgentStatus = "disconnected"
 	AgentStatusSleeping     AgentStatus = "sleeping"
+	AgentStatusWriting     AgentStatus = "writing"
+	AgentStatusSearching   AgentStatus = "searching"
+	AgentStatusSpawning    AgentStatus = "spawning"
 )
 
 type NotificationPolicy string
