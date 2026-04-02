@@ -473,6 +473,350 @@ func (r *Registry) RecordHookTaskCompleted(ctx context.Context, agentID string, 
 	return err
 }
 
+func (r *Registry) RecordHookToolFailed(ctx context.Context, agentID string, toolName string, errorMsg string, isInterrupt bool, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.LastEventAt = now
+		if isInterrupt {
+			agent.Status = core.AgentStatusWaitingInput
+			agent.StatusConfidence = 1
+			agent.StatusReason = "Hook: user interrupted."
+			agent.LastUserVisibleSummary = "User interrupted."
+		} else {
+			agent.Status = core.AgentStatusThinking
+			agent.StatusConfidence = 1
+			agent.StatusReason = fmt.Sprintf("Hook: tool failed: %s", toolName)
+			summary := fmt.Sprintf("Tool failed: %s", toolName)
+			if errorMsg != "" {
+				summary = fmt.Sprintf("Tool failed: %s — %s", toolName, errorMsg)
+			}
+			agent.LastUserVisibleSummary = summary
+		}
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             agent.LastUserVisibleSummary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookUserPrompt(ctx context.Context, agentID string, prompt string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.Status = core.AgentStatusThinking
+		agent.StatusConfidence = 1
+		agent.StatusReason = "Hook: user prompt submitted."
+		agent.ErrorType = ""
+		preview := strings.TrimSpace(prompt)
+		if len(preview) > 50 {
+			preview = preview[:50] + "…"
+		}
+		if preview != "" {
+			agent.LastUserVisibleSummary = fmt.Sprintf("Prompt: %s", preview)
+		} else {
+			agent.LastUserVisibleSummary = "User prompt submitted."
+		}
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             agent.LastUserVisibleSummary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookPermissionRequest(ctx context.Context, agentID string, toolName string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.Status = core.AgentStatusWaitingInput
+		agent.StatusConfidence = 1
+		reason := "Hook: permission needed."
+		if toolName != "" {
+			reason = fmt.Sprintf("Hook: permission needed for %s", toolName)
+		}
+		agent.StatusReason = reason
+		agent.LastUserVisibleSummary = reason
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentStatusUpdated,
+			Summary:             reason,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookPermissionDenied(ctx context.Context, agentID string, toolName string, reason string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.LastEventAt = now
+		summary := "Permission denied"
+		if toolName != "" {
+			summary = fmt.Sprintf("Permission denied: %s", toolName)
+		}
+		agent.LastUserVisibleSummary = summary
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookPreCompact(ctx context.Context, agentID string, trigger string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.LastUserVisibleSummary = "Compacting context..."
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             "Compacting context...",
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookPostCompact(ctx context.Context, agentID string, trigger string, compactSummary string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.Status = core.AgentStatusThinking
+		agent.StatusConfidence = 1
+		agent.StatusReason = "Hook: context compacted."
+		summary := "Context compacted."
+		if compactSummary != "" {
+			summary = fmt.Sprintf("Context compacted: %s", compactSummary)
+		}
+		agent.LastUserVisibleSummary = summary
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookSetup(ctx context.Context, agentID string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.LastEventAt = now
+		agent.LastUserVisibleSummary = "Setup hook fired."
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             "Setup hook fired.",
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookElicitation(ctx context.Context, agentID string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.Status = core.AgentStatusWaitingInput
+		agent.StatusConfidence = 1
+		agent.StatusReason = "Hook: elicitation prompt."
+		agent.LastUserVisibleSummary = "Waiting for user input (elicitation)."
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentStatusUpdated,
+			Summary:             "Waiting for user input (elicitation).",
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookElicitationResult(ctx context.Context, agentID string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.Status = core.AgentStatusThinking
+		agent.StatusConfidence = 1
+		agent.StatusReason = "Hook: elicitation result received."
+		agent.LastUserVisibleSummary = "Elicitation result received."
+		agent.LastEventAt = now
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             "Elicitation result received.",
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookConfigChange(ctx context.Context, agentID string, source string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.LastEventAt = now
+		summary := "Config changed."
+		if source != "" {
+			summary = fmt.Sprintf("Config changed: %s", source)
+		}
+		agent.LastUserVisibleSummary = summary
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookWorktreeCreate(ctx context.Context, agentID string, name string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.LastEventAt = now
+		summary := "Worktree created"
+		if name != "" {
+			summary = fmt.Sprintf("Worktree created: %s", name)
+		}
+		agent.LastUserVisibleSummary = summary
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookWorktreeRemove(ctx context.Context, agentID string, worktreePath string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.LastEventAt = now
+		summary := "Worktree removed"
+		if worktreePath != "" {
+			summary = fmt.Sprintf("Worktree removed: %s", worktreePath)
+		}
+		agent.LastUserVisibleSummary = summary
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookCwdChanged(ctx context.Context, agentID string, oldCwd string, newCwd string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.LastEventAt = now
+		if newCwd != "" {
+			agent.ProjectPath = newCwd
+		}
+		summary := fmt.Sprintf("Working directory changed: %s", newCwd)
+		agent.LastUserVisibleSummary = summary
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookInstructionsLoaded(ctx context.Context, agentID string, filePath string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.LastEventAt = now
+		summary := "Instructions loaded"
+		if filePath != "" {
+			summary = fmt.Sprintf("Instructions loaded: %s", filePath)
+		}
+		agent.LastUserVisibleSummary = summary
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
+func (r *Registry) RecordHookFileChanged(ctx context.Context, agentID string, filePath string, event string, omcMode string) error {
+	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		applyOmcMode(agent, omcMode)
+		agent.LastEventAt = now
+		summary := "File changed"
+		if filePath != "" {
+			summary = fmt.Sprintf("File %s: %s", event, filePath)
+		}
+		agent.LastUserVisibleSummary = summary
+		return &core.Event{
+			AgentID:             agent.ID,
+			Type:                core.EventTypeAgentProcessOutput,
+			Summary:             summary,
+			LifecycleStatus:     string(agent.Status),
+			LifecycleMode:       string(agent.Mode),
+			LifecycleReason:     agent.StatusReason,
+			LifecycleConfidence: agent.StatusConfidence,
+		}, nil
+	})
+	return err
+}
+
 func structuredToolSummary(toolName string, toolInputPreview string) string {
 	label := strings.TrimSpace(toolName)
 	if label == "" {
