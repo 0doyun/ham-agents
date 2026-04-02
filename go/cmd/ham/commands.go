@@ -354,7 +354,7 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 		}
 		return err
 	case "stop":
-		return client.HookStop(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
+		return client.HookStop(ctx, agentID, payload.SessionID, sessionRef, payload.LastMessage, detectOmcMode())
 	case "session-end":
 		return client.HookSessionEnd(ctx, agentID, payload.SessionID, sessionRef, detectOmcMode())
 	case "subagent-start", "agent-spawned":
@@ -368,7 +368,7 @@ func runHook(ctx context.Context, client *ipc.Client, args []string) error {
 		if description == "" {
 			description = payload.subagentCompletionDescription()
 		}
-		return client.HookAgentFinished(ctx, agentID, payload.SessionID, sessionRef, description, detectOmcMode())
+		return client.HookAgentFinished(ctx, agentID, payload.SessionID, sessionRef, description, payload.LastMessage, detectOmcMode())
 	case "teammate-idle":
 		return client.HookTeammateIdle(ctx, agentID, payload.SessionID, sessionRef, payload.TeammateName, payload.TeamRole, detectOmcMode())
 	case "task-created":

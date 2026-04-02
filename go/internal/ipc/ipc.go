@@ -475,13 +475,13 @@ func (c *Client) HookAgentSpawned(ctx context.Context, agentID string, sessionID
 	return err
 }
 
-func (c *Client) HookAgentFinished(ctx context.Context, agentID string, sessionID string, sessionRef string, description string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookAgentFinished, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, Description: description, OmcMode: omcMode})
+func (c *Client) HookAgentFinished(ctx context.Context, agentID string, sessionID string, sessionRef string, description string, lastMessage string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookAgentFinished, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, Description: description, LastMessage: lastMessage, OmcMode: omcMode})
 	return err
 }
 
-func (c *Client) HookStop(ctx context.Context, agentID string, sessionID string, sessionRef string, omcMode string) error {
-	_, err := c.request(ctx, Request{Command: CommandHookStop, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, OmcMode: omcMode})
+func (c *Client) HookStop(ctx context.Context, agentID string, sessionID string, sessionRef string, lastMessage string, omcMode string) error {
+	_, err := c.request(ctx, Request{Command: CommandHookStop, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, LastMessage: lastMessage, OmcMode: omcMode})
 	return err
 }
 

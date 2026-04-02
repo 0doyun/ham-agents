@@ -66,6 +66,7 @@ type Agent struct {
 	SessionProcessID        int                `json:"session_process_id,omitempty"`
 	SessionCommand          string             `json:"session_command,omitempty"`
 	AvatarVariant           string             `json:"avatar_variant"`
+	LastAssistantMessage    string             `json:"last_assistant_message,omitempty"`
 	SubAgentCount           int                `json:"sub_agent_count,omitempty"`
 	TeamRole                string             `json:"team_role,omitempty"`
 	TeamTaskTotal           int                `json:"team_task_total,omitempty"`

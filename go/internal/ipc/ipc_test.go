@@ -597,7 +597,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 	}
 
 	// HookAgentFinished should decrement SubAgentCount.
-	if err := client.HookAgentFinished(context.Background(), agent.ID, "session-1", "iterm2://session/agent-1", "sub-task", "ralph"); err != nil {
+	if err := client.HookAgentFinished(context.Background(), agent.ID, "session-1", "iterm2://session/agent-1", "sub-task", "", "ralph"); err != nil {
 		t.Fatalf("hook agent-finished: %v", err)
 	}
 	snapshot, err = client.Status(context.Background())

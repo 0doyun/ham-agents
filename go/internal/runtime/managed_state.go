@@ -272,13 +272,22 @@ func (r *Registry) RecordHookSessionStart(ctx context.Context, agentID string, s
 	return err
 }
 
-func (r *Registry) RecordHookStop(ctx context.Context, agentID string, omcMode string) error {
+func (r *Registry) RecordHookStop(ctx context.Context, agentID string, lastMessage string, omcMode string) error {
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
 		applyOmcMode(agent, omcMode)
+		if lastMessage != "" {
+			agent.LastAssistantMessage = lastMessage
+			preview := lastMessage
+			if len(preview) > 100 {
+				preview = preview[:100] + "…"
+			}
+			agent.LastUserVisibleSummary = preview
+		} else {
+			agent.LastUserVisibleSummary = "Waiting for next prompt."
+		}
 		agent.Status = core.AgentStatusIdle
 		agent.StatusConfidence = 1
 		agent.StatusReason = "Hook: response completed."
-		agent.LastUserVisibleSummary = "Waiting for next prompt."
 		agent.LastEventAt = now
 		return &core.Event{
 			AgentID:             agent.ID,
@@ -353,11 +362,14 @@ func (r *Registry) RecordHookAgentSpawned(ctx context.Context, agentID string, d
 	return err
 }
 
-func (r *Registry) RecordHookAgentFinished(ctx context.Context, agentID string, description string, omcMode string) error {
+func (r *Registry) RecordHookAgentFinished(ctx context.Context, agentID string, description string, lastMessage string, omcMode string) error {
 	_, err := r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
 		applyOmcMode(agent, omcMode)
 		if agent.SubAgentCount > 0 {
 			agent.SubAgentCount--
+		}
+		if lastMessage != "" {
+			agent.LastAssistantMessage = lastMessage
 		}
 		agent.LastEventAt = now
 		summary := "Agent finished"

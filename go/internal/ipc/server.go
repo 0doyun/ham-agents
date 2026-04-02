@@ -390,7 +390,7 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			}
 			return Response{}, err
 		}
-		if err := s.registry.RecordHookAgentFinished(ctx, request.AgentID, request.Description, request.OmcMode); err != nil {
+		if err := s.registry.RecordHookAgentFinished(ctx, request.AgentID, request.Description, request.LastMessage, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
@@ -401,7 +401,7 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			}
 			return Response{}, err
 		}
-		if err := s.registry.RecordHookStop(ctx, request.AgentID, request.OmcMode); err != nil {
+		if err := s.registry.RecordHookStop(ctx, request.AgentID, request.LastMessage, request.OmcMode); err != nil {
 			return Response{}, err
 		}
 		return Response{}, nil
