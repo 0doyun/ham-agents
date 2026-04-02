@@ -80,6 +80,8 @@ func run(args []string) error {
 		return runRename(ctx, client, args[1:])
 	case "down":
 		return runDown(ctx, client, args[1:])
+	case "uninstall":
+		return runUninstall(ctx, client, args[1:], os.Stdin, os.Stdout, os.Stderr)
 	default:
 		return fmt.Errorf("unsupported command %q", args[0])
 	}
@@ -127,6 +129,7 @@ Usage:
   ham list [--json] [--team ref] [--workspace ref]
   ham status [--json] [--team ref] [--workspace ref]
   ham events [--json] [--limit N] [--follow] [--after-id ID] [--wait-ms N]
+  ham uninstall [--purge]
   ham down
 
 Daemon socket:

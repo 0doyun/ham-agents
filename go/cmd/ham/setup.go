@@ -210,6 +210,65 @@ func categoryHasHamHook(hooksMap map[string]interface{}, key string) bool {
 	return false
 }
 
+// removeHamHooks removes all ham hook entries from settings, preserving non-ham hooks.
+// Returns the number of categories that had ham hooks removed.
+func removeHamHooks(settings map[string]interface{}) int {
+	hooks, ok := settings["hooks"].(map[string]interface{})
+	if !ok {
+		return 0
+	}
+	removed := 0
+	for key, val := range hooks {
+		arr, ok := val.([]interface{})
+		if !ok {
+			continue
+		}
+		filtered := make([]interface{}, 0, len(arr))
+		for _, entry := range arr {
+			if !entryIsHamHook(entry) {
+				filtered = append(filtered, entry)
+			}
+		}
+		if len(filtered) < len(arr) {
+			removed++
+			if len(filtered) == 0 {
+				delete(hooks, key)
+			} else {
+				hooks[key] = filtered
+			}
+		}
+	}
+	if len(hooks) == 0 {
+		delete(settings, "hooks")
+	}
+	return removed
+}
+
+// entryIsHamHook returns true if the hook entry contains a "ham hook" command.
+func entryIsHamHook(entry interface{}) bool {
+	entryMap, ok := entry.(map[string]interface{})
+	if !ok {
+		return false
+	}
+	if cmd, ok := entryMap["command"].(string); ok && strings.Contains(cmd, "ham hook") {
+		return true
+	}
+	innerHooks, ok := entryMap["hooks"].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, inner := range innerHooks {
+		innerMap, ok := inner.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if cmd, ok := innerMap["command"].(string); ok && strings.Contains(cmd, "ham hook") {
+			return true
+		}
+	}
+	return false
+}
+
 // mergeHamHooks adds ham hook entries for the base 12 categories.
 func mergeHamHooks(settings map[string]interface{}) {
 	mergeHamHooksForCategories(settings, hamHookCategories)

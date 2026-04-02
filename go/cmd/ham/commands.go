@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -604,6 +605,91 @@ func runDown(_ context.Context, client *ipc.Client, _ []string) error {
 	_ = uninstallDaemonFromLaunchd()
 
 	fmt.Fprintln(os.Stderr, "ham: everything stopped")
+	return nil
+}
+
+func runUninstall(_ context.Context, client *ipc.Client, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) error {
+	purge := false
+	for _, arg := range args {
+		if arg == "--purge" {
+			purge = true
+		}
+	}
+
+	fmt.Fprintln(stdout, "Uninstalling ham-agents...")
+
+	// Step 1: Kill menu bar app.
+	if pkillPath, err := exec.LookPath("pkill"); err == nil {
+		_ = exec.Command(pkillPath, "-x", "ham-menubar").Run()
+		fmt.Fprintln(stdout, "  Menu bar app stopped.")
+	}
+
+	// Step 2: Shutdown daemon.
+	if err := client.Shutdown(context.Background()); err != nil {
+		fmt.Fprintf(stderr, "  Daemon shutdown: %v (may already be stopped)\n", err)
+	} else {
+		fmt.Fprintln(stdout, "  Daemon stopped.")
+	}
+
+	// Step 3: Remove launchd plist.
+	_ = uninstallDaemonFromLaunchd()
+	fmt.Fprintln(stdout, "  Launchd agent removed.")
+
+	// Step 4: Remove ham hooks from Claude Code settings.json.
+	home, err := os.UserHomeDir()
+	if err == nil {
+		settingsPath := filepath.Join(home, ".claude", "settings.json")
+		if data, readErr := os.ReadFile(settingsPath); readErr == nil {
+			var settings map[string]interface{}
+			if json.Unmarshal(data, &settings) == nil {
+				removed := removeHamHooks(settings)
+				if removed > 0 {
+					if out, marshalErr := json.MarshalIndent(settings, "", "  "); marshalErr == nil {
+						_ = os.WriteFile(settingsPath, append(out, '\n'), 0o644)
+					}
+					fmt.Fprintf(stdout, "  Removed ham hooks from %d categories in settings.json.\n", removed)
+				} else {
+					fmt.Fprintln(stdout, "  No ham hooks found in settings.json.")
+				}
+			}
+		} else {
+			fmt.Fprintln(stdout, "  No Claude Code settings.json found (skipped).")
+		}
+	}
+
+	// Step 5: Optionally remove ~/.ham-agents/ data directory.
+	if home != "" && !purge {
+		dataDir := filepath.Join(home, ".ham-agents")
+		if _, statErr := os.Stat(dataDir); statErr == nil {
+			fmt.Fprintf(stdout, "\n  Data directory exists: %s\n", dataDir)
+			fmt.Fprint(stdout, "  Remove it? This deletes all agent history and settings. [y/N] ")
+			scanner := bufio.NewScanner(stdin)
+			if scanner.Scan() {
+				answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
+				if answer == "y" || answer == "yes" {
+					if err := os.RemoveAll(dataDir); err != nil {
+						fmt.Fprintf(stderr, "  Failed to remove data directory: %v\n", err)
+					} else {
+						fmt.Fprintln(stdout, "  Data directory removed.")
+					}
+				} else {
+					fmt.Fprintln(stdout, "  Data directory kept.")
+				}
+			}
+		}
+	} else if purge && home != "" {
+		dataDir := filepath.Join(home, ".ham-agents")
+		if err := os.RemoveAll(dataDir); err != nil {
+			fmt.Fprintf(stderr, "  Failed to remove data directory: %v\n", err)
+		} else {
+			fmt.Fprintln(stdout, "  Data directory removed.")
+		}
+	}
+
+	fmt.Fprintln(stdout, "\nham-agents uninstalled (hooks, daemon, launchd removed).")
+	fmt.Fprintln(stdout, "Binaries (ham, hamd) are still installed.")
+	fmt.Fprintln(stdout, "  To reconfigure:    ham setup")
+	fmt.Fprintln(stdout, "  To fully remove:   brew uninstall ham")
 	return nil
 }
 

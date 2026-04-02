@@ -32,6 +32,20 @@ No extra commands needed. Every Claude Code session automatically becomes a hams
 
 > **Requirements:** macOS 13+ (Apple Silicon) · [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 
+## Update
+
+```bash
+brew upgrade ham
+ham setup              # re-register hooks for the new version
+```
+
+## Uninstall
+
+```bash
+ham uninstall          # remove hooks, stop daemon, unload launchd
+brew uninstall ham     # remove binaries
+```
+
 ## How it works
 
 ham-agents is **fully hook-based**. It plugs into Claude Code's hook system so everything is tracked without changing how you work.
@@ -99,6 +113,8 @@ ham ask <agent> "message"       # send a message to an agent
 ham stop <agent>                # stop a managed agent
 ham doctor                      # check daemon, hooks, socket status
 ham ui                          # launch the menu bar app manually
+ham uninstall                   # remove hooks, stop daemon, unload launchd
+ham uninstall --purge           # same + delete all data without prompting
 ham team create <name>          # create a team
 ham team add <team> <agent>     # add agent to team
 ```
