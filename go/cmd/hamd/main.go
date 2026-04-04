@@ -82,7 +82,9 @@ func run(args []string) error {
 		}
 
 		// Acquire exclusive PID file lock to prevent duplicate daemons.
-		cleanStalePIDFile(ipcConfig.SocketPath)
+		// Do NOT remove the pid file before locking — removing the path while
+		// another process holds an flock on the old inode allows a second daemon
+		// to create and lock a new file at the same path.
 		pidFile, err := acquirePIDFileLock(ipcConfig.SocketPath)
 		if err != nil {
 			return err

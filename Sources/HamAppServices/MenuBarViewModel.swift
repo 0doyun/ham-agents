@@ -28,7 +28,7 @@ public final class MenuBarViewModel: ObservableObject {
     public var statusBarTint: StatusBarTint {
         if agents.contains(where: { $0.status == .error }) { return .red }
         if agents.contains(where: { $0.status == .waitingInput }) { return .yellow }
-        if agents.contains(where: { $0.status.isRunningActivity }) { return .blue }
+        if agents.contains(where: { $0.status.isActiveWork }) { return .blue }
         if !agents.isEmpty && agents.allSatisfy({ $0.status == .done }) { return .green }
         return .gray
     }
