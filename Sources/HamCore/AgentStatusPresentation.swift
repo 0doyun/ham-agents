@@ -20,4 +20,15 @@ public extension AgentStatus {
             return false
         }
     }
+
+    /// Broader active-work check that includes all non-idle, non-terminal statuses.
+    /// Use this for status bar tinting where any active work should show as busy.
+    var isActiveWork: Bool {
+        switch self {
+        case .idle, .done, .error, .disconnected, .sleeping, .waitingInput:
+            return false
+        default:
+            return true
+        }
+    }
 }

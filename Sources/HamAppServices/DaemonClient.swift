@@ -305,9 +305,16 @@ public final class UnixSocketDaemonTransport: DaemonTransport, @unchecked Sendab
                         throw HamDaemonClientError.transportFailed("connect() failed: \(errno)")
                     }
 
+                    // Set socket timeouts to prevent indefinite blocking.
+                    // Must exceed maxFollowWait (60s) to avoid killing long-poll requests.
+                    var timeout = timeval(tv_sec: 90, tv_usec: 0)
+                    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+                    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+
                     // Send
                     let sent = payload.withUnsafeBytes { buf in
-                        Darwin.write(fd, buf.baseAddress!, buf.count)
+                        guard let ptr = buf.baseAddress, buf.count > 0 else { return 0 }
+                        return Darwin.write(fd, ptr, buf.count)
                     }
                     guard sent == payload.count else {
                         close(fd)

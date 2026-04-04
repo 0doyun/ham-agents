@@ -3,6 +3,14 @@ import Foundation
 import HamCore
 import HamNotifications
 
+public enum StatusBarTint: String, Sendable {
+    case red
+    case yellow
+    case blue
+    case green
+    case gray
+}
+
 @MainActor
 public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var summary: HamMenuBarSummary?
@@ -16,6 +24,15 @@ public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var notificationHistory: [NotificationHistoryEntry] = []
     @Published public var selectedAgentID: Agent.ID?
     @Published public var roleDraft = ""
+
+    public var statusBarTint: StatusBarTint {
+        if agents.contains(where: { $0.status == .error }) { return .red }
+        if agents.contains(where: { $0.status == .waitingInput }) { return .yellow }
+        if agents.contains(where: { $0.status.isActiveWork }) { return .blue }
+        if !agents.isEmpty && agents.allSatisfy({ $0.status == .done }) { return .green }
+        return .gray
+    }
+
     @Published public private(set) var settings = DaemonSettingsPayload(
         notifications: DaemonNotificationSettingsPayload(
             done: true,

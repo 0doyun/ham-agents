@@ -71,6 +71,18 @@ Each hamster sits at their own desk. What's on the desk tells you what they're d
 
 Click any hamster to see details, send a message, or jump to its terminal.
 
+### Status at a Glance
+
+The menu bar icon changes color based on your agents' overall state:
+
+| Color | Meaning |
+|---|---|
+| Red | At least one agent has an error |
+| Yellow | An agent is waiting for input |
+| Blue | Agents are actively working |
+| Green | All agents finished successfully |
+| Gray | No agents or all idle |
+
 ## Features
 
 ### Agent Teams
@@ -101,13 +113,13 @@ When you use Claude Agent Teams, ham-agents shows it:
 
 ### Everything local
 
-All state is stored in `~/Library/Application Support/ham-agents/`. Nothing leaves your machine.
+All state is stored in `~/Library/Application Support/ham-agents/`. Nothing leaves your machine. Event logs are automatically rotated (max 10K entries) so disk usage stays bounded.
 
 ## CLI
 
 ```
 ham setup                       # configure Claude Code hooks + start daemon
-ham list                        # list all tracked agents
+ham list                        # list all tracked agents (color-coded by status)
 ham status                      # summary with attention counts
 ham ask <agent> "message"       # send a message to an agent
 ham stop <agent>                # stop a managed agent

@@ -12,6 +12,43 @@ import (
 	"github.com/ham-agents/ham-agents/go/internal/core"
 )
 
+// ANSI color helpers for terminal output.
+const (
+	ansiReset  = "\033[0m"
+	ansiRed    = "\033[31m"
+	ansiGreen  = "\033[32m"
+	ansiYellow = "\033[33m"
+	ansiBlue   = "\033[34m"
+	ansiGray   = "\033[90m"
+)
+
+func colorForStatus(status core.AgentStatus) string {
+	switch status {
+	case core.AgentStatusError:
+		return ansiRed
+	case core.AgentStatusWaitingInput:
+		return ansiYellow
+	case core.AgentStatusDisconnected:
+		return ansiYellow
+	case core.AgentStatusDone:
+		return ansiGreen
+	case core.AgentStatusRunningTool, core.AgentStatusReading, core.AgentStatusThinking,
+		core.AgentStatusWriting, core.AgentStatusSearching, core.AgentStatusSpawning:
+		return ansiBlue
+	case core.AgentStatusBooting, core.AgentStatusIdle, core.AgentStatusSleeping:
+		return ansiGray
+	default:
+		return ""
+	}
+}
+
+func colorize(text string, color string) string {
+	if color == "" {
+		return text
+	}
+	return color + text + ansiReset
+}
+
 func renderStopResult(out io.Writer, agentID string, asJSON bool) error {
 	if asJSON {
 		return writeJSONTo(out, map[string]any{
@@ -78,12 +115,14 @@ func formatAgentListSummary(agents []core.Agent) string {
 }
 
 func formatAgentListLine(agent core.Agent) string {
+	statusLabel := formatAgentStatusLabel(agent)
+	statusColor := colorForStatus(agent.Status)
 	parts := []string{
 		agent.ID,
-		displayNameWithOmcMode(agent),
+		colorize(displayNameWithOmcMode(agent), statusColor),
 		agent.Provider,
 		string(agent.Mode),
-		formatAgentStatusLabel(agent),
+		colorize(statusLabel, statusColor),
 		formatConfidenceLabel(agent.StatusConfidence),
 	}
 	if reason := strings.TrimSpace(agent.StatusReason); reason != "" {
@@ -255,7 +294,8 @@ func renderStatus(out io.Writer, snapshot core.RuntimeSnapshot, asJSON bool) err
 	}
 
 	for _, agent := range urgentAgents(snapshot.Agents) {
-		if _, err := fmt.Fprintf(out, "! %s\n", formatAgentListLine(agent)); err != nil {
+		prefix := colorize("!", colorForStatus(agent.Status))
+		if _, err := fmt.Fprintf(out, "%s %s\n", prefix, formatAgentListLine(agent)); err != nil {
 			return err
 		}
 	}

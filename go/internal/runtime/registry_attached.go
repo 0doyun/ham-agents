@@ -44,6 +44,9 @@ func (r *Registry) RefreshAttachedByScheme(ctx context.Context, scheme string, s
 }
 
 func (r *Registry) refreshAttachedWithScheme(ctx context.Context, scheme string, sessions []core.AttachableSession) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	agents, err := r.store.LoadAgents(ctx)
 	if err != nil {
 		return err

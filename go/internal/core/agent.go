@@ -52,6 +52,7 @@ type Agent struct {
 	LastEventAt             time.Time          `json:"last_event_at"`
 	LastUserVisibleSummary  string             `json:"last_user_visible_summary,omitempty"`
 	RecentTools             []string           `json:"recent_tools,omitempty"`
+	RecentToolsDetailed     []ToolActivity     `json:"recent_tools_detailed,omitempty"`
 	OmcMode                 string             `json:"omc_mode,omitempty"`
 	NotificationPolicy      NotificationPolicy `json:"notification_policy"`
 	SessionID               string             `json:"session_id,omitempty"`
@@ -72,6 +73,40 @@ type Agent struct {
 	TeamRole                string             `json:"team_role,omitempty"`
 	TeamTaskTotal           int                `json:"team_task_total,omitempty"`
 	TeamTaskCompleted       int                `json:"team_task_completed,omitempty"`
+}
+
+type ToolActivity struct {
+	ToolName     string     `json:"tool_name"`
+	InputPreview string     `json:"input_preview,omitempty"`
+	ActivityDesc string     `json:"activity_desc,omitempty"`
+	ToolType     string     `json:"tool_type,omitempty"`
+	StartedAt    time.Time  `json:"started_at"`
+	CompletedAt  *time.Time `json:"completed_at,omitempty"`
+	DurationMs   int        `json:"duration_ms,omitempty"`
+}
+
+// MaxRecentToolsDetailed is the maximum number of entries kept in RecentToolsDetailed.
+const MaxRecentToolsDetailed = 20
+
+// ClassifyToolType returns a tool type category based on the tool name.
+func ClassifyToolType(toolName string) string {
+	switch toolName {
+	case "Bash":
+		return "bash"
+	case "Read", "Write", "Edit", "NotebookEdit":
+		return "file"
+	case "Grep", "Glob":
+		return "search"
+	case "Agent":
+		return "agent"
+	case "WebFetch", "WebSearch":
+		return "web"
+	default:
+		if len(toolName) > 4 && toolName[:4] == "mcp_" {
+			return "mcp"
+		}
+		return "util"
+	}
 }
 
 type SubAgentInfo struct {

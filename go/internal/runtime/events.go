@@ -24,7 +24,12 @@ func (r *Registry) Events(ctx context.Context, limit int) ([]core.Event, error) 
 	return events[len(events)-limit:], nil
 }
 
+const maxFollowWait = 60 * time.Second
+
 func (r *Registry) FollowEvents(ctx context.Context, afterEventID string, limit int, wait time.Duration) ([]core.Event, error) {
+	if wait > maxFollowWait {
+		wait = maxFollowWait
+	}
 	pollInterval := 200 * time.Millisecond
 	deadline := r.clock().Add(wait)
 

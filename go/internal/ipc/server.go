@@ -104,19 +104,33 @@ func removeStaleSocket(socketPath string) error {
 func (s *Server) handleConnection(ctx context.Context, connection net.Conn) {
 	defer connection.Close()
 
+	// Prevent slow or malicious clients from holding a goroutine indefinitely.
+	_ = connection.SetReadDeadline(time.Now().Add(10 * time.Second))
+
 	var request Request
 	if err := json.NewDecoder(connection).Decode(&request); err != nil {
 		_ = json.NewEncoder(connection).Encode(Response{Error: fmt.Sprintf("decode request: %v", err)})
+		closeWrite(connection)
 		return
 	}
 
 	response, err := s.dispatch(ctx, request)
 	if err != nil {
 		_ = json.NewEncoder(connection).Encode(Response{Error: err.Error()})
+		closeWrite(connection)
 		return
 	}
 
 	_ = json.NewEncoder(connection).Encode(response)
+	closeWrite(connection)
+}
+
+// closeWrite signals the client that no more data will be sent,
+// so the client's read loop can terminate instead of blocking forever.
+func closeWrite(conn net.Conn) {
+	if uc, ok := conn.(*net.UnixConn); ok {
+		_ = uc.CloseWrite()
+	}
 }
 
 func (s *Server) dispatch(ctx context.Context, request Request) (Response, error) {
