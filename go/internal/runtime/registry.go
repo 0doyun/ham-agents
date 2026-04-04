@@ -7,13 +7,20 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
 	"github.com/ham-agents/ham-agents/go/internal/store"
 )
 
+// eventSeq is a global atomic counter to ensure unique event IDs
+// even when multiple events are created within the same nanosecond.
+var eventSeq uint64
+
 type Registry struct {
+	mu         sync.Mutex
 	store      store.AgentStore
 	eventStore store.EventStore
 	clock      func() time.Time
@@ -27,19 +34,14 @@ func NewRegistry(agentStore store.AgentStore, eventStore store.EventStore) *Regi
 		eventStore: eventStore,
 		clock:      time.Now,
 		idProvider: func(now time.Time) string {
-			return fmt.Sprintf("managed-%d", now.UnixNano())
+			return fmt.Sprintf("managed-%d-%d", now.UnixNano(), atomic.AddUint64(&eventSeq, 1))
 		},
 		hostname: os.Hostname,
 	}
 }
 
 func (r *Registry) List(ctx context.Context) ([]core.Agent, error) {
-	agents, err := r.store.LoadAgents(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	agents, err = r.applyObservedRefresh(ctx, agents)
+	agents, err := r.listLocked(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +54,18 @@ func (r *Registry) List(ctx context.Context) ([]core.Agent, error) {
 	})
 
 	return agents, nil
+}
+
+func (r *Registry) listLocked(ctx context.Context) ([]core.Agent, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	agents, err := r.store.LoadAgents(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.applyObservedRefresh(ctx, agents)
 }
 
 func (r *Registry) Snapshot(ctx context.Context) (core.RuntimeSnapshot, error) {
@@ -140,6 +154,9 @@ func (r *Registry) UpdateRole(ctx context.Context, agentID string, role string) 
 }
 
 func (r *Registry) Remove(ctx context.Context, agentID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	agents, err := r.store.LoadAgents(ctx)
 	if err != nil {
 		return err
@@ -224,6 +241,18 @@ func (r *Registry) mutateAgent(
 	agentID string,
 	mutate func(agent *core.Agent, now time.Time) (*core.Event, error),
 ) (core.Agent, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.mutateAgentLocked(ctx, agentID, mutate)
+}
+
+// mutateAgentLocked performs the load-mutate-save cycle.
+// The caller must hold r.mu.
+func (r *Registry) mutateAgentLocked(
+	ctx context.Context,
+	agentID string,
+	mutate func(agent *core.Agent, now time.Time) (*core.Event, error),
+) (core.Agent, error) {
 	agents, err := r.store.LoadAgents(ctx)
 	if err != nil {
 		return core.Agent{}, err
@@ -256,6 +285,7 @@ func (r *Registry) mutateAgent(
 	return core.Agent{}, fmt.Errorf("agent %q not found", agentID)
 }
 
+// registerAgent appends a new agent and persists. The caller must hold r.mu.
 func (r *Registry) registerAgent(ctx context.Context, agents []core.Agent, agent core.Agent) (core.Agent, error) {
 	updatedAgents := append(append([]core.Agent(nil), agents...), agent)
 	if err := r.saveAgentsAndEvents(ctx, updatedAgents, []core.Event{{
@@ -272,6 +302,7 @@ func (r *Registry) registerAgent(ctx context.Context, agents []core.Agent, agent
 	return agent, nil
 }
 
+// applyRefreshedAgents persists refreshed agents if changed. The caller must hold r.mu.
 func (r *Registry) applyRefreshedAgents(
 	ctx context.Context,
 	previous []core.Agent,
@@ -303,7 +334,7 @@ func (r *Registry) appendEvent(ctx context.Context, event core.Event) {
 	}
 
 	if event.ID == "" {
-		event.ID = fmt.Sprintf("event-%d", r.clock().UTC().UnixNano())
+		event.ID = fmt.Sprintf("event-%d-%d", r.clock().UTC().UnixNano(), atomic.AddUint64(&eventSeq, 1))
 	}
 	if event.OccurredAt.IsZero() {
 		event.OccurredAt = r.clock().UTC()

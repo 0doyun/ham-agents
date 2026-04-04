@@ -81,6 +81,17 @@ func run(args []string) error {
 			return nil
 		}
 
+		// Acquire exclusive PID file lock to prevent duplicate daemons.
+		cleanStalePIDFile(ipcConfig.SocketPath)
+		pidFile, err := acquirePIDFileLock(ipcConfig.SocketPath)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			pidFile.Close()
+			removePIDFile(ipcConfig.SocketPath)
+		}()
+
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 

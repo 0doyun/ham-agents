@@ -9,6 +9,9 @@ import (
 )
 
 func (r *Registry) RefreshObserved(ctx context.Context) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	agents, err := r.store.LoadAgents(ctx)
 	if err != nil {
 		return err
@@ -59,6 +62,8 @@ func (r *Registry) refreshObservedAgents(ctx context.Context, agents []core.Agen
 	return refreshed, events, nil
 }
 
+// applyObservedRefresh refreshes observed agents and persists changes.
+// The caller must hold r.mu.
 func (r *Registry) applyObservedRefresh(ctx context.Context, agents []core.Agent) ([]core.Agent, error) {
 	refreshed, events, err := r.refreshObservedAgents(ctx, agents)
 	if err != nil {

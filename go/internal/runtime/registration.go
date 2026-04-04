@@ -45,6 +45,9 @@ type registrationContext struct {
 }
 
 func (r *Registry) RegisterManaged(ctx context.Context, input RegisterManagedInput) (core.Agent, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	agents, err := r.store.LoadAgents(ctx)
 	if err != nil {
 		return core.Agent{}, err
@@ -84,6 +87,9 @@ func (r *Registry) RegisterManaged(ctx context.Context, input RegisterManagedInp
 }
 
 func (r *Registry) RegisterAttached(ctx context.Context, input RegisterAttachedInput) (core.Agent, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	agents, err := r.store.LoadAgents(ctx)
 	if err != nil {
 		return core.Agent{}, err
@@ -104,7 +110,7 @@ func (r *Registry) RegisterAttached(ctx context.Context, input RegisterAttachedI
 	}
 
 	if existing, ok := existingObservedOrAttachedAgent(agents, core.AgentModeAttached, registration.sessionRef); ok {
-		return r.mutateAgent(ctx, existing.ID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		return r.mutateAgentLocked(ctx, existing.ID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
 			agent.DisplayName = registration.displayName
 			agent.Provider = registration.provider
 			agent.ProjectPath = registration.projectPath
@@ -141,6 +147,9 @@ func (r *Registry) RegisterAttached(ctx context.Context, input RegisterAttachedI
 }
 
 func (r *Registry) RegisterObserved(ctx context.Context, input RegisterObservedInput) (core.Agent, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	agents, err := r.store.LoadAgents(ctx)
 	if err != nil {
 		return core.Agent{}, err
@@ -161,7 +170,7 @@ func (r *Registry) RegisterObserved(ctx context.Context, input RegisterObservedI
 	}
 
 	if existing, ok := existingObservedOrAttachedAgent(agents, core.AgentModeObserved, registration.sessionRef); ok {
-		return r.mutateAgent(ctx, existing.ID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
+		return r.mutateAgentLocked(ctx, existing.ID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
 			agent.DisplayName = registration.displayName
 			agent.Provider = registration.provider
 			agent.ProjectPath = registration.projectPath
