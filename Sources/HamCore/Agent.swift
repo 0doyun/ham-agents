@@ -25,6 +25,26 @@ public enum NotificationPolicy: String, Codable, CaseIterable, Sendable {
     case priorityOnly
 }
 
+public struct ToolActivity: Codable, Equatable, Sendable {
+    public var toolName: String
+    public var inputPreview: String?
+    public var activityDesc: String?
+    public var toolType: String?
+    public var startedAt: Date
+    public var completedAt: Date?
+    public var durationMs: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case toolName = "tool_name"
+        case inputPreview = "input_preview"
+        case activityDesc = "activity_desc"
+        case toolType = "tool_type"
+        case startedAt = "started_at"
+        case completedAt = "completed_at"
+        case durationMs = "duration_ms"
+    }
+}
+
 public struct Agent: Codable, Equatable, Identifiable, Sendable {
     public let id: String
     public var displayName: String
@@ -41,6 +61,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
     public var lastEventAt: Date
     public var lastUserVisibleSummary: String?
     public var recentTools: [String]
+    public var recentToolsDetailed: [ToolActivity]
     public var omcMode: String?
     public var notificationPolicy: NotificationPolicy
     public var sessionID: String?
@@ -74,6 +95,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         lastEventAt: Date,
         lastUserVisibleSummary: String? = nil,
         recentTools: [String] = [],
+        recentToolsDetailed: [ToolActivity] = [],
         omcMode: String? = nil,
         notificationPolicy: NotificationPolicy = .default,
         sessionID: String? = nil,
@@ -106,6 +128,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         self.lastEventAt = lastEventAt
         self.lastUserVisibleSummary = lastUserVisibleSummary
         self.recentTools = recentTools
+        self.recentToolsDetailed = recentToolsDetailed
         self.omcMode = omcMode
         self.notificationPolicy = notificationPolicy
         self.sessionID = sessionID
@@ -140,6 +163,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         case lastEventAt = "last_event_at"
         case lastUserVisibleSummary = "last_user_visible_summary"
         case recentTools = "recent_tools"
+        case recentToolsDetailed = "recent_tools_detailed"
         case omcMode = "omc_mode"
         case notificationPolicy = "notification_policy"
         case sessionID = "session_id"
@@ -175,6 +199,7 @@ public struct Agent: Codable, Equatable, Identifiable, Sendable {
         lastEventAt = try c.decodeIfPresent(Date.self, forKey: .lastEventAt) ?? Date()
         lastUserVisibleSummary = try c.decodeIfPresent(String.self, forKey: .lastUserVisibleSummary)
         recentTools = try c.decodeIfPresent([String].self, forKey: .recentTools) ?? []
+        recentToolsDetailed = try c.decodeIfPresent([ToolActivity].self, forKey: .recentToolsDetailed) ?? []
         omcMode = try c.decodeIfPresent(String.self, forKey: .omcMode)
         notificationPolicy = try c.decodeIfPresent(NotificationPolicy.self, forKey: .notificationPolicy) ?? .default
         sessionID = try c.decodeIfPresent(String.self, forKey: .sessionID)

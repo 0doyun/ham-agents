@@ -141,6 +141,7 @@ func (r *Registry) RecordHookToolStart(ctx context.Context, agentID string, tool
 		agent.ErrorType = ""
 		agent.LastUserVisibleSummary = summary
 		pushRecentTool(agent, summary)
+		pushRecentToolDetailed(agent, toolName, toolInputPreview, summary, now)
 		agent.LastEventAt = now
 		return &core.Event{
 			AgentID:             agent.ID,
@@ -166,6 +167,7 @@ func (r *Registry) RecordHookToolDone(ctx context.Context, agentID string, toolN
 		if summary != "" {
 			agent.LastUserVisibleSummary = summary
 		}
+		completeRecentToolDetailed(agent, toolName, now)
 		agent.LastEventAt = now
 		return &core.Event{
 			AgentID:             agent.ID,
@@ -895,6 +897,33 @@ func pushRecentTool(agent *core.Agent, summary string) {
 		}
 	}
 	agent.RecentTools = recent
+}
+
+func pushRecentToolDetailed(agent *core.Agent, toolName string, inputPreview string, activityDesc string, now time.Time) {
+	activity := core.ToolActivity{
+		ToolName:     toolName,
+		InputPreview: inputPreview,
+		ActivityDesc: activityDesc,
+		ToolType:     core.ClassifyToolType(toolName),
+		StartedAt:    now,
+	}
+
+	detailed := append([]core.ToolActivity{activity}, agent.RecentToolsDetailed...)
+	if len(detailed) > core.MaxRecentToolsDetailed {
+		detailed = detailed[:core.MaxRecentToolsDetailed]
+	}
+	agent.RecentToolsDetailed = detailed
+}
+
+func completeRecentToolDetailed(agent *core.Agent, toolName string, now time.Time) {
+	for i := range agent.RecentToolsDetailed {
+		if agent.RecentToolsDetailed[i].ToolName == toolName && agent.RecentToolsDetailed[i].CompletedAt == nil {
+			completed := now
+			agent.RecentToolsDetailed[i].CompletedAt = &completed
+			agent.RecentToolsDetailed[i].DurationMs = int(now.Sub(agent.RecentToolsDetailed[i].StartedAt).Milliseconds())
+			break
+		}
+	}
 }
 
 func applyOmcMode(agent *core.Agent, omcMode string) {
