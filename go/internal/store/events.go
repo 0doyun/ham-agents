@@ -17,9 +17,14 @@ type EventStore interface {
 	Load(ctx context.Context) ([]core.Event, error)
 }
 
+// maxEventEntries is the maximum number of events retained in the log.
+// When exceeded, the oldest entries are pruned during Append.
+const maxEventEntries = 10000
+
 type FileEventStore struct {
-	path string
-	mu   sync.Mutex
+	path       string
+	mu         sync.Mutex
+	appendCount int
 }
 
 func NewFileEventStore(path string) *FileEventStore {
@@ -68,7 +73,43 @@ func (s *FileEventStore) Append(ctx context.Context, event core.Event) error {
 		return fmt.Errorf("append event: %w", err)
 	}
 
+	s.appendCount++
+	if s.appendCount%1000 == 0 {
+		s.truncateLocked(ctx)
+	}
+
 	return nil
+}
+
+// truncateLocked prunes the event log to the most recent maxEventEntries.
+// Must be called with s.mu held.
+func (s *FileEventStore) truncateLocked(ctx context.Context) {
+	data, err := os.ReadFile(s.path)
+	if err != nil {
+		return
+	}
+
+	lines := bytesSplitLines(data)
+	if len(lines) <= maxEventEntries {
+		return
+	}
+
+	// Keep only the most recent entries.
+	kept := lines[len(lines)-maxEventEntries:]
+	var buf []byte
+	for _, line := range kept {
+		if len(line) == 0 {
+			continue
+		}
+		buf = append(buf, line...)
+		buf = append(buf, '\n')
+	}
+
+	tmpPath := s.path + ".tmp"
+	if err := os.WriteFile(tmpPath, buf, 0o644); err != nil {
+		return
+	}
+	_ = os.Rename(tmpPath, s.path)
 }
 
 func (s *FileEventStore) Load(ctx context.Context) ([]core.Event, error) {

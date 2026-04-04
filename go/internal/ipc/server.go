@@ -104,6 +104,9 @@ func removeStaleSocket(socketPath string) error {
 func (s *Server) handleConnection(ctx context.Context, connection net.Conn) {
 	defer connection.Close()
 
+	// Prevent slow or malicious clients from holding a goroutine indefinitely.
+	_ = connection.SetReadDeadline(time.Now().Add(10 * time.Second))
+
 	var request Request
 	if err := json.NewDecoder(connection).Decode(&request); err != nil {
 		_ = json.NewEncoder(connection).Encode(Response{Error: fmt.Sprintf("decode request: %v", err)})
