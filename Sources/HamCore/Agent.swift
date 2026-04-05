@@ -17,6 +17,9 @@ public enum AgentStatus: String, Codable, CaseIterable, Sendable {
     case error
     case disconnected
     case sleeping
+    case writing
+    case searching
+    case spawning
 }
 
 public enum NotificationPolicy: String, Codable, CaseIterable, Sendable {

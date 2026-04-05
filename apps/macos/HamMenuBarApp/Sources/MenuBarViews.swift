@@ -927,6 +927,9 @@ private struct StatusBadge: View {
         case .done:          return "done"
         case .idle:          return "idle"
         case .sleeping:      return "sleeping"
+        case .writing:       return "writing"
+        case .searching:     return "searching"
+        case .spawning:      return "spawning"
         }
     }
 
@@ -942,6 +945,8 @@ private struct StatusBadge: View {
             return .green
         case .idle, .sleeping:
             return .gray
+        case .writing, .searching, .spawning:
+            return .blue
         }
     }
 }

@@ -88,6 +88,12 @@ public enum PixelOfficeMapper {
             return .alertLight
         case .idle, .sleeping, .done:
             return .desk  // idle/sleeping stay at desk with sleep sprite
+        case .writing:
+            return .desk
+        case .searching:
+            return .desk
+        case .spawning:
+            return .desk
         }
     }
 
@@ -111,6 +117,12 @@ public enum PixelOfficeMapper {
             return .sleep
         case .idle:
             return .idle
+        case .writing:
+            return .type
+        case .searching:
+            return .walk
+        case .spawning:
+            return .walk
         }
     }
 

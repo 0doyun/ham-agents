@@ -121,7 +121,7 @@ All state is stored in `~/Library/Application Support/ham-agents/`. Nothing leav
 ham setup                       # configure Claude Code hooks + start daemon
 ham list                        # list all tracked agents (color-coded by status)
 ham status                      # summary with attention counts
-ham ask <agent> "message"       # send a message to an agent
+ham ask <agent-or-team> "message" # send a message to an agent or team
 ham stop <agent>                # stop a managed agent
 ham doctor                      # check daemon, hooks, socket status
 ham ui                          # launch the menu bar app manually
@@ -139,6 +139,15 @@ After `ham setup`, just use `claude` as usual — agents are tracked automatical
 ```
 ham run <provider>              # start an agent wrapped in a PTY (richer state inference)
 ham attach --pick-iterm-session # attach to an existing iTerm session
+ham attach --pick-tmux-session  # attach to an existing tmux pane
+ham observe <source-ref>        # observe a transcript file
+ham open <agent-id>             # open agent's terminal or workspace
+ham detach <agent-id>           # detach an attached agent
+ham rename <agent-id> <name>    # rename an agent
+ham logs <agent-id>             # view agent event log
+ham events [--follow]           # list or stream events
+ham settings                    # view/update settings
+ham down                        # stop the daemon
 ```
 
 </details>
@@ -169,7 +178,7 @@ Claude Code              agent registry
 
 > **Just want to use ham-agents?** Use `brew install` above. This section is for contributing to the project.
 
-Requires Go 1.21+, Swift 5.10+, and Xcode (for Swift compilation).
+Requires Go 1.23+, Swift 5.10+, and Xcode (for Swift compilation).
 
 ```bash
 git clone https://github.com/0doyun/ham-agents.git

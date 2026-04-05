@@ -491,6 +491,27 @@ struct PixelOfficeView: View {
             // Small LED (sleeping)
             context.fill(Path(ellipseIn: CGRect(x: cx - 1, y: 9, width: 3, height: 2)), with: .color(Color.orange.opacity(0.4)))
 
+        case .writing:
+            // Pencil + paper on desk
+            let paperX = cx - 8
+            context.fill(Path(CGRect(x: paperX, y: 2, width: 16, height: 12)), with: .color(Color.white.opacity(0.9)))
+            context.fill(Path(CGRect(x: paperX + 2, y: 4, width: 10, height: 1)), with: .color(Color.gray.opacity(0.3)))
+            context.fill(Path(CGRect(x: paperX + 2, y: 6, width: 8, height: 1)), with: .color(Color.gray.opacity(0.3)))
+            context.fill(Path(CGRect(x: paperX + 2, y: 8, width: 10, height: 1)), with: .color(Color.gray.opacity(0.3)))
+            // Pencil
+            context.fill(Path(CGRect(x: cx + 10, y: 3, width: 2, height: 10)), with: .color(Color.yellow.opacity(0.8)))
+            context.fill(Path(CGRect(x: cx + 10, y: 12, width: 2, height: 2)), with: .color(Color.gray.opacity(0.6)))
+
+        case .searching:
+            // Magnifying glass on desk
+            context.stroke(Path(ellipseIn: CGRect(x: cx - 6, y: 1, width: 12, height: 12)), with: .color(Color(red: 0.62, green: 0.64, blue: 0.66)), lineWidth: 2)
+            context.fill(Path(CGRect(x: cx + 4, y: 11, width: 2, height: 5)), with: .color(Color(red: 0.62, green: 0.64, blue: 0.66)))
+
+        case .spawning:
+            // Mini hamster spawning indicator
+            context.fill(Path(ellipseIn: CGRect(x: cx - 4, y: 4, width: 8, height: 8)), with: .color(Color.orange.opacity(0.5)))
+            context.fill(Path(ellipseIn: CGRect(x: cx - 2, y: 6, width: 4, height: 4)), with: .color(Color.orange.opacity(0.8)))
+
         case .done:
             break
         }
