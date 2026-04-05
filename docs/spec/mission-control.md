@@ -107,8 +107,8 @@ P1-5 이벤트 브로드캐스트 기반
 
 | 데이터 | 현재 상태 | 필요한 조치 |
 |--------|----------|------------|
-| Go IPC Command 상수 (52개) | `go/internal/ipc/ipc.go:22-74` 에 정의 | 변경 없음 |
-| Swift DaemonCommand enum (19개) | `Sources/HamCore/DaemonIPC.swift:3-20` | 6개 추가 + unknown fallback |
+| Go IPC Command 상수 (51개) | `go/internal/ipc/ipc.go:22-74` 에 정의 | 변경 없음 |
+| Swift DaemonCommand enum (16개) | `Sources/HamCore/DaemonIPC.swift:3-20` | 6개 추가 + unknown fallback |
 | Hook contract schema | 암묵적. 테스트 없음 | contract test 추가 |
 | 동시성 안전성 | C-1 수정 완료, 추가 레이스 미검증 | race test 추가 |
 
