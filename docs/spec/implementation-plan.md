@@ -4,6 +4,20 @@
 
 ---
 
+## Build & Test Convention
+
+모든 빌드/테스트 명령은 **레포 루트** (`/Users/User/projects/ham-agents/`) 에서 실행한다. go.mod 이 루트에 위치하며 모듈 경로는 `github.com/ham-agents/ham-agents` 이다.
+
+| 작업 | 명령 |
+|------|------|
+| 빌드 | `go build ./go/cmd/ham ./go/cmd/hamd` |
+| 단위 테스트 | `go test ./... -count=1 -short` |
+| 레이스 테스트 | `go test ./... -race -count=1` |
+
+**주의**: `./go/...` 는 잘못된 패턴이다. 루트 기준 `./...` 이 정답.
+
+---
+
 ## 목차
 
 1. [Phase 분류 및 우선순위](#1-phase-분류-및-우선순위)
@@ -19,7 +33,7 @@
 
 ### Phase 1: Mission Control MVP (CLI + 메뉴바 확장)
 
-**실행 순서**: P1-0 → P1-1 → P1-2/P1-3 병렬 → P1-4 → P1-5
+**실행 순서**: P1-0 → P1-1 → (P1-2 ∥ P1-3) → 조건부 P1-4
 
 | 단계 | 기능 | 예상 커밋 수 | 범위 |
 |------|------|-------------|------|
@@ -27,17 +41,17 @@
 | P1-1 | 이벤트 스키마 확장 + Artifact Capture | 3-4 | Event 구조체 확장, ArtifactStore 신규, hook handler 수정 |
 | P1-2 | 실시간 Session Graph | 2-3 | SessionGraph 타입, CLI --graph, 메뉴바 트리 뷰 |
 | P1-3 | Notification Inbox (읽기 전용) | 3-4 | InboxItem/InboxManager, IPC 커맨드 2개, CLI/메뉴바 UI |
-| P1-4 | 비용/토큰 텔레메트리 v1 | 2-3 | ADR-3 조사 결과에 따라 시나리오 분기 (A/B/C) |
-| P1-5 | 이벤트 브로드캐스트 기반 | 2-3 | EventBus 구현, registry 내부 리팩토링 |
+| P1-4 | 비용/토큰 텔레메트리 v1 (조건부) | 2-3 | ADR-3 조사 결과에 따라 시나리오 분기 (A/B/C). Scenario C 시 Phase 2 이관 |
 
-**총 예상**: 16-22 커밋
+**커밋 수 재산정 (Ralph Round 2)**: 기존 16-22 → **12-17** (P1-5 이관으로 4-5 커밋 감소). P1-4 Scenario C 확정 시 추가 -2 커밋.
 
 ### Phase 2: Terminal IDE (ham Studio)
 
-**실행 순서**: Studio Window → Team Orchestrator → Playbooks → Git/CI → Review Loop
+**실행 순서**: Event Broadcast → Studio Window → Team Orchestrator → Playbooks → Git/CI → Review Loop
 
 | 단계 | 기능 | 예상 커밋 수 | 범위 |
 |------|------|-------------|------|
+| P2-0 | Event Broadcast (P1-5 이관) | 2-3 | EventBus 구현, registry 내부 리팩토링. 원 기획은 mission-control.md P1-5 참조 |
 | P2-1 | ham Studio 윈도우 | 5-7 | NSWindow, 3-패널 레이아웃, StudioViewModel, activation policy |
 | P2-2 | Agent Team Orchestrator | 3-4 | TeamOrchestratorState, worktree 스캐너, concurrency budget UI |
 | P2-3 | Playbooks / Recipes | 4-5 | Playbook 스키마, PlaybookRunner, YAML 로더, Studio UI |
@@ -85,12 +99,12 @@
 
 **빌드/테스트 검증:**
 ```bash
-go test ./go/... -race -count=1
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go test ./... -race -count=1
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
-- `go test ./go/... -race` PASS, 데이터 레이스 0건
+- `go test ./... -race` PASS, 데이터 레이스 0건
 - M-2, M-3, M-4, M-5, H-2 버그 모두 해결 확인
 
 ---
@@ -180,7 +194,7 @@ go test ./go/internal/runtime/ -run TestRecordHook -v
 ```bash
 go test ./go/internal/core/ -v
 swift test --disable-sandbox --filter HamCoreTests
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -210,7 +224,7 @@ go build ./go/cmd/ham && go build ./go/cmd/hamd
 **빌드/테스트 검증:**
 ```bash
 go test ./go/internal/runtime/ -run TestRecordHook -v
-go test ./go/... -race
+go test ./... -race
 ```
 
 **완료 조건:**
@@ -235,7 +249,7 @@ go test ./go/... -race
 **빌드/테스트 검증:**
 ```bash
 go test ./go/internal/store/ -run TestArtifact -v
-go build ./go/cmd/hamd
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -265,7 +279,7 @@ go build ./go/cmd/hamd
 **빌드/테스트 검증:**
 ```bash
 go test ./go/internal/core/ -run TestBuildSessionGraph -v
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -330,7 +344,7 @@ swift test --disable-sandbox
 ```bash
 go test ./go/internal/runtime/ -run TestInbox -v
 go test ./go/internal/ipc/ -run TestInboxCommand -v
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -401,7 +415,7 @@ swift test --disable-sandbox
 ```bash
 go test ./go/internal/store/ -run TestCost -v
 go test ./go/internal/runtime/ -run TestCost -v
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -456,8 +470,8 @@ swift test --disable-sandbox
 **빌드/테스트 검증:**
 ```bash
 go test ./go/internal/runtime/ -run TestEventBus -v
-go test ./go/... -race
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go test ./... -race
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -468,6 +482,12 @@ go build ./go/cmd/ham && go build ./go/cmd/hamd
 ---
 
 ## 3. Phase 2 상세 태스크
+
+### P2-0. Event Broadcast (P1-5 이관)
+
+Phase 1 에서 이관된 EventBus 도입 작업. 원 기획은 mission-control.md P1-5 참조.
+
+Phase 2 초입에 수행하여 ham Studio SSE 엔드포인트 등 외부 subscriber 기반을 마련한다.
 
 ### P2-1: ham Studio 윈도우
 
@@ -567,7 +587,7 @@ swift test --disable-sandbox
 ```bash
 go test ./go/internal/adapters/ -run TestGit -v
 go test ./go/internal/runtime/ -run TestOrchestrator -v
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -617,7 +637,7 @@ swift test --disable-sandbox
 ```bash
 go test ./go/internal/store/ -run TestPlaybook -v
 go test ./go/internal/runtime/ -run TestPlaybook -v
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -665,7 +685,7 @@ swift test --disable-sandbox
 ```bash
 go test ./go/internal/adapters/ -run TestGitHub -v
 go test ./go/internal/runtime/ -run TestEventTrigger -v
-go build ./go/cmd/hamd
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -693,7 +713,7 @@ go build ./go/cmd/hamd
 ```bash
 go test ./go/internal/runtime/ -run TestCheckpoint -v
 go test ./go/internal/runtime/ -run TestReviewQueue -v
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -722,7 +742,7 @@ go build ./go/cmd/ham && go build ./go/cmd/hamd
 **빌드/테스트 검증:**
 ```bash
 go test ./go/internal/store/ -run TestDB -v
-go build ./go/cmd/hamd
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -749,7 +769,7 @@ go build ./go/cmd/hamd
 **빌드/테스트 검증:**
 ```bash
 go test ./go/internal/runtime/ -run TestTraceBuilder -v
-go build ./go/cmd/ham
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -794,7 +814,7 @@ swift test --disable-sandbox
 **빌드/테스트 검증:**
 ```bash
 go test ./go/internal/runtime/ -run TestPolicy -v
-go build ./go/cmd/ham
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -823,7 +843,7 @@ go build ./go/cmd/ham
 ```bash
 go test ./go/internal/runtime/ -run TestMemory -v
 go test ./go/internal/store/ -run TestMemory -v
-go build ./go/cmd/ham
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -848,7 +868,7 @@ go build ./go/cmd/ham
 **빌드/테스트 검증:**
 ```bash
 go test ./go/internal/runtime/ -run TestMaintenance -v
-go build ./go/cmd/ham
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -873,7 +893,7 @@ go build ./go/cmd/ham
 **빌드/테스트 검증:**
 ```bash
 go test ./go/internal/runtime/ -run TestPack -v
-go build ./go/cmd/ham
+go build ./go/cmd/ham ./go/cmd/hamd
 ```
 
 **완료 조건:**
@@ -1019,15 +1039,15 @@ dev/phase-1 브랜치에서 작업. main에 직접 커밋 금지.
 3. test-engineer: eventbus_test.go 동시성 테스트
 
 ## 빌드/테스트 검증 (매 커밋 후)
-go test ./go/... -race -count=1
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go test ./... -race -count=1
+go build ./go/cmd/ham ./go/cmd/hamd
 swift build --disable-sandbox
 swift test --disable-sandbox
 
 ## 완료 조건
-- [ ] go test ./go/... -race PASS (데이터 레이스 0건)
+- [ ] go test ./... -race PASS (데이터 레이스 0건)
 - [ ] swift test --disable-sandbox PASS
-- [ ] go build ./go/cmd/ham && go build ./go/cmd/hamd 성공
+- [ ] go build ./go/cmd/ham ./go/cmd/hamd 성공
 - [ ] swift build --disable-sandbox 성공
 - [ ] DaemonCommand enum이 Go IPC Command와 동기화됨 (hook 계열 제외)
 - [ ] 27개 hook contract test PASS
@@ -1083,13 +1103,13 @@ dev/phase-2 브랜치에서 작업. dev/phase-1이 main에 머지된 후 시작.
 2. swift-frontend: StudioInspectorView review section + CheckpointTimelineView
 
 ## 빌드/테스트 검증 (매 커밋 후)
-go test ./go/... -race -count=1
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go test ./... -race -count=1
+go build ./go/cmd/ham ./go/cmd/hamd
 swift build --disable-sandbox
 swift test --disable-sandbox
 
 ## 완료 조건
-- [ ] go test ./go/... -race PASS
+- [ ] go test ./... -race PASS
 - [ ] swift test --disable-sandbox PASS
 - [ ] ham Studio 창이 "Open Studio" 클릭으로 열림
 - [ ] 3-패널 레이아웃 (sidebar + center + inspector) 정상 렌더링
@@ -1146,13 +1166,13 @@ dev/phase-3 브랜치에서 작업. dev/phase-2가 main에 머지된 후 시작.
 1. go-backend: core/pack.go + runtime/pack_manager.go + store/pack_store.go + CLI
 
 ## 빌드/테스트 검증 (매 커밋 후)
-go test ./go/... -race -count=1
-go build ./go/cmd/ham && go build ./go/cmd/hamd
+go test ./... -race -count=1
+go build ./go/cmd/ham ./go/cmd/hamd
 swift build --disable-sandbox
 swift test --disable-sandbox
 
 ## 완료 조건
-- [ ] go test ./go/... -race PASS
+- [ ] go test ./... -race PASS
 - [ ] swift test --disable-sandbox PASS
 - [ ] SQLite DB 파일 생성 + JSONL 마이그레이션 성공
 - [ ] ham debug replay <session-id> 실행 시 타임라인 출력
