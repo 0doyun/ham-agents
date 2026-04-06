@@ -547,6 +547,51 @@ type hookPayload struct {
 
 Swift `Agent.init(from:)` 에서 `decodeIfPresent` 사용으로 디코딩 에러는 발생하지 않으나, UI에서 해당 데이터를 활용할 수 없음.
 
+### Managed Mode PTY Base (Round 3 조사)
+
+Phase 2 embedded PTY 전환의 기반을 확인하기 위한 현재 구현 스냅샷 (2026-04-06 기준, dev/detailed-plan).
+
+**두 가지 spawn 경로가 존재한다**:
+
+1. **ham CLI path — `ham run <provider>`**
+   - Entry: `go/cmd/ham/commands.go:23` `runRegister`
+   - Exec call: `go/cmd/ham/pty.go:69` `cmd := exec.Command(providerBin)`
+   - PTY 할당: `go/cmd/ham/pty.go:129-153` `openPTY()` — `/dev/ptmx` + `TIOCPTYGRANT` + `TIOCPTYUNLK` + `TIOCPTYGNAME` syscalls
+   - Flags: `SysProcAttr{Setsid: true, Setctty: true}` (pty.go:79-82)
+   - I/O wiring: `cmd.Stdin/Stdout/Stderr = tty` (pty.go:70-72)
+   - stdin 복사: `os.Stdin → ptmx` (pty.go:91-93)
+   - stdout 복사: `ptmx → os.Stdout` + line-tee `→ client.RecordOutput()` (pty.go:97-121)
+   - 이 경로는 ham CLI 프로세스 내부에서만 ptmx fd 를 유지. hamd 로는 전달되지 않음
+
+2. **hamd ManagedService path — `CommandRunManaged` IPC**
+   - Entry: `go/internal/runtime/managed.go:39` `ManagedService.Start`
+   - Exec call: 내부 `exec.Cmd`
+   - I/O wiring: `cmd.StdoutPipe()` / `cmd.StderrPipe()` (managed.go:61-70) — **plain pipes, PTY 없음**
+   - 즉 현재 IPC 로 스폰 요청이 오면 PTY 가 할당되지 않는다
+
+**Lifecycle**:
+- Start (CLI): ham CLI 가 `client.RegisterManaged` 로 hamd 등록 후 로컬 spawn
+- Start (hamd): `ManagedService.Start` (IPC `CommandRunManaged`)
+- Stop: hamd 전용 — `ManagedService.Stop` 이 SIGTERM, 2 초 후 SIGKILL (managed.go:93-116)
+- Wait/reap: `go/internal/runtime/managed.go:152` `waitForExit` 고루틴
+
+**Agent 필드 (managed 모드 관련)**:
+- `go/internal/core/agent.go:67` `SessionProcessID int` — PID
+- `go/internal/core/agent.go:68` `SessionCommand string` — 스폰 커맨드라인
+- `go/internal/core/agent.go:62` `SessionTTY string` — **있지만 managed 모드에서는 설정되지 않는다** (attached/observed 전용)
+- `go/internal/core/agent.go:58` `SessionID string` — hook.session-start 수신 시 populate
+
+**Gap for Phase 2 embedded PTY**:
+- hamd 가 PTY master 를 소유하도록 ManagedService.Start 를 확장해야 함 (기존 pty.go 의 openPTY 패턴을 `go/internal/runtime/pty_alloc.go` 같은 공용 헬퍼로 추출)
+- Agent.SessionTTY 를 managed 모드에서도 populate
+- IPC 에 PTY streaming 경로 추가 (ADR-2 참조)
+- Swift `DaemonIPC.swift` 에 PTY 관련 DaemonCommand 3 개 추가 필요
+
+**관련 ADR**:
+- Phase 2 transport 결정은 `tech-migration.md` ADR-2 (PTY Transport for Embedded Studio Terminal) 참조
+- SessionEvent 스키마 (PTY 라인 tee 용) 는 `mission-control.md` ADR-1 참조
+- Phase 2 UX 와 기능 세부는 `ham-studio.md` P2-1 (Embedded PTY Runtime), P2-3 (Approval Interception) 참조
+
 ### 2-2. Event 구조체
 
 **Go Event** (core/agent.go:155-168):

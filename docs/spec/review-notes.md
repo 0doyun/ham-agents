@@ -151,3 +151,63 @@
 | ISSUE-05 (LifecycleConfidence 타입) | CRITICAL | US-003 | mission-control.md 스키마 표에서 string → float64 수정 |
 | ISSUE-06 (hookPayload 파일 위치) | HIGH | US-001 | current-state.md hookPayload 참조 commands.go:433으로 수정 |
 | ISSUE-07 (Swift DaemonCommand 16개) | HIGH | US-001 | current-state.md, tech-migration.md 수치 16으로 통일 |
+
+---
+
+## 라운드 3 재검증 (2026-04-06)
+
+### 배경
+라운드 2 (커밋 931550b) 까지는 ham-agents 가 Observe 중심 control plane 이었다. critic 와 사용자 합의로 "관찰만 하는 AgentOps 는 의미 없다" 가 확인되어 Phase 2 embedded PTY 방향으로 전환. ham Studio 가 primary UX 가 되고 Claude Code 세션이 Studio 탭 안에서 직접 돌아간다.
+
+라운드 3 의 범위는 Phase 2 전환 + 그 파급효과 (포지셔닝, Realism Check, 구현 계획, 현재 상태 문서). Phase 1 MVP 범위 (P1-0~P1-4) 와 라운드 2 산출물 (ADR-1, Phase 1 Scope Gate, 경쟁 비교표) 은 유지.
+
+### 재검증 증거
+
+| # | 명령 | 결과 | 검증 대상 |
+|---|------|------|----------|
+| R3-1 | `grep -n 'ADR-2' docs/spec/tech-migration.md` | >0 (신규 섹션) | US-002: PTY Transport ADR 작성 |
+| R3-2 | `grep -n 'Embedded PTY Runtime' docs/spec/ham-studio.md` | >0 (P2-1 신규) | US-003: ham-studio PTY 재작성 |
+| R3-3 | `grep -n 'Approval Interception' docs/spec/ham-studio.md` | >0 (P2-3 신규) | US-003: Govern 축 구현 |
+| R3-4 | `grep -n 'Observe + Direct + Govern\|Observe.*Direct.*Govern' docs/spec/mission-control.md` | >0 (포지셔닝 업데이트) | US-004: mission-control 축 재정의 |
+| R3-5 | `grep -n 'Phase 2 Handoff' docs/spec/agentops-platform.md` | >0 (신규 subsection) | US-005: Policy Engine ↔ PTY 연결 |
+| R3-6 | `grep -n '22-31' docs/spec/implementation-plan.md` | >0 (커밋 수 재산정) | US-006: Phase 2 재계획 |
+| R3-7 | `grep -n 'Managed Mode PTY Base' docs/spec/current-state.md` | >0 (신규 subsection) | US-007: PTY base 문서화 |
+| R3-8 | `grep -n 'ADR-1' docs/spec/mission-control.md` | >0 (라운드 2 유지) | 회귀 없음 확인 |
+| R3-9 | `grep -n '52개' docs/spec/current-state.md` | >0 (라운드 2 카운트 유지) | 회귀 없음 확인 |
+| R3-10 | `grep -n 'Scope Gate' docs/spec/implementation-plan.md` | >0 (라운드 2 유지) | 회귀 없음 확인 |
+
+### 라운드 3 주요 결정
+
+1. **PTY 내장 방식**: ADR-2 에서 3 가지 옵션 비교 후 **Option 1 (NDJSON stream upgrade)** 선정. 기존 `CommandFollowEvents` 장기 연결 패턴을 재사용해 `CommandFollowPTY` / `CommandWritePTY` / `CommandResizePTY` 3 개 신규 IPC 커맨드 도입. 기존 request-response IPC 는 무변경, 새 command 3 개 추가만.
+
+2. **Swift 터미널 라이브러리**: SwiftTerm (https://github.com/migueldeicaza/SwiftTerm) — AppKit 네이티브, xterm-256color, MIT.
+
+3. **Policy Engine 차단 가능해짐**: 라운드 2 에서 "hook 단방향이라 차단 불가, 알림만" 이었던 P3-2 Alert Policy Engine 이 Phase 2 PTY Approval Interception 을 extension point 로 사용해 실제 차단 가능. 단, attached / observed legacy 모드에서는 여전히 알림만 가능.
+
+4. **NSWindow activation policy 전환**: default 가 `.accessory` → `.regular` 로 변경. MenuBarExtra 는 ambient 알림 surface 로 강등.
+
+5. **Phase 2 커밋 수 재산정**: 라운드 2 20-27 → 라운드 3 **22-31** (+2-3 from P2-1 Embedded PTY Runtime, +0-1 from P2-3 Approval Interception).
+
+### 라운드 3 에서 추가된 ISSUE 없음
+
+라운드 3 는 critic 의 전면 재검토를 아직 거치지 않은 상태다 (Ralph 루프가 US-009 에서 critic 재검증을 예정). 재검증 결과 블로커가 발생하면 이 섹션 아래에 `### ISSUE-R3-01` 같은 형식으로 누적한다.
+
+### 라운드 2 산출물 회귀 체크
+
+| 라운드 2 항목 | 상태 | 확인 방법 |
+|-------------|------|----------|
+| ADR-1 SessionEvent 스키마 (mission-control.md, tech-migration.md, agentops-platform.md) | 유지 | grep 'ADR-1' 결과 3 파일 모두 존재 |
+| Go Command 52개 | 유지 | grep '52개' docs/spec/current-state.md |
+| Swift DaemonCommand 16개 | 유지 | grep '16 케이스' docs/spec/current-state.md |
+| Phase 1 MVP 범위 (P1-0~P1-4) | 유지 | grep 'Phase 1 MVP 범위' docs/spec/mission-control.md |
+| Scope Gate (P1-4) | 유지 | grep 'Scope Gate' docs/spec/implementation-plan.md |
+| 경쟁 비교표 (Cursor/Windsurf/Warp/Claude Code Agent Teams) | 유지 + Direct/Govern 행 추가 | grep 'Direct / Govern capability' |
+| Build & Test Convention | 유지 | grep 'Build & Test Convention' |
+| P2-0 EventBus (P1-5 이관) | 유지 | grep 'P2-0.*Event Broadcast' |
+
+### 다음 단계
+
+1. 라운드 3 변경사항을 dev/detailed-plan 에 커밋 + push
+2. critic (Claude) 승인 리뷰
+3. 블로커 발견 시 즉시 수정 → 재검증
+4. 통과 시 Ralph 세션 종료

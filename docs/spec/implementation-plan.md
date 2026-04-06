@@ -64,16 +64,24 @@
 
 **실행 순서**: Event Broadcast → Studio Window → Team Orchestrator → Playbooks → Git/CI → Review Loop
 
-| 단계 | 기능 | 예상 커밋 수 | 범위 |
-|------|------|-------------|------|
-| P2-0 | Event Broadcast (P1-5 이관) | 2-3 | EventBus 구현, registry 내부 리팩토링. 원 기획은 mission-control.md P1-5 참조 |
-| P2-1 | ham Studio 윈도우 | 5-7 | NSWindow, 3-패널 레이아웃, StudioViewModel, activation policy |
-| P2-2 | Agent Team Orchestrator | 3-4 | TeamOrchestratorState, worktree 스캐너, concurrency budget UI |
-| P2-3 | Playbooks / Recipes | 4-5 | Playbook 스키마, PlaybookRunner, YAML 로더, Studio UI |
-| P2-4 | Git/CI/Issue 연동 | 3-4 | WebhookReceiver, GitHub 어댑터, EventTriggerEngine |
-| P2-5 | Review Loop | 3-4 | CheckpointManager, ReviewQueue, Studio review UI |
+| 태스크 | 내용 | 예상 커밋 |
+|-------|------|----------|
+| P2-0 Event Broadcast (P1-5 이관) | EventBus 내부 fan-out | 2-3 |
+| P2-1 Embedded PTY Runtime | hamd PTY 할당 + NDJSON 스트림 (ADR-2) + SwiftTerm 통합 | 6-8 |
+| P2-2 Session Launcher | Studio New Session UI + workspace/model/playbook 선택 | 2-3 |
+| P2-3 Approval Interception | PTY 블록 + approve 모달 + CommandAnswerPermission | 3-4 |
+| P2-4 Agent Team Orchestrator | 기존 round 2 범위 | 3-4 |
+| P2-5 Playbooks | 기존 round 2 범위 | 2-3 |
+| P2-6 Git/CI webhook | 기존 round 2 범위 | 2-3 |
+| P2-7 Review Loop | 기존 round 2 범위 | 2-3 |
 
 **총 예상**: 20-27 커밋 (P1-5 이관으로 +2-3)
+
+**커밋 수 재산정 (Ralph Round 3)**: 라운드 2 `20-27` → **22-31 커밋**. 내역:
+- 라운드 2 기준 20-27 유지
+- +2-3 from P2-1 Embedded PTY Runtime (hamd PTY 할당, NDJSON 스트림, SwiftTerm 통합)
+- +0-1 from P2-3 Approval Interception (P2-1 위에 얹히므로 증분 작음)
+- 총 +2-4, 신규 범위 `22-31 커밋`
 
 ### Phase 3: AgentOps Platform
 
@@ -500,20 +508,58 @@ go build ./go/cmd/ham ./go/cmd/hamd
 
 ---
 
-### P2-1: ham Studio 윈도우
+### P2-1. Embedded PTY Runtime (신규 — Round 3)
 
-#### P2-1-A: Studio Window + Activation Policy
+**의존성**: P1-0 Registry 락, P1-1 SessionEvent 스키마, ADR-2 (tech-migration.md)
+
+**목표**: hamd 가 PTY master 를 소유하고 Claude Code 를 spawn. NDJSON 스트림으로 Swift ham Studio 가 PTY 데이터를 수신 → SwiftTerm 렌더.
+
+**변경 파일**:
+- `go/internal/runtime/managed.go` — ManagedService.Start 에서 openPTY 호출, managedProcess 에 ptmx/subs 필드 추가
+- `go/internal/runtime/pty_alloc.go` (신규) — 기존 go/cmd/ham/pty.go 의 openPTY 패턴을 재사용 가능하게 추출
+- `go/internal/ipc/ipc.go` — Command 상수 3 개 추가 (`CommandFollowPTY`, `CommandWritePTY`, `CommandResizePTY`)
+- `go/internal/ipc/server.go` — dispatch 에 3 개 case 추가, handleFollowPTY 는 CommandFollowEvents 패턴 재사용
+- `go/internal/core/agent.go` — 기존 `SessionTTY` 필드를 managed 모드에서도 populate
+- `Sources/HamCore/DaemonIPC.swift` — DaemonCommand enum 에 `ptyFollow`, `ptyWrite`, `ptyResize` 추가 (16 → 19)
+- `Sources/HamApp/PTY/PtyClient.swift` (신규)
+- `Sources/HamApp/PTY/PtyTabView.swift` (신규 — SwiftTerm NSViewRepresentable)
+- `Sources/HamApp/StudioWindow.swift` (신규 또는 확장) — 탭 컨테이너
+
+**테스트**:
+- Go: `go test ./go/internal/runtime -run TestPTYHost` (ptmx 할당 + subs fan-out unit test)
+- Go: `go test ./go/internal/ipc -run TestFollowPTY` (NDJSON stream contract)
+- Swift: SwiftTerm 통합은 수동 smoke test (Studio 탭 열기 → Claude Code 세션 시작 → 입력/출력 rendering 확인)
+
+**빌드**:
+```bash
+go build ./go/cmd/ham ./go/cmd/hamd
+# Swift 측: xcodebuild 또는 swift build (HamApp 타겟에 SwiftTerm SPM dependency 추가)
+```
+
+**완료 조건**:
+- [ ] hamd managed 모드가 PTY 할당
+- [ ] Swift Studio 탭이 SwiftTerm 으로 PTY 출력 렌더
+- [ ] 사용자 입력이 CommandWritePTY 경유로 ptmx 에 write
+- [ ] TIOCSWINSZ 리사이즈 동작
+- [ ] Studio 크래시 후 재시작 시 resume_from_seq 로 재구독 성공
+- [ ] 기존 `ham run <provider>` CLI 로컬 PTY 경로도 계속 동작 (회귀 없음)
+- [ ] `go test ./... -race -count=1` 통과
+- [ ] `go build ./go/cmd/ham ./go/cmd/hamd` 성공
+
+---
+
+### P2-2: Session Launcher
+
+#### P2-2-A: Studio New Session UI (신규 — Round 3)
+
+**의존성**: P2-1 Embedded PTY Runtime
+
+**목표**: ham Studio 에서 새 세션을 시작할 때 workspace/model/playbook 을 선택하는 UI.
 
 **변경 파일 목록:**
-- `apps/macos/HamMenuBarApp/Sources/HamMenuBarApp.swift` — HamStudioWindowPresenter 싱글톤, "Open Studio" 메뉴 항목
-- `Sources/HamAppServices/StudioViewModel.swift` — **[신규]** StudioViewModel (1초 polling, 200ms event follow)
-
-**변경 내용:**
-- `HamMenuBarApp.swift`: `HamStudioWindowPresenter` (HamOfficeWindowPresenter 패턴 따름). NSWindow 1200x800, minSize 900x600. `show()` 시 `.regular` activation policy, `windowWillClose` 시 Office도 닫혀있으면 `.accessory` 복귀. MenuBarContentView에 "Open Studio" 버튼 추가
-- `StudioViewModel.swift`: `@MainActor final class StudioViewModel: ObservableObject`. 동일 `HamDaemonClient` 공유, 1초 refresh + 200ms event follow. Studio 열릴 때 MenuBarViewModel polling을 30초로 늦추는 알림 발송
-
-**테스트 계획:**
-- `Tests/HamAppServicesTests/StudioViewModelTests.swift` — polling 주기, event follow 연결
+- `apps/macos/HamMenuBarApp/Sources/SessionLauncherView.swift` — **[신규]** New Session 모달 (workspace picker, model selector, playbook dropdown)
+- `Sources/HamAppServices/SessionLauncherModel.swift` — **[신규]** SessionLauncherModel (IPC CommandStartSession 호출)
+- `Sources/HamCore/DaemonIPC.swift` — `startSession` 커맨드 추가
 
 **빌드/테스트 검증:**
 ```bash
@@ -522,66 +568,46 @@ swift test --disable-sandbox
 ```
 
 **완료 조건:**
-- "Open Studio" 클릭 시 별도 창 열림
-- Dock 아이콘 표시/숨김 정상 전환
-- Studio 창 닫기 후 메뉴바만 남는 상태 복귀
+- "New Session" 클릭 시 launcher 모달 열림
+- workspace/model/playbook 선택 후 세션 시작 → P2-1 PTY 탭에 연결
 
 ---
 
-#### P2-1-B: 3-패널 레이아웃
+### P2-3: Approval Interception
+
+#### P2-3-A: PTY 블록 + CommandAnswerPermission (신규 — Round 3)
+
+**의존성**: P2-1 Embedded PTY Runtime
+
+**목표**: hamd 가 permission 요청 감지 시 PTY 입력을 블록하고 Swift 승인 모달을 트리거. 사용자 응답을 `CommandAnswerPermission` 으로 전달.
 
 **변경 파일 목록:**
-- `apps/macos/HamMenuBarApp/Sources/StudioRootView.swift` — **[신규]** HamStudioRootView (NavigationSplitView + HSplitView)
-- `apps/macos/HamMenuBarApp/Sources/StudioSidebarView.swift` — **[신규]** 에이전트/팀 트리 사이드바
-- `apps/macos/HamMenuBarApp/Sources/StudioCenterView.swift` — **[신규]** 라이브 이벤트 로그 + 탭
-- `apps/macos/HamMenuBarApp/Sources/StudioInspectorView.swift` — **[신규]** Diff, Approval, Cost, Context 인스펙터
-
-**변경 내용:**
-- `StudioRootView.swift`: NavigationSplitView (sidebar) + HSplitView (center + inspector). Toolbar에 sidebar/inspector toggle
-- `StudioSidebarView.swift`: SessionGraph 기반 에이전트 트리 + 팀 그룹핑. 상태 뱃지 (색상 dot), 빠른 필터 (running/waiting/error)
-- `StudioCenterView.swift`: 선택된 에이전트의 이벤트 로그 스트림. 탭 (에이전트별). EventPresentation 재활용
-- `StudioInspectorView.swift`: 선택 에이전트 상세 — 상태/confidence/blocking reason, 최근 tool 활동, artifact 목록, 비용 (P1-4 데이터), OpenTarget 버튼
-
-**테스트 계획:**
-- SwiftUI Preview로 3-패널 레이아웃 시각 확인
-- `Tests/HamAppServicesTests/StudioViewModelTests.swift` — 에이전트 선택 시 center/inspector 데이터 갱신
+- `go/internal/runtime/managed.go` — PTY 출력에서 permission 패턴 감지, 블록 상태 설정
+- `go/internal/ipc/ipc.go` — `CommandAnswerPermission` 상수 추가
+- `go/internal/ipc/server.go` — `handleAnswerPermission` 핸들러 추가
+- `Sources/HamCore/DaemonIPC.swift` — `answerPermission` 커맨드 추가
+- `Sources/HamApp/PTY/ApprovalModalView.swift` — **[신규]** 승인 모달 (Yes/No/Always/Never)
 
 **빌드/테스트 검증:**
 ```bash
+go test ./go/internal/runtime/ -run TestApproval -v
+go build ./go/cmd/ham ./go/cmd/hamd
 swift build --disable-sandbox
-swift test --disable-sandbox
 ```
 
 **완료 조건:**
-- 3-패널 레이아웃 렌더링 정상
-- sidebar toggle, inspector toggle 동작
-- 에이전트 선택 시 center/inspector 갱신
+- [ ] permission 요청 감지 시 PTY 입력 블록
+- [ ] Swift 승인 모달 표시
+- [ ] 사용자 응답이 CommandAnswerPermission 경유로 hamd 에 전달
+- [ ] "Always" 선택 시 동일 패턴 자동 승인
 
 ---
 
-#### P2-1-C: Studio 이벤트 로그 + 에이전트 상세
+### P2-4: Agent Team Orchestrator
 
-**변경 파일 목록:**
-- `Sources/HamAppServices/EventPresentation.swift` — 새 필드 (toolName, toolDuration) 활용 표시 로직
-- `apps/macos/HamMenuBarApp/Sources/StudioCenterView.swift` — 이벤트 로그 LazyVStack, 자동 스크롤
-- `apps/macos/HamMenuBarApp/Sources/StudioInspectorView.swift` — artifact 뷰어, quick message 필드
+> 기존 round 2 P2-2 범위. Round 3 에서 P2-4 로 재번호 부여.
 
-**빌드/테스트 검증:**
-```bash
-swift build --disable-sandbox
-swift test --disable-sandbox
-```
-
-**완료 조건:**
-- 이벤트 로그에 도구명 + 소요시간 표시
-- artifact 있는 이벤트에 `[artifact]` 마커
-- Quick message 전송 동작
-
----
-
-### P2-2: Agent Team Orchestrator
-
-#### P2-2-A: TeamOrchestratorState + Git Adapter
+#### P2-4-A: TeamOrchestratorState + Git Adapter
 
 **변경 파일 목록:**
 - `go/internal/core/team.go` — TeamOrchestratorState, TaskContract, WorktreeInfo, MergeGate 타입 추가
@@ -608,7 +634,7 @@ go build ./go/cmd/ham ./go/cmd/hamd
 
 ---
 
-#### P2-2-B: Studio Team UI
+#### P2-4-B: Studio Team UI
 
 **변경 파일 목록:**
 - `apps/macos/HamMenuBarApp/Sources/StudioSidebarView.swift` — 팀 트리 섹션 (lead/worker 아이콘, task progress bar)
@@ -628,9 +654,11 @@ swift test --disable-sandbox
 
 ---
 
-### P2-3: Playbooks / Recipes
+### P2-5: Playbooks / Recipes
 
-#### P2-3-A: Playbook 스키마 + Runner (Go)
+> 기존 round 2 P2-3 범위. Round 3 에서 P2-5 로 재번호 부여.
+
+#### P2-5-A: Playbook 스키마 + Runner (Go)
 
 **변경 파일 목록:**
 - `go/internal/core/playbook.go` — **[신규]** Playbook, PlaybookStep, PlaybookExecution 타입
@@ -657,7 +685,7 @@ go build ./go/cmd/ham ./go/cmd/hamd
 
 ---
 
-#### P2-3-B: Studio Playbook UI
+#### P2-5-B: Studio Playbook UI
 
 **변경 파일 목록:**
 - `apps/macos/HamMenuBarApp/Sources/StudioPlaybookView.swift` — **[신규]** playbook 목록 + 실행 UI
@@ -677,9 +705,11 @@ swift test --disable-sandbox
 
 ---
 
-### P2-4: Git/CI/Issue 연동
+### P2-6: Git/CI/Issue 연동
 
-#### P2-4-A: GitHub Webhook + EventTrigger (Go)
+> 기존 round 2 P2-4 범위. Round 3 에서 P2-6 으로 재번호 부여.
+
+#### P2-6-A: GitHub Webhook + EventTrigger (Go)
 
 **변경 파일 목록:**
 - `go/internal/core/external_event.go` — **[신규]** ExternalEvent, ExternalEventSource, EventTriggerRule
@@ -705,9 +735,11 @@ go build ./go/cmd/ham ./go/cmd/hamd
 
 ---
 
-### P2-5: Review Loop
+### P2-7: Review Loop
 
-#### P2-5-A: Checkpoint + Review Queue (Go)
+> 기존 round 2 P2-5 범위. Round 3 에서 P2-7 로 재번호 부여.
+
+#### P2-7-A: Checkpoint + Review Queue (Go)
 
 **변경 파일 목록:**
 - `go/internal/core/review.go` — **[신규]** Checkpoint, ReviewItem, ReviewStatus
@@ -961,13 +993,13 @@ P1-4-A (go-backend) → P1-4-B (swift-frontend)
 
 | 에이전트 | 역할 | 담당 태스크 |
 |----------|------|-------------|
-| **go-backend** | Go 코드 변경 | P2-0-A (EventBus), P2-2-A, P2-3-A, P2-4-A, P2-5-A |
-| **swift-frontend** | Swift UI 구현 | P2-1-A, P2-1-B, P2-1-C, P2-2-B, P2-3-B |
-| **ui-designer** | Studio 레이아웃 설계 | P2-1-B 레이아웃, P2-2-B 팀 UI, P2-3-B playbook UI |
+| **go-backend** | Go 코드 변경 | P2-0-A (EventBus), P2-1-A (ManagedService PTY + IPC commands), P2-3-A (Permission interception + CommandAnswerPermission), P2-4-A, P2-5-A, P2-6-A, P2-7-A |
+| **swift-frontend** | Swift UI 구현 | P2-1-B (PTY UI + SwiftTerm NSViewRepresentable), P2-2-A (Session Launcher UI), P2-3-B (Approval modal), P2-4-B, P2-5-B |
+| **ui-designer** | Studio 레이아웃 설계 | P2-4-B 팀 UI, P2-5-B playbook UI |
 | **test-engineer** | 테스트 | 각 태스크별 테스트 |
-| **architect** | 설계 리뷰 | P2-3 Playbook 스키마, P2-4 webhook 보안 |
+| **architect** | 설계 리뷰 | P2-1 설계 검증 (ADR-2 구현 확인), P2-5 Playbook 스키마, P2-6 webhook 보안 |
 | **code-reviewer** | 품질 검증 | Studio 코드 리뷰 |
-| **devops** | 빌드 검증 | 각 커밋 후 빌드 |
+| **devops** | 빌드 검증 | 각 커밋 후 빌드, SwiftTerm SPM dependency spike |
 
 #### 태스크 분배
 
@@ -975,12 +1007,17 @@ P1-4-A (go-backend) → P1-4-B (swift-frontend)
 ```
 P2-0-A (go-backend)  ← EventBus 구현 (P1-5 이관)
     ↓
-P2-1-A (swift-frontend) → P2-1-B (swift-frontend + ui-designer) → P2-1-C (swift-frontend)
+[SwiftTerm SPM spike — devops + architect]
     ↓
-P2-2-A (go-backend) + P2-2-B (swift-frontend)  ← 스키마 확정 후 병렬
-P2-3-A (go-backend) + P2-3-B (swift-frontend)  ← 스키마 확정 후 병렬
+P2-1-A (go-backend: PTY 할당 + IPC) ∥ P2-1-B (swift-frontend: PtyClient + PtyTabView)
     ↓
-P2-4-A (go-backend) → P2-5-A (go-backend)
+P2-2-A (swift-frontend: Session Launcher) ∥ P2-3-A (go-backend: Permission interception)
+P2-3-B (swift-frontend: Approval modal)
+    ↓
+P2-4-A (go-backend) + P2-4-B (swift-frontend)  ← 스키마 확정 후 병렬
+P2-5-A (go-backend) + P2-5-B (swift-frontend)  ← 스키마 확정 후 병렬
+    ↓
+P2-6-A (go-backend) → P2-7-A (go-backend)
 ```
 
 ---
@@ -1077,31 +1114,49 @@ dev/phase-2 브랜치에서 작업. dev/phase-1이 main에 머지된 후 시작.
 - swift-frontend (opus): Swift UI 구현 전담
 - ui-designer (opus): Studio 레이아웃 + 픽셀 아트 일관성
 - test-engineer (opus): 테스트 코드 전담
-- architect (opus): Playbook 스키마 + Webhook 보안 리뷰
+- architect (opus): ADR-2 구현 검증, Playbook 스키마 + Webhook 보안 리뷰
 - code-reviewer (opus): Studio 코드 품질 검증
 - devops (haiku): 빌드 검증
 
 ## 실행 순서
 
-### Step 1: P2-1 ham Studio 윈도우 (5-7 커밋)
-1. swift-frontend: HamMenuBarApp.swift에 HamStudioWindowPresenter 추가 + activation policy 전환
-2. swift-frontend + ui-designer: StudioRootView (3-패널), StudioSidebarView, StudioCenterView, StudioInspectorView
-3. swift-frontend: StudioViewModel (1초 polling, 200ms event follow) + EventPresentation 새 필드 활용
+### Step 0: P2-0 EventBus (2-3 커밋)
+1. go-backend: runtime/eventbus.go 신규, registry.go 리팩토링, events.go EventBus 기반 재작성
 
-### Step 2: P2-2 Team Orchestrator (3-4 커밋)
+### Step 0a: SwiftTerm SPM dependency spike (P2-1 전 선행)
+1. devops: Package.swift 에 SwiftTerm SPM dependency 추가 후 `swift build --disable-sandbox` 검증
+2. architect: ADR-2 (tech-migration.md) 구현 가능성 확인
+
+### Step 1: P2-1 Embedded PTY Runtime (6-8 커밋)
+1. go-backend: runtime/pty_alloc.go 신규 (openPTY 추출), runtime/managed.go PTY 할당 통합
+2. go-backend: ipc/ipc.go CommandFollowPTY/CommandWritePTY/CommandResizePTY 추가, ipc/server.go 핸들러
+3. swift-frontend: DaemonIPC.swift ptyFollow/ptyWrite/ptyResize 추가
+4. swift-frontend: PTY/PtyClient.swift 신규, PTY/PtyTabView.swift 신규 (SwiftTerm NSViewRepresentable)
+5. swift-frontend: StudioWindow.swift 탭 컨테이너
+
+### Step 1b: P2-2 Session Launcher (2-3 커밋)
+1. swift-frontend: SessionLauncherView.swift 신규 + SessionLauncherModel.swift 신규
+2. swift-frontend: DaemonIPC.swift startSession 커맨드 추가
+
+### Step 1c: P2-3 Approval Interception (3-4 커밋)
+1. go-backend: runtime/managed.go permission 패턴 감지 + 블록 로직
+2. go-backend: ipc/ipc.go CommandAnswerPermission + ipc/server.go 핸들러
+3. swift-frontend: DaemonIPC.swift answerPermission 추가 + PTY/ApprovalModalView.swift 신규
+
+### Step 2: P2-4 Team Orchestrator (3-4 커밋)
 1. go-backend: core/team.go 타입 확장 + runtime/orchestrator.go + adapters/git.go WorktreeScanner
 2. swift-frontend + ui-designer: Studio sidebar 팀 트리 + inspector 팀 상세
 
-### Step 3: P2-3 Playbooks (4-5 커밋)
+### Step 3: P2-5 Playbooks (2-3 커밋)
 1. architect: Playbook YAML 스키마 리뷰
 2. go-backend: core/playbook.go + runtime/playbook_runner.go + store/playbook_store.go + CLI
 3. swift-frontend: StudioPlaybookView + PlaybookExecutionView
 
-### Step 4: P2-4 Git/CI 연동 (3-4 커밋)
+### Step 4: P2-6 Git/CI 연동 (2-3 커밋)
 1. architect: Webhook 보안 (localhost only, 인증) 리뷰
 2. go-backend: core/external_event.go + adapters/github_webhook.go + runtime/webhook_server.go + event_trigger.go
 
-### Step 5: P2-5 Review Loop (3-4 커밋)
+### Step 5: P2-7 Review Loop (2-3 커밋)
 1. go-backend: core/review.go + runtime/checkpoint_manager.go + review_queue.go + adapters/git.go
 2. swift-frontend: StudioInspectorView review section + CheckpointTimelineView
 
@@ -1114,9 +1169,11 @@ swift test --disable-sandbox
 ## 완료 조건
 - [ ] go test ./... -race PASS
 - [ ] swift test --disable-sandbox PASS
-- [ ] ham Studio 창이 "Open Studio" 클릭으로 열림
-- [ ] 3-패널 레이아웃 (sidebar + center + inspector) 정상 렌더링
-- [ ] Dock 아이콘 표시/숨김 전환 정상
+- [ ] hamd managed 모드가 PTY 할당 (go test ./go/internal/runtime -run TestPTYHost PASS)
+- [ ] Swift Studio 탭이 SwiftTerm 으로 PTY 출력 렌더 (smoke test)
+- [ ] CommandFollowPTY/CommandWritePTY/CommandResizePTY IPC 동작
+- [ ] Session Launcher 모달에서 workspace/model/playbook 선택 후 세션 시작
+- [ ] permission 요청 시 승인 모달 표시 + CommandAnswerPermission 전달
 - [ ] 팀 트리에서 lead/worker 구분 표시
 - [ ] ham playbook list/run 동작
 - [ ] Studio에서 playbook 실행 진행률 표시

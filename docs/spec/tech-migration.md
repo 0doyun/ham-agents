@@ -284,6 +284,148 @@ IPC 프로토콜 변경 없음. `Response.Events` 배열의 각 `Event` JSON에 
 
 ---
 
+## ADR-2: PTY Transport for Embedded Studio Terminal
+
+**Status**: Proposed (2026-04-06, 라운드 3)
+**Scope**: docs/spec/ham-studio.md, docs/spec/tech-migration.md, docs/spec/implementation-plan.md
+**Depends on**: ADR-1 (SessionEvent 스키마)
+
+### Context
+ham-agents Phase 2 방향이 "관찰만 하는 control plane" 에서 "내장 PTY 탭을 가진 Claude Code agent command center" 로 전환됐다. ham Studio 가 primary UX 이고 Claude Code 세션이 Studio 탭 안에서 직접 돌아가야 한다.
+
+현재 상태 (US-001 조사):
+- `ham run <provider>` CLI 경로는 이미 `/dev/ptmx` 기반 PTY 를 가지고 있다 (`go/cmd/ham/pty.go:69, 129-153`). 단 ptmx fd 는 ham CLI 프로세스 내부에만 존재하고 hamd 로 넘어가지 않는다
+- `hamd.ManagedService.Start` (managed.go:61-70) 경로는 plain `StdoutPipe/StderrPipe` 만 사용한다. 즉 IPC 로 스폰 요청이 들어오면 PTY 가 할당되지 않는다
+- `Agent.SessionTTY` (agent.go:62) 필드가 존재하지만 managed 경로에서 설정되지 않는다
+- IPC 는 주로 request-response 지만 `CommandFollowEvents` (server.go:279) 는 이미 long-poll 스트리밍 패턴을 사용하고 있다
+- Swift `DaemonIPC.swift` 의 16 개 `DaemonCommand` 중 어느 것도 tty/fd/stream 을 노출하지 않는다
+
+### Decision options
+
+세 가지 운송 옵션을 비교한다.
+
+#### Option 1: NDJSON stream upgrade (main IPC 확장)
+기존 Unix socket IPC 에 `CommandFollowPTY` / `CommandWritePTY` 등을 추가하고, `CommandFollowEvents` 장기 연결 패턴을 재사용해 base64 인코딩된 PTY 프레임을 NDJSON 으로 스트리밍한다.
+
+- **hamd 구현**: `ManagedService.Start` 에서 `openPTY()` 호출 (pty.go:129-153 코드를 hamd 쪽으로 공유). ptmx 를 `managedProcess` 구조체에 저장. IPC 서버에 PTY subscriber 목록 + ptmx read fan-out 고루틴 추가
+- **Swift 구현**: `DaemonCommand.followPTY(agent_id)` 호출 후 NDJSON 프레임을 `AsyncStream<Data>` 로 받아 SwiftTerm feed 에 주입. 사용자 입력은 `writePTY(agent_id, base64)` 로 송신
+- **IPC 영향**: 기존 request-response 변형. 새 command 2-3 개 추가. `CommandFollowEvents` 와 동일한 dispatch 패턴
+- **장점**: (a) 기존 IPC 경로/권한/소켓 재사용 (b) Swift 쪽 구현이 `CommandFollowEvents` 와 대칭 (c) 디버깅 용이 (`ham events --follow` 처럼 `ham pty --follow` 가능)
+- **단점**: (a) base64 인코딩 오버헤드 (평균 33% 데이터 증가) (b) NDJSON 파싱 지연 (작은 프레임도 개행 구분 필요) (c) 대용량 출력 시 소켓 backpressure 처리 필요
+- **구현 난이도**: 중
+
+#### Option 2: Per-session pty.sock (별도 소켓)
+세션당 전용 Unix 도메인 소켓 (`~/.ham/run/pty-{agent_id}.sock`) 을 열고 Swift 가 직접 read/write. 프레이밍 없이 raw bytes.
+
+- **hamd 구현**: `ManagedService.Start` 에서 ptmx 할당 + 전용 socket listener 생성 + ptmx ↔ socket 양방향 io.Copy. Agent 에 `SessionPtySocket string` 필드 추가
+- **Swift 구현**: `CFSocket` 또는 `NWConnection` 으로 `~/.ham/run/pty-{agent_id}.sock` 직접 연결. raw bytes 를 SwiftTerm 에 feed
+- **IPC 영향**: 메인 IPC 는 완전히 건드리지 않음. 새 command 0 개 (agent 조회 시 `SessionPtySocket` 경로만 리턴)
+- **장점**: (a) 메인 IPC dispatch 에 영향 0 (b) raw bytes 로 인코딩 오버헤드 없음 (c) 세션 격리: 한 PTY 소켓 문제가 다른 세션에 파급되지 않음
+- **단점**: (a) 세션당 소켓 파일 관리 (생성/삭제/퍼미션/stale cleanup) (b) 각 세션 listener 수락 루프 추가 (c) Swift 가 소켓 경로를 별도로 받아 관리 (IPC 와 분리된 상태)
+- **구현 난이도**: 중상
+
+#### Option 3: SCM_RIGHTS fd passing (fd 전달)
+ptmx master fd 를 `sendmsg(SCM_RIGHTS)` 로 Swift 프로세스에 직접 전달. Swift 는 전달받은 fd 를 `FileHandle` 로 감싸 SwiftTerm 에 연결.
+
+- **hamd 구현**: `ManagedService.Start` 에서 ptmx 할당. 기존 IPC 연결에서 fd 를 `unix.Sendmsg` / `SCM_RIGHTS` 로 넘김. Go 에서는 `golang.org/x/sys/unix.Sendmsg` + `unix.UnixRights` 사용
+- **Swift 구현**: `recvmsg` + `SCM_RIGHTS` 수신. Swift Foundation 이 `recvmsg` 를 직접 노출하지 않아 C bridging 필요 (`cmsghdr` 매크로). 받은 raw fd 를 `FileHandle(fileDescriptor:)` 로 래핑
+- **IPC 영향**: 메인 IPC 에 새 "fd-transfer" 단계 도입. `sendmsg`/`recvmsg` 는 일반 read/write 와 다른 경로라 현재 JSON framing 과 공존 설계 필요
+- **장점**: (a) 커널 fd 를 직접 전달하므로 hamd 는 이후 데이터 중계에 관여하지 않음 (b) 최대 성능 (zero-copy) (c) 단일 소유권으로 racy 상태 최소화
+- **단점**: (a) Swift 에서 recvmsg/SCM_RIGHTS 사용하려면 C bridging 필요 — 이식성 낮음 (b) fd 전달 실패 시 fallback 경로가 없음 (c) 디버깅 난이도 상 (fd 가 어디로 갔는지 추적 어려움) (d) 권한 모델 복잡 (Sandbox entitlements)
+- **구현 난이도**: 상
+
+### Recommended option: Option 1 (NDJSON stream upgrade)
+
+**근거**:
+1. `CommandFollowEvents` (server.go:279) 가 이미 long-poll 스트리밍 패턴을 사용하고 있어 구조 재사용 가능. PTY 스트리밍은 이 패턴의 자연스러운 확장
+2. Swift 쪽이 C bridging 없이 순수 `AsyncStream` 으로 구현 가능 (`DaemonIPC.swift` 의 기존 JSON decoder 재사용)
+3. 디버깅/관측 용이: `ham pty --follow <agent>` CLI 명령으로 같은 스트림을 터미널에서 재생 가능
+4. base64 오버헤드는 Phase 2 규모 (개인 개발자 멀티세션, 초당 수 KB~수십 KB) 에서 허용 가능
+5. 실패 모드가 명확: 소켓 끊김 → Studio 재연결 → `CommandFollowPTY(resume_from_seq)` 로 resume 가능
+
+**폐기 사유**:
+- Option 2: 구조 격리 장점은 크지만 세션당 소켓 관리가 long-term 운영 부담. Phase 3 Policy Engine 이 IPC 경유로 PTY 흐름을 관찰하려면 결국 메인 IPC 와 동등한 레이어를 재구현해야 함
+- Option 3: 성능은 최고지만 Swift C bridging 은 이식성/디버깅/entitlements 비용이 구현 시간 내내 누적된다. Phase 2 에서 차분히 굴러가는 것이 최고 성능보다 중요
+
+### Go-side sketch
+
+```go
+// go/internal/runtime/managed.go (conceptual)
+type managedProcess struct {
+    cmd     *exec.Cmd
+    ptmx    *os.File    // ← 신규: PTY master
+    subs    []chan []byte // ← 신규: PTY subscribers
+    subsMu  sync.Mutex
+}
+
+// go/internal/ipc/ipc.go (conceptual)
+const (
+    CommandFollowPTY Command = "pty.follow"
+    CommandWritePTY  Command = "pty.write"
+    CommandResizePTY Command = "pty.resize"
+)
+
+// go/internal/ipc/server.go dispatch (conceptual)
+case CommandFollowPTY:
+    return s.handleFollowPTY(ctx, conn, request) // 장기 연결, NDJSON 스트림
+case CommandWritePTY:
+    return s.handleWritePTY(ctx, request)         // 일회성 request-response
+case CommandResizePTY:
+    return s.handleResizePTY(ctx, request)        // 일회성 (rows/cols 갱신)
+```
+
+NDJSON 프레임 포맷 (PTY → Studio 방향):
+```json
+{"type":"pty_data","agent_id":"...","seq":123,"data":"<base64>"}
+{"type":"pty_exit","agent_id":"...","exit_code":0,"reason":"normal"}
+```
+
+Studio → PTY 방향은 별도 `CommandWritePTY` 일회성 호출.
+
+### Swift-side sketch
+
+```swift
+// Sources/HamCore/DaemonIPC.swift (conceptual)
+enum DaemonCommand: String {
+    // ... 기존 16 개 ...
+    case ptyFollow = "pty.follow"
+    case ptyWrite  = "pty.write"
+    case ptyResize = "pty.resize"
+}
+
+// Sources/HamApp/PtyClient.swift (신규)
+final class PtyClient {
+    func follow(agentID: String) -> AsyncStream<PtyFrame> { ... }
+    func write(agentID: String, data: Data) async throws { ... }
+    func resize(agentID: String, cols: Int, rows: Int) async throws { ... }
+}
+
+// Studio tab view integrates SwiftTerm with PtyClient
+```
+
+### ADR-1 cross-reference
+PTY 출력은 raw bytes 로 흐르지만, 동시에 hamd 는 line-tee 해서 `SessionEvent` (ADR-1) 로도 기록한다. 즉:
+- Studio Tab ← NDJSON PTY stream (raw 사용자 보기 용)
+- Session Graph / Inbox / Timeline ← SessionEvent (구조화 된 메타데이터)
+
+동일 데이터의 두 표현을 병행 유지하며, Phase 3 Policy Engine 은 SessionEvent 경로로 구독한다.
+
+### Backward compatibility
+
+1. **기존 request-response IPC 무변경**: 새 3 개 command 추가는 기존 dispatch 테이블에 append 만 한다. 기존 16 개 Swift command / 52 개 Go Command 는 그대로
+2. **attached / observed 모드**: PTY 내장은 managed 모드에 한정. 기존에 iTerm/tmux 에 붙어있는 attached 모드와 transcript 감시하는 observed 모드는 legacy fallback 으로 유지. Studio 에서는 "외부 터미널에 이미 세션이 있어요" 탭 타입으로 표시
+3. **`ham run` CLI 경로**: 기존 ham CLI 의 로컬 PTY 코드 (pty.go) 는 유지. 사용자가 `ham run` 을 직접 쓰면 기존처럼 본인 터미널이 PTY. Studio 가 열면 hamd 가 PTY 를 소유하고 NDJSON 으로 스트림
+4. **PTY 미지원 플랫폼**: Windows 는 원래 scope 밖 (ham-agents 는 macOS 전용). Linux 는 `/dev/ptmx` 공통 지원
+5. **마이그레이션 순서**: 기존 사용자는 기존 CLI 경로 그대로 사용 가능. Studio 탭 내장은 opt-in. Phase 2 초기에는 두 경로가 공존
+
+### Failure modes
+- **hamd 크래시**: PTY ptmx 파일이 OS 레벨로 닫힘. Claude Code 프로세스는 SIGHUP 받고 종료. Studio 탭은 `pty_exit` 프레임을 못 받고 연결 끊김 감지로 에러 표시 후 재연결 시도 (새 세션으로)
+- **Studio 앱 크래시**: ptmx 는 hamd 가 계속 소유. Claude Code 프로세스는 계속 돌아감. 사용자는 Studio 재시작 후 같은 agent_id 로 `CommandFollowPTY` 재구독 (세션 resume)
+- **소켓 끊김**: Studio 는 `seq` 를 저장하고 있다가 재연결 시 `resume_from_seq` 로 buffered 프레임을 재생
+- **PTY write 실패 (예: Claude Code 종료 중)**: `CommandWritePTY` 가 에러 리턴, Studio 는 탭을 read-only 로 전환
+
+---
+
 ## 6-3. 저장소를 event log + read model로 분리
 
 ### 현재 상태
