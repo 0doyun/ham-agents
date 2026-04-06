@@ -22,7 +22,7 @@
 | 1 | `grep -c '^\tCommand' go/internal/ipc/ipc.go` | **52** | Go Command 총 개수 |
 | 2 | `awk '/^public enum DaemonCommand/,/^}/' Sources/HamCore/DaemonIPC.swift \| grep -c '    case '` | **16** | Swift DaemonCommand 총 개수 |
 | 3 | `grep -n 'RecordHookSessionSeen' go/internal/ipc/server.go` | lines **642, 655** | 함수 존재 여부 |
-| 4 | Read go/internal/core/agent.go:167 | `LifecycleConfidence  float64` | 타입 확인 |
+| 4 | Read go/internal/core/agent.go:167 | `LifecycleConfidence  float64` | 타입 확인 (pre-fix; 현재는 float64 로 교체됨 — US-003 참조) |
 | 5 | `ls /Users/User/projects/ham-agents/go.mod` + head | exists, `module github.com/ham-agents/ham-agents` | go.mod 위치 및 모듈명 |
 | 6 | `grep -n 'hookPayload' go/cmd/ham/commands.go` | line **433**: `type hookPayload struct` | hookPayload 정의 파일 |
 | 7 | `grep -n 'go test\|go build' docs/spec/implementation-plan.md` | `go test ./...` 및 `go build ./go/cmd/ham ./go/cmd/hamd` | 빌드 명령 현황 |

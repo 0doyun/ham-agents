@@ -43,6 +43,21 @@
 | P1-3 | Notification Inbox (읽기 전용) | 3-4 | InboxItem/InboxManager, IPC 커맨드 2개, CLI/메뉴바 UI |
 | P1-4 | 비용/토큰 텔레메트리 v1 (조건부) | 2-3 | ADR-3 조사 결과에 따라 시나리오 분기 (A/B/C). Scenario C 시 Phase 2 이관 |
 
+#### Scope Gate (P1-4 Cost Telemetry)
+
+**목적**: P1-4 를 Phase 1 에 포함할지, Phase 2 로 이관할지를 결정론적으로 판정한다.
+
+- **결정 주체**: Phase 1 리드 (ham-agents 프로젝트 메인테이너)
+- **트리거 아티팩트**: `docs/decisions/ADR-3-cost-telemetry.md` 가 `status: accepted` 로 커밋될 때 게이트 판정
+- **데드라인**: Phase 1 킥오프 후 1주 이내. 판정이 그 전에 나오지 않으면 자동으로 Scenario C (Phase 2 이관) 로 fallback
+- **판정 분기**:
+  - **Scenario A — hook 에서 cost 데이터 확보 가능**: P1-4 Phase 1 포함, 예상 +3-4 커밋
+  - **Scenario B — transcript 파싱으로 확보 가능**: P1-4 Phase 1 포함, 예상 +5-6 커밋 (난이도 상향)
+  - **Scenario C — 현재 hook/transcript 로 불가능**: P1-4 를 Phase 2 로 이관, Phase 1 커밋 -2 차감
+- **종속성**: 이 판정이 Phase 1 commit 총량, Phase 2 commit 총량, ADR-3 deadline 세 가지를 동시에 확정한다
+
+**판정 상태**: PENDING (ADR-3 미작성)
+
 **커밋 수 재산정 (Ralph Round 2)**: 기존 16-22 → **12-17** (P1-5 이관으로 4-5 커밋 감소). P1-4 Scenario C 확정 시 추가 -2 커밋.
 
 ### Phase 2: Terminal IDE (ham Studio)
@@ -58,7 +73,7 @@
 | P2-4 | Git/CI/Issue 연동 | 3-4 | WebhookReceiver, GitHub 어댑터, EventTriggerEngine |
 | P2-5 | Review Loop | 3-4 | CheckpointManager, ReviewQueue, Studio review UI |
 
-**총 예상**: 18-24 커밋
+**총 예상**: 20-27 커밋 (P1-5 이관으로 +2-3)
 
 ### Phase 3: AgentOps Platform
 
@@ -445,7 +460,11 @@ swift test --disable-sandbox
 
 ---
 
-### P1-5: 이벤트 브로드캐스트 기반
+## 3. Phase 2 상세 태스크
+
+### P2-0. Event Broadcast (P1-5 에서 이관)
+
+> 이 태스크는 Ralph 라운드 2 에서 Phase 1 P1-5 에서 Phase 2 초입 P2-0 으로 이관되었다. 기획 원본은 docs/spec/mission-control.md P1-5 참조.
 
 #### P1-5-A: EventBus 구현 + Registry 리팩토링
 
@@ -480,14 +499,6 @@ go build ./go/cmd/ham ./go/cmd/hamd
 - `go test -race` PASS
 
 ---
-
-## 3. Phase 2 상세 태스크
-
-### P2-0. Event Broadcast (P1-5 이관)
-
-Phase 1 에서 이관된 EventBus 도입 작업. 원 기획은 mission-control.md P1-5 참조.
-
-Phase 2 초입에 수행하여 ham Studio SSE 엔드포인트 등 외부 subscriber 기반을 마련한다.
 
 ### P2-1: ham Studio 윈도우
 
@@ -910,10 +921,10 @@ go build ./go/cmd/ham ./go/cmd/hamd
 
 | 에이전트 | 모델 | 역할 | 담당 태스크 |
 |----------|------|------|-------------|
-| **go-backend** | opus | Go 코드 변경 | P1-0-A, P1-1-A(Go), P1-1-B, P1-1-C, P1-2-A, P1-3-A, P1-4-A, P1-5-A |
+| **go-backend** | opus | Go 코드 변경 | P1-0-A, P1-1-A(Go), P1-1-B, P1-1-C, P1-2-A, P1-3-A, P1-4-A |
 | **swift-frontend** | opus | Swift 코드 변경 | P1-0-B, P1-1-A(Swift), P1-2-B(Swift), P1-3-B(Swift), P1-4-B |
 | **test-engineer** | opus | 테스트 작성 | P1-0-C, 각 태스크별 테스트 코드 |
-| **architect** | opus | 스키마 리뷰 (읽기 전용) | P1-1 Event 스키마 리뷰, P1-5 EventBus 설계 검증 |
+| **architect** | opus | 스키마 리뷰 (읽기 전용) | P1-1 Event 스키마 리뷰 |
 | **code-reviewer** | opus | 품질 검증 (읽기 전용) | 각 태스크 완료 후 Go-Swift 동기화 확인 |
 | **devops** | haiku | 빌드 검증 | 각 커밋 후 `go build` + `swift build` 실행 |
 
@@ -929,8 +940,6 @@ P1-2-A (go-backend) ─┬─ P1-2-B (swift-frontend)     ← 병렬 가능
 P1-3-A (go-backend) ─┘─ P1-3-B (swift-frontend)     ← 병렬 가능
     ↓
 P1-4-A (go-backend) → P1-4-B (swift-frontend)
-    ↓
-P1-5-A (go-backend)
 ```
 
 **병렬 가능 구간:**
@@ -943,7 +952,6 @@ P1-5-A (go-backend)
 1. **P1-0 완료 후**: architect가 Go-Swift enum 동기화 리뷰. code-reviewer가 버그 수정 검증
 2. **P1-1 스키마 확정**: architect가 Event 스키마 리뷰 → go-backend, swift-frontend 동시 구현 시작
 3. **P1-3 InboxItem 스키마**: go-backend가 InboxItem 정의 → swift-frontend가 Codable 구현
-4. **P1-5 EventBus**: architect가 설계 리뷰 → go-backend 구현 → test-engineer가 통합 테스트
 
 ---
 
@@ -953,7 +961,7 @@ P1-5-A (go-backend)
 
 | 에이전트 | 역할 | 담당 태스크 |
 |----------|------|-------------|
-| **go-backend** | Go 코드 변경 | P2-2-A, P2-3-A, P2-4-A, P2-5-A |
+| **go-backend** | Go 코드 변경 | P2-0-A (EventBus), P2-2-A, P2-3-A, P2-4-A, P2-5-A |
 | **swift-frontend** | Swift UI 구현 | P2-1-A, P2-1-B, P2-1-C, P2-2-B, P2-3-B |
 | **ui-designer** | Studio 레이아웃 설계 | P2-1-B 레이아웃, P2-2-B 팀 UI, P2-3-B playbook UI |
 | **test-engineer** | 테스트 | 각 태스크별 테스트 |
@@ -965,6 +973,8 @@ P1-5-A (go-backend)
 
 **순차 실행:**
 ```
+P2-0-A (go-backend)  ← EventBus 구현 (P1-5 이관)
+    ↓
 P2-1-A (swift-frontend) → P2-1-B (swift-frontend + ui-designer) → P2-1-C (swift-frontend)
     ↓
 P2-2-A (go-backend) + P2-2-B (swift-frontend)  ← 스키마 확정 후 병렬
@@ -1033,11 +1043,6 @@ dev/phase-1 브랜치에서 작업. main에 직접 커밋 금지.
 2. go-backend: core/cost.go + store/cost.go + runtime/cost.go + ipc + CLI
 3. swift-frontend: DaemonIPC costSummary + 메뉴바 비용 표시 (시나리오 A/B)
 
-### Step 5: P1-5 EventBus (2-3 커밋)
-1. architect: EventBus 설계 리뷰
-2. go-backend: runtime/eventbus.go 신규 + registry.go 리팩토링 + events.go subscription 전환
-3. test-engineer: eventbus_test.go 동시성 테스트
-
 ## 빌드/테스트 검증 (매 커밋 후)
 go test ./... -race -count=1
 go build ./go/cmd/ham ./go/cmd/hamd
@@ -1054,8 +1059,6 @@ swift test --disable-sandbox
 - [ ] Event 스키마에 SessionID, ToolName, ParentAgentID 필드 존재
 - [ ] ham status --graph 실행 시 트리 출력
 - [ ] ham inbox 실행 시 알림 목록 출력
-- [ ] EventBus 기반 fan-out 동작 (eventStore + inboxManager + followEvents)
-- [ ] 기존 ham events --follow 동작 변경 없음
 ```
 
 ---
