@@ -1127,6 +1127,20 @@ dev/phase-2 브랜치에서 작업. dev/phase-1이 main에 머지된 후 시작.
 1. devops: Package.swift 에 SwiftTerm SPM dependency 추가 후 `swift build --disable-sandbox` 검증
 2. architect: ADR-2 (tech-migration.md) 구현 가능성 확인
 
+### Step 0b: Permission Interception Spike
+
+**목적**: P2-3 Approval Interception 이 실제로 동작하는지 spike 로 검증
+
+**시나리오**: fixture Claude Code 세션을 PTY 에 띄우고 destructive tool 시도. hamd 가 (a) hook.permission-request 수신 후 tool 실행을 block 하거나, (b) PTY 일시 정지 + stdin 으로 permission 응답 주입이 동작하는지 확인.
+
+**산출물**:
+- `go/cmd/ham/pty_spike/main.go` (신규 임시 테스트 바이너리) — PTY 할당 + Claude Code 스폰 + destructive tool fixture 입력 + block 여부 측정
+- spike 결과 기록 (어느 방식이 동작하는지, 레이턴시, 실패 모드)
+
+**합격 기준**: 최소 하나의 방식이 PTY 기반 permission 차단을 달성하면 PASS. 둘 다 실패하면 FAIL.
+
+**실패 시 플랜**: P2-3 은 alert-only 로 강등, P3-2 Policy Engine Realism Check 를 다시 ✗ 로 flip, ham-studio.md P2-3 섹션에 "Phase 2 에서 spike FAIL 확정, P3-3 Persistent Memory 경로로 대체 조사" 추가. Phase 2 다른 태스크 (P2-1 PTY Runtime, P2-2 Session Launcher) 는 그대로 진행.
+
 ### Step 1: P2-1 Embedded PTY Runtime (6-8 커밋)
 1. go-backend: runtime/pty_alloc.go 신규 (openPTY 추출), runtime/managed.go PTY 할당 통합
 2. go-backend: ipc/ipc.go CommandFollowPTY/CommandWritePTY/CommandResizePTY 추가, ipc/server.go 핸들러

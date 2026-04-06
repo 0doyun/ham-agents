@@ -150,7 +150,7 @@ Phase 1 시작 시점에 go/internal/core/event.go 를 위 스키마로 확장. 
 | # | 결정 사항 | 관련 기능 | 상태 | 비고 |
 |---|----------|----------|------|------|
 | ADR-1 | SessionEvent 스키마: `core.Event` additive 확장 | P1-1, P1-5 | **확정** | 기존 JSONL 하위 호환. 모든 새 필드 `omitempty` |
-| ADR-2 | Approval 경로: 외부 permission 승인 API 가용성 | P1-3 | **미정 -- 조사 필요** | Phase 1은 읽기 전용으로 스코프 축소 |
+| ADR-7 | Approval 경로: 외부 permission 승인 API 가용성 | P1-3 → Phase 2 P2-3 | **Phase 2 P2-3 Approval Interception 으로 해소** | Phase 1은 읽기 전용으로 스코프 축소 |
 | ADR-3 | 비용 데이터 소스: Claude Code 토큰/비용 노출 경로 | P1-4 | **미정 -- 조사 필요** | 시나리오 A/B/C 분기 |
 | ADR-4 | Artifact 저장: 인라인 4KB / 파일 1MB / 총 500MB | P1-1 | **확정** | LRU 정리, Privacy 설정 연동 |
 | ADR-5 | UI 표면: Phase 1은 CLI + 메뉴바, Studio는 Phase 2 | P1-2 | **확정** | |
@@ -577,7 +577,7 @@ inbox.mark-read
 
 | 불가능한 것 | 이유 | 대안 |
 |------------|------|------|
-| Permission 승인/거절 | Claude Code에 외부에서 permission을 승인하는 공개 API가 확인되지 않음 (ADR-2 미정) | Phase 1: 읽기 전용. "Go to terminal" 버튼으로 사용자가 직접 터미널에서 승인. Phase 2: API 확인 후 Approval Inbox로 업그레이드 |
+| Permission 승인/거절 | Claude Code에 외부에서 permission을 승인하는 공개 API가 확인되지 않음 (ADR-7, Phase 2 P2-3 Approval Interception 으로 해소) | Phase 1: 읽기 전용. "Go to terminal" 버튼으로 사용자가 직접 터미널에서 승인. Phase 2: API 확인 후 Approval Inbox로 업그레이드 |
 | 실시간 알림 push | IPC 요청-응답 전용. 서버 → 클라이언트 push 불가 | 메뉴바: 기존 폴링 주기 (5초 refresh)에 inbox 갱신 포함. macOS 알림은 기존 HamNotifications 경로 활용 |
 | Inbox 항목 100개 초과 보관 | 메모리 + 파일 크기 제한 | 100개 ring buffer. 오래된 항목은 events.jsonl에 이력으로 남아있으므로 `ham logs`로 조회 가능 |
 | Permission request의 정확한 해소 시점 | Claude Code가 "permission granted" hook을 보내지 않음 | 다음 tool 시작 시 해당 permission_request InboxItem을 자동으로 "resolved"로 표시 |

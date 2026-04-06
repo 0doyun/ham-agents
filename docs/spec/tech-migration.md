@@ -69,7 +69,7 @@
 |------|------|-----------|
 | 6-1 | EventBus 도입, Registry 역할 축소 | `runtime/` 패키지 대규모 변경 |
 | 6-3 | write-ahead log + read model 분리 | `store/` 패키지 신규 + 기존 변경 |
-| 6-4a | 스트림 채널 프로토타입 (NDJSON over UDS) | `ipc/` 패키지 신규 |
+| 6-4a | 스트림 채널 프로토타입 (NDJSON over UDS) | ipc/ 패키지 — 기존 server.go 에 PTY dispatch 추가 (ADR-2 참조) |
 | 6-8b | attach/detach chaos test, golden traces | 테스트 인프라 |
 
 ### Phase 3: UI 확장 + 생태계
@@ -286,6 +286,8 @@ IPC 프로토콜 변경 없음. `Response.Events` 배열의 각 `Event` JSON에 
 
 ## ADR-2: PTY Transport for Embedded Studio Terminal
 
+> **Note (라운드 3 재번호)**: 라운드 2 ADR 목록의 "ADR-2 (Approval 경로 — 외부 API 가용성)" 은 **ADR-7** 로 재번호됐다. 본 ADR-2 는 라운드 3 PTY Transport 결정이다. mission-control.md ADR 상태표 참조.
+
 **Status**: Proposed (2026-04-06, 라운드 3)
 **Scope**: docs/spec/ham-studio.md, docs/spec/tech-migration.md, docs/spec/implementation-plan.md
 **Depends on**: ADR-1 (SessionEvent 스키마)
@@ -346,6 +348,8 @@ ptmx master fd 를 `sendmsg(SCM_RIGHTS)` 로 Swift 프로세스에 직접 전달
 **폐기 사유**:
 - Option 2: 구조 격리 장점은 크지만 세션당 소켓 관리가 long-term 운영 부담. Phase 3 Policy Engine 이 IPC 경유로 PTY 흐름을 관찰하려면 결국 메인 IPC 와 동등한 레이어를 재구현해야 함
 - Option 3: 성능은 최고지만 Swift C bridging 은 이식성/디버깅/entitlements 비용이 구현 시간 내내 누적된다. Phase 2 에서 차분히 굴러가는 것이 최고 성능보다 중요
+
+> **Note on PRD deviation**: PRD 라운드 3 는 Option 2 (per-session pty.sock) 를 expected 로 가리켰다. 본 ADR 은 Option 1 로 편향했는데, 이유는 기존 `CommandFollowEvents` long-poll 패턴이 Option 2 의 "bounded blast radius" 이점의 80% 를 제공하면서 구현 비용은 20% 수준이기 때문이다. 또한 Phase 3 Policy Engine 이 PTY 트래픽을 관찰하려면 결국 메인 IPC 와 동등한 관찰 레이어가 필요하므로 Option 2 의 격리 장점이 실질적으로 희석된다.
 
 ### Go-side sketch
 
@@ -607,8 +611,7 @@ NDJSON over UDS를 1차 구현으로 선정한다:
 
 | 파일 | 변경 내용 |
 |------|-----------|
-| `go/internal/ipc/stream.go` (신규) | `StreamServer`: UDS listen, subscribe 핸들링, NDJSON write loop |
-| `go/internal/ipc/stream.go` | `StreamSubscription`: EventBus subscriber, per-client 채널, heartbeat goroutine |
+| `go/internal/ipc/server.go` (기존 확장) | 기존 server.go 에 PTY case 3 개 추가 (ADR-2 Option 1 방식). 신규 stream.go 파일은 생성하지 않음. `StreamServer` / `StreamSubscription` 로직은 server.go 내 `handleFollowPTY` / `handleWritePTY` / `handleResizePTY` 로 통합 |
 | `go/internal/ipc/server.go` | `dispatch()`에서 `subscribe` 커맨드 추가, 또는 별도 소켓으로 분리 |
 | `go/cmd/hamd/main.go` | StreamServer 초기화, EventBus subscriber 등록, 소켓 경로 설정 |
 | `go/internal/ipc/ipc.go` | (선택) JSON-RPC 2.0 래퍼 -- 기존 Command 상수를 method 이름으로 매핑 |
