@@ -48,9 +48,15 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	artifactPath, err := store.DefaultArtifactStorePath()
+	if err != nil {
+		return err
+	}
+	eventStore := store.NewFileEventStore(eventPath).
+		WithArtifactStore(store.NewFileArtifactStore(artifactPath))
 	registry := runtime.NewRegistry(
 		store.NewFileAgentStore(statePath),
-		store.NewFileEventStore(eventPath),
+		eventStore,
 	)
 	managedService := runtime.NewManagedService(registry)
 	settingsService := runtime.NewSettingsService(store.NewFileSettingsStore(settingsPath))
