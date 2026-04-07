@@ -367,6 +367,22 @@ func (c *Client) Status(ctx context.Context) (core.RuntimeSnapshot, error) {
 	return *response.Snapshot, nil
 }
 
+// StatusWithGraph requests the session tree alongside the runtime snapshot.
+// It returns the SessionGraph and the RuntimeSnapshot from the same response.
+func (c *Client) StatusWithGraph(ctx context.Context) (core.SessionGraph, core.RuntimeSnapshot, error) {
+	response, err := c.request(ctx, Request{Command: CommandStatus, Graph: true})
+	if err != nil {
+		return core.SessionGraph{}, core.RuntimeSnapshot{}, err
+	}
+	if response.Snapshot == nil {
+		return core.SessionGraph{}, core.RuntimeSnapshot{}, fmt.Errorf("daemon response missing snapshot payload")
+	}
+	if response.SessionGraph == nil {
+		return core.SessionGraph{}, core.RuntimeSnapshot{}, fmt.Errorf("daemon response missing session_graph payload")
+	}
+	return *response.SessionGraph, *response.Snapshot, nil
+}
+
 func (c *Client) Events(ctx context.Context, limit int) ([]core.Event, error) {
 	response, err := c.request(ctx, Request{Command: CommandEvents, Limit: limit})
 	if err != nil {

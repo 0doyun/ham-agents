@@ -1013,6 +1013,23 @@ func runStatus(ctx context.Context, client *ipc.Client, args []string) error {
 		return err
 	}
 
+	if options.graph {
+		graph, snapshot, err := client.StatusWithGraph(ctx)
+		if err != nil {
+			return err
+		}
+		filteredAgents, err := filterAgentsForQuery(ctx, client, snapshot.Agents, options.teamRef, options.workspaceRef)
+		if err != nil {
+			return err
+		}
+		if options.teamRef != "" || options.workspaceRef != "" {
+			// Rebuild graph from filtered agent set.
+			rebuiltGraph := buildFilteredGraph(filteredAgents, graph.GeneratedAt)
+			return renderSessionGraph(os.Stdout, rebuiltGraph)
+		}
+		return renderSessionGraph(os.Stdout, graph)
+	}
+
 	snapshot, err := client.Status(ctx)
 	if err != nil {
 		return err

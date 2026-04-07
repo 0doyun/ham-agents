@@ -436,3 +436,52 @@ func sanitizeSensitiveText(value string) string {
 	sanitized = homePathPattern.ReplaceAllString(sanitized, `/Users/***`)
 	return sanitized
 }
+
+// renderSessionGraph prints the session tree to out.
+// Each node is prefixed with indentation reflecting its depth.
+// Format:
+//
+//	SessionGraph: N agents (M blocked)
+//	  - alice [running] d0
+//	    - bob [waiting_input] d1
+//	      - carol [done] d2
+//	  - dan [idle] d0
+//
+// The simple indented format is used (2 spaces per depth level) so that it is
+// unambiguous and easy to test without requiring complex tree-drawing logic.
+func renderSessionGraph(out io.Writer, graph core.SessionGraph) error {
+	if _, err := fmt.Fprintf(out, "SessionGraph: %d agents (%d blocked)\n", graph.TotalCount, graph.BlockedCount); err != nil {
+		return err
+	}
+	var printNode func(node core.SessionNode) error
+	printNode = func(node core.SessionNode) error {
+		indent := strings.Repeat("  ", node.Depth)
+		name := node.Agent.DisplayName
+		if name == "" {
+			name = node.Agent.ID
+		}
+		status := string(node.Agent.Status)
+		if _, err := fmt.Fprintf(out, "%s- %s [%s] d%d\n", indent, name, status, node.Depth); err != nil {
+			return err
+		}
+		for _, child := range node.Children {
+			if err := printNode(child); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, root := range graph.Roots {
+		if err := printNode(root); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// buildFilteredGraph builds a SessionGraph from a filtered subset of agents.
+func buildFilteredGraph(agents []core.Agent, generatedAt time.Time) core.SessionGraph {
+	graph := core.BuildSessionGraph(agents)
+	graph.GeneratedAt = generatedAt
+	return graph
+}

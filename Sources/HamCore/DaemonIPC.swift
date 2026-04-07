@@ -86,6 +86,7 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
     public var waitMillis: Int?
     public var policy: String?
     public var settings: DaemonSettingsPayload?
+    public var graph: Bool?
 
     public init(
         command: DaemonCommand,
@@ -100,7 +101,8 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         afterEventID: String? = nil,
         waitMillis: Int? = nil,
         policy: String? = nil,
-        settings: DaemonSettingsPayload? = nil
+        settings: DaemonSettingsPayload? = nil,
+        graph: Bool? = nil
     ) {
         self.command = command
         self.agentID = agentID
@@ -115,6 +117,7 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         self.waitMillis = waitMillis
         self.policy = policy
         self.settings = settings
+        self.graph = graph
     }
 
     enum CodingKeys: String, CodingKey {
@@ -131,6 +134,7 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         case waitMillis = "wait_millis"
         case policy
         case settings
+        case graph
     }
 }
 
@@ -444,6 +448,7 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
     public var events: [AgentEventPayload]?
     public var snapshot: DaemonRuntimeSnapshotPayload?
     public var settings: DaemonSettingsPayload?
+    public var sessionGraph: SessionGraph?
     public var error: String?
 
     public init(
@@ -455,6 +460,7 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
         events: [AgentEventPayload]? = nil,
         snapshot: DaemonRuntimeSnapshotPayload? = nil,
         settings: DaemonSettingsPayload? = nil,
+        sessionGraph: SessionGraph? = nil,
         error: String? = nil
     ) {
         self.agent = agent
@@ -465,6 +471,7 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
         self.events = events
         self.snapshot = snapshot
         self.settings = settings
+        self.sessionGraph = sessionGraph
         self.error = error
     }
 
@@ -477,6 +484,7 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
         case events
         case snapshot
         case settings
+        case sessionGraph = "session_graph"
         case error
     }
 }

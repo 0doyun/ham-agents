@@ -117,6 +117,125 @@ func TestParseAgentQueryOptionsAcceptsTeamWorkspaceAndJSON(t *testing.T) {
 	}
 }
 
+func TestParseAgentQueryOptions_GraphFlag(t *testing.T) {
+	t.Parallel()
+
+	options, err := parseAgentQueryOptions("status", []string{"--graph"})
+	if err != nil {
+		t.Fatalf("parse agent query options: %v", err)
+	}
+	if !options.graph {
+		t.Fatalf("expected graph flag to be true")
+	}
+}
+
+func TestStatus_GraphFlag_OutputsTree(t *testing.T) {
+	t.Parallel()
+
+	// Build a minimal SessionGraph: two roots, one with a child.
+	alice := core.Agent{
+		ID:          "a1",
+		DisplayName: "alice",
+		Status:      core.AgentStatusRunningTool,
+	}
+	bob := core.Agent{
+		ID:          "a2",
+		DisplayName: "bob",
+		Status:      core.AgentStatusWaitingInput,
+	}
+	carol := core.Agent{
+		ID:          "a3",
+		DisplayName: "carol",
+		Status:      core.AgentStatusDone,
+	}
+
+	graph := core.SessionGraph{
+		TotalCount:   3,
+		BlockedCount: 1,
+		Roots: []core.SessionNode{
+			{
+				Agent: alice,
+				Depth: 0,
+				Children: []core.SessionNode{
+					{
+						Agent:    bob,
+						Depth:    1,
+						Children: []core.SessionNode{},
+					},
+				},
+			},
+			{
+				Agent:    carol,
+				Depth:    0,
+				Children: []core.SessionNode{},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := renderSessionGraph(&buf, graph); err != nil {
+		t.Fatalf("renderSessionGraph: %v", err)
+	}
+	out := buf.String()
+
+	if !strings.Contains(out, "SessionGraph: 3 agents (1 blocked)") {
+		t.Errorf("missing header line, got:\n%s", out)
+	}
+	if !strings.Contains(out, "- alice [running_tool] d0") {
+		t.Errorf("missing alice root node, got:\n%s", out)
+	}
+	if !strings.Contains(out, "  - bob [waiting_input] d1") {
+		t.Errorf("missing bob child node (depth 1), got:\n%s", out)
+	}
+	if !strings.Contains(out, "- carol [done] d0") {
+		t.Errorf("missing carol root node, got:\n%s", out)
+	}
+
+	// Verify depth ordering: alice before bob (child indented further)
+	alicePos := strings.Index(out, "alice")
+	bobPos := strings.Index(out, "bob")
+	carolPos := strings.Index(out, "carol")
+	if alicePos >= bobPos {
+		t.Errorf("alice should appear before bob in output")
+	}
+	if bobPos >= carolPos {
+		t.Errorf("bob should appear before carol in output")
+	}
+}
+
+func TestRenderSessionGraph_EmptyGraph(t *testing.T) {
+	t.Parallel()
+
+	graph := core.SessionGraph{TotalCount: 0, BlockedCount: 0}
+	var buf bytes.Buffer
+	if err := renderSessionGraph(&buf, graph); err != nil {
+		t.Fatalf("renderSessionGraph: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "SessionGraph: 0 agents (0 blocked)") {
+		t.Errorf("unexpected output: %s", out)
+	}
+}
+
+func TestRenderSessionGraph_FallsBackToIDWhenDisplayNameEmpty(t *testing.T) {
+	t.Parallel()
+
+	graph := core.SessionGraph{
+		TotalCount: 1,
+		Roots: []core.SessionNode{
+			{Agent: core.Agent{ID: "x1", DisplayName: "", Status: core.AgentStatusIdle}, Depth: 0},
+		},
+	}
+	var buf bytes.Buffer
+	if err := renderSessionGraph(&buf, graph); err != nil {
+		t.Fatalf("renderSessionGraph: %v", err)
+	}
+	if !strings.Contains(buf.String(), "- x1 [idle] d0") {
+		t.Errorf("expected id fallback, got: %s", buf.String())
+	}
+}
+
+
 func TestResolveUICommandPrefersEnvironmentOverride(t *testing.T) {
 	t.Parallel()
 

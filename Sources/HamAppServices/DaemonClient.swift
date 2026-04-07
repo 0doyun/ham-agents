@@ -41,10 +41,15 @@ public protocol HamDaemonClientProtocol: Sendable {
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent
     func updateRole(agentID: String, role: String) async throws -> Agent
     func removeAgent(agentID: String) async throws
+    func fetchSessionGraph() async throws -> SessionGraph
 }
 
 public extension HamDaemonClientProtocol {
     func fetchTeams() async throws -> [DaemonTeamPayload] { [] }
+    func fetchSessionGraph() async throws -> SessionGraph {
+        // Default no-op for clients that do not implement the graph endpoint.
+        throw HamDaemonClientError.missingPayload("session_graph")
+    }
 }
 
 public struct HamMenuBarSummary: Equatable, Sendable {
@@ -199,6 +204,17 @@ public final class HamDaemonClient: HamDaemonClientProtocol, @unchecked Sendable
         if let error = response.error {
             throw HamDaemonClientError.server(error)
         }
+    }
+
+    public func fetchSessionGraph() async throws -> SessionGraph {
+        let response = try await transport.send(.init(command: .status, graph: true))
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
+        guard let graph = response.sessionGraph else {
+            throw HamDaemonClientError.missingPayload("session_graph")
+        }
+        return graph
     }
 }
 

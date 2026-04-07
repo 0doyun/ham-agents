@@ -1,5 +1,61 @@
 import Foundation
 
+// MARK: - Session Graph
+
+public struct SessionNode: Codable, Equatable, Sendable, Identifiable {
+    public let agent: Agent
+    public let children: [SessionNode]
+    public let blockReason: String
+    public let depth: Int
+
+    public var id: String { agent.id }
+
+    public init(agent: Agent, children: [SessionNode] = [], blockReason: String = "", depth: Int) {
+        self.agent = agent
+        self.children = children
+        self.blockReason = blockReason
+        self.depth = depth
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case agent
+        case children
+        case blockReason = "block_reason"
+        case depth
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.agent = try container.decode(Agent.self, forKey: .agent)
+        self.children = try container.decodeIfPresent([SessionNode].self, forKey: .children) ?? []
+        self.blockReason = try container.decodeIfPresent(String.self, forKey: .blockReason) ?? ""
+        self.depth = try container.decode(Int.self, forKey: .depth)
+    }
+}
+
+public struct SessionGraph: Codable, Equatable, Sendable {
+    public let roots: [SessionNode]
+    public let totalCount: Int
+    public let blockedCount: Int
+    public let generatedAt: Date
+
+    public init(roots: [SessionNode], totalCount: Int, blockedCount: Int, generatedAt: Date) {
+        self.roots = roots
+        self.totalCount = totalCount
+        self.blockedCount = blockedCount
+        self.generatedAt = generatedAt
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case roots
+        case totalCount = "total_count"
+        case blockedCount = "blocked_count"
+        case generatedAt = "generated_at"
+    }
+}
+
+// MARK: - Agent enums
+
 public enum AgentMode: String, Codable, CaseIterable, Sendable {
     case managed
     case attached

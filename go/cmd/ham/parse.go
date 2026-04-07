@@ -402,6 +402,7 @@ type agentQueryOptions struct {
 	asJSON       bool
 	teamRef      string
 	workspaceRef string
+	graph        bool
 }
 
 func parseAgentQueryOptions(command string, args []string) (agentQueryOptions, error) {
@@ -410,6 +411,7 @@ func parseAgentQueryOptions(command string, args []string) (agentQueryOptions, e
 	asJSON := flags.Bool("json", false, "emit JSON")
 	teamRef := flags.String("team", "", "filter by team id or name")
 	workspaceRef := flags.String("workspace", "", "filter by workspace path or name")
+	graph := flags.Bool("graph", false, "render session tree")
 	if err := flags.Parse(args); err != nil {
 		return agentQueryOptions{}, err
 	}
@@ -420,5 +422,6 @@ func parseAgentQueryOptions(command string, args []string) (agentQueryOptions, e
 		asJSON:       *asJSON,
 		teamRef:      strings.TrimSpace(*teamRef),
 		workspaceRef: strings.TrimSpace(*workspaceRef),
+		graph:        *graph,
 	}, nil
 }

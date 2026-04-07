@@ -118,6 +118,13 @@ struct MenuBarContentView: View {
                 if filteredAttentionAgents.isEmpty && filteredNonAttentionAgents.isEmpty {
                     Text("No tracked agents")
                         .foregroundStyle(.secondary)
+                } else if let graph = viewModel.sessionGraph, !graph.roots.isEmpty {
+                    // Tree view: render session hierarchy when graph data is available.
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(graph.roots) { root in
+                            SessionNodeView(node: root)
+                        }
+                    }
                 } else {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(filteredNonAttentionAgents) { agent in
@@ -1026,6 +1033,73 @@ private func eventBadgeBackground(for emphasis: AgentEventEmphasis) -> Color {
         return .blue.opacity(0.18)
     case .neutral:
         return .gray.opacity(0.18)
+    }
+}
+
+// MARK: - Session tree view
+
+private struct SessionNodeView: View {
+    let node: SessionNode
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                // Depth indent: 12pt per level to mirror the tree structure.
+                if node.depth > 0 {
+                    Spacer()
+                        .frame(width: CGFloat(node.depth) * 12)
+                }
+                Image(systemName: sessionNodeIcon(status: node.agent.status))
+                    .font(.caption)
+                    .foregroundStyle(sessionNodeColor(status: node.agent.status))
+                Text(node.agent.displayName.isEmpty ? node.agent.id : node.agent.displayName)
+                    .font(.body)
+                Spacer()
+                Text(node.agent.status.humanizedLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if !node.blockReason.isEmpty {
+                    Text("(\(node.blockReason))")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+            }
+            ForEach(node.children) { child in
+                SessionNodeView(node: child)
+            }
+        }
+    }
+
+    private func sessionNodeIcon(status: AgentStatus) -> String {
+        switch status {
+        case .error:
+            return "exclamationmark.circle"
+        case .waitingInput:
+            return "person.crop.circle.badge.questionmark"
+        case .disconnected:
+            return "wifi.slash"
+        case .done:
+            return "checkmark.circle"
+        case .runningTool, .reading, .thinking, .writing, .searching, .spawning:
+            return "circle.dotted"
+        case .booting, .idle, .sleeping:
+            return "circle"
+        }
+    }
+
+    private func sessionNodeColor(status: AgentStatus) -> Color {
+        switch status {
+        case .error:
+            return .red
+        case .waitingInput, .disconnected:
+            return .yellow
+        case .done:
+            return .green
+        case .runningTool, .reading, .thinking, .writing, .searching, .spawning:
+            return .blue
+        case .booting, .idle, .sleeping:
+            return .secondary
+        }
     }
 }
 

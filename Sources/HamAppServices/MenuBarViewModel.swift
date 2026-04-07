@@ -15,6 +15,7 @@ public enum StatusBarTint: String, Sendable {
 public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var summary: HamMenuBarSummary?
     @Published public private(set) var agents: [Agent] = []
+    @Published public private(set) var sessionGraph: SessionGraph?
     @Published public private(set) var attachableSessions: [DaemonAttachableSessionPayload] = []
     @Published public private(set) var teams: [DaemonTeamPayload] = []
     @Published public private(set) var isRefreshing = false
@@ -504,6 +505,7 @@ public final class MenuBarViewModel: ObservableObject {
             let loadedSettingsValue = try await loadedSettings
             let loadedAttachableSessionsValue = (try? await client.fetchAttachableSessions()) ?? []
             let loadedTeamsValue = (try? await client.fetchTeams()) ?? []
+            let loadedSessionGraph = try? await client.fetchSessionGraph()
             applyRefreshedState(
                 summary: summaryValue,
                 agents: loadedAgentsValue,
@@ -514,6 +516,7 @@ public final class MenuBarViewModel: ObservableObject {
             attachableSessions = loadedAttachableSessionsValue
             teams = loadedTeamsValue
             settings = loadedSettingsValue
+            sessionGraph = loadedSessionGraph
             notificationPermissionStatus = await permissionStatus
             if roleDraft.isEmpty, let firstAgent = agents.first {
                 roleDraft = firstAgent.role ?? ""
