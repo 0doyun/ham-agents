@@ -23,7 +23,6 @@ func makeAgent(id string, status AgentStatus, subAgentIDs ...string) Agent {
 	}
 }
 
-// TestBuildSessionGraph_SingleRoot: 1 agent, no children.
 func TestBuildSessionGraph_SingleRoot(t *testing.T) {
 	agents := []Agent{
 		makeAgent("a1", AgentStatusIdle),
@@ -47,7 +46,6 @@ func TestBuildSessionGraph_SingleRoot(t *testing.T) {
 	}
 }
 
-// TestBuildSessionGraph_RootWithTwoChildren: parent with 2 children in the input.
 func TestBuildSessionGraph_RootWithTwoChildren(t *testing.T) {
 	agents := []Agent{
 		makeAgent("parent", AgentStatusIdle, "child1", "child2"),
@@ -76,7 +74,6 @@ func TestBuildSessionGraph_RootWithTwoChildren(t *testing.T) {
 	}
 }
 
-// TestBuildSessionGraph_ThreeLevelNested: root → mid → leaf.
 func TestBuildSessionGraph_ThreeLevelNested(t *testing.T) {
 	agents := []Agent{
 		makeAgent("root", AgentStatusIdle, "mid"),
@@ -111,7 +108,6 @@ func TestBuildSessionGraph_ThreeLevelNested(t *testing.T) {
 	}
 }
 
-// TestBuildSessionGraph_OrphanAgent: child referenced but not present in input → silently skipped.
 func TestBuildSessionGraph_OrphanAgent(t *testing.T) {
 	agents := []Agent{
 		makeAgent("root", AgentStatusIdle, "missing-child"),
@@ -140,7 +136,6 @@ func TestBuildSessionGraph_OrphanAgent(t *testing.T) {
 	}
 }
 
-// TestBuildSessionGraph_BlockReasonMapping: verify each status maps to the correct BlockReason.
 func TestBuildSessionGraph_BlockReasonMapping(t *testing.T) {
 	agents := []Agent{
 		makeAgent("idle-agent", AgentStatusIdle),
@@ -190,7 +185,6 @@ func TestBuildSessionGraph_BlockReasonMapping(t *testing.T) {
 	}
 }
 
-// TestBuildSessionGraph_EmptySnapshot: empty input → empty graph.
 func TestBuildSessionGraph_EmptySnapshot(t *testing.T) {
 	g := BuildSessionGraph(nil)
 
@@ -208,7 +202,6 @@ func TestBuildSessionGraph_EmptySnapshot(t *testing.T) {
 	}
 }
 
-// TestBuildSessionGraph_CycleDefense: a → b → a cycle must terminate and return sane output.
 func TestBuildSessionGraph_CycleDefense(t *testing.T) {
 	// a references b, b references a — cycle.
 	agents := []Agent{

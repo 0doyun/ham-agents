@@ -71,7 +71,6 @@ func (m *InboxManager) List(typeFilter core.InboxItemType, unreadOnly bool) []co
 	defer m.mu.Unlock()
 
 	result := make([]core.InboxItem, 0, len(m.items))
-	// Iterate in reverse so newest is first.
 	for i := len(m.items) - 1; i >= 0; i-- {
 		item := m.items[i]
 		if typeFilter != "" && item.Type != typeFilter {

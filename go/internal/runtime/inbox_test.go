@@ -43,7 +43,6 @@ func newTestInboxManager(t *testing.T) *InboxManager {
 	return m
 }
 
-// Test 1: permission-request hook creates an item with Actionable=true.
 func TestInboxManager_HandleEvent_PermissionRequest_CreatesItem(t *testing.T) {
 	m := newTestInboxManager(t)
 	m.HandleEvent(makeEventWithTool("e1", "hook.permission-request", "agent-1", "Bash"))
@@ -63,7 +62,6 @@ func TestInboxManager_HandleEvent_PermissionRequest_CreatesItem(t *testing.T) {
 	}
 }
 
-// Test 2: all 6 inbox-eligible hook types create items with correct Types.
 func TestInboxManager_HandleEvent_AllSixHooks_CreateItems(t *testing.T) {
 	m := newTestInboxManager(t)
 
@@ -95,7 +93,6 @@ func TestInboxManager_HandleEvent_AllSixHooks_CreateItems(t *testing.T) {
 	}
 }
 
-// Test 3: non-inbox hook types are ignored.
 func TestInboxManager_HandleEvent_NonInboxHook_Ignored(t *testing.T) {
 	m := newTestInboxManager(t)
 	// Events with no HookOrigin (or a non-inbox hook name) are not inbox-eligible.
@@ -109,7 +106,6 @@ func TestInboxManager_HandleEvent_NonInboxHook_Ignored(t *testing.T) {
 	}
 }
 
-// Test 4: ring buffer drops oldest when > 100 items.
 func TestInboxManager_RingBuffer_DropsOldest(t *testing.T) {
 	m := newTestInboxManager(t)
 
@@ -136,7 +132,6 @@ func TestInboxManager_RingBuffer_DropsOldest(t *testing.T) {
 	}
 }
 
-// Test 5: MarkRead decrements unread count.
 func TestInboxManager_MarkRead_DecrementsUnreadCount(t *testing.T) {
 	m := newTestInboxManager(t)
 	m.HandleEvent(makeEvent("e1", "hook.notification", "a"))
@@ -155,7 +150,6 @@ func TestInboxManager_MarkRead_DecrementsUnreadCount(t *testing.T) {
 	}
 }
 
-// Test 6: MarkAllRead sets all items to read.
 func TestInboxManager_MarkAllRead(t *testing.T) {
 	m := newTestInboxManager(t)
 	for i := 0; i < 5; i++ {
@@ -173,7 +167,6 @@ func TestInboxManager_MarkAllRead(t *testing.T) {
 	}
 }
 
-// Test 7: persist and reload round-trip.
 func TestInboxManager_Persist_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "inbox.json")
@@ -207,7 +200,6 @@ func TestInboxManager_Persist_RoundTrip(t *testing.T) {
 	}
 }
 
-// Test 8: resolver populates AgentName.
 func TestInboxManager_HandleEvent_ResolvesAgentName(t *testing.T) {
 	m := newTestInboxManager(t)
 	m.SetAgentNameResolver(func(id string) string {
@@ -223,7 +215,6 @@ func TestInboxManager_HandleEvent_ResolvesAgentName(t *testing.T) {
 	}
 }
 
-// Test 9: nil resolver leaves AgentName empty.
 func TestInboxManager_HandleEvent_ResolverNil_FallsBackToEmpty(t *testing.T) {
 	m := newTestInboxManager(t)
 	// No resolver set
@@ -235,7 +226,6 @@ func TestInboxManager_HandleEvent_ResolverNil_FallsBackToEmpty(t *testing.T) {
 }
 
 // Test 10: loading from a missing file returns empty inbox with no error.
-// (was Test 8 before resolver tests were added)
 func TestInboxManager_LoadFromMissingFile_Empty(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "nonexistent", "inbox.json")
 	m, err := NewInboxManager(path)

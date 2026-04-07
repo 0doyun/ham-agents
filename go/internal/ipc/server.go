@@ -755,4 +755,3 @@ func autoDisplayName(projectPath string, registry *hamruntime.Registry, ctx cont
 // errNoAgent is returned when a hook fires but no matching agent exists.
 // The server treats this as a no-op rather than an error.
 var errNoAgent = fmt.Errorf("no matching agent")
-

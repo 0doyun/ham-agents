@@ -19,12 +19,7 @@ type SessionGraph struct {
 }
 
 // blockReasonForStatus maps an AgentStatus to a BlockReason string.
-// Statuses that indicate the agent is effectively paused or needs attention:
-//   - AgentStatusWaitingInput → "waiting_input"
-//   - AgentStatusError, AgentStatusDisconnected → "permission_request" (blocked/unresponsive)
-//   - AgentStatusDone → "done"
-//   - All others (booting, idle, thinking, reading, running_tool, sleeping,
-//     writing, searching, spawning) → "" (not blocked)
+// Running and idle statuses return "" (not blocked).
 func blockReasonForStatus(status AgentStatus) string {
 	switch status {
 	case AgentStatusWaitingInput:
@@ -39,18 +34,15 @@ func blockReasonForStatus(status AgentStatus) string {
 }
 
 // BuildSessionGraph constructs a tree from a flat list of agents.
-// Parent-child links come from each Agent's SubAgents field (each SubAgentInfo carries
-// the child's AgentID). An agent that is referenced as a child of another agent is NOT a root.
-// Cycles are defended against by tracking visited IDs during DFS depth assignment.
-// Orphan references (child IDs not present in the input slice) are silently skipped.
+// Parent-child links come from each Agent's SubAgents field. Cycles are
+// defended against by tracking visited IDs during DFS. Orphan references
+// (child IDs not present in the input slice) are silently skipped.
 func BuildSessionGraph(agents []Agent) SessionGraph {
-	// Build lookup map by ID.
 	byID := make(map[string]*Agent, len(agents))
 	for i := range agents {
 		byID[agents[i].ID] = &agents[i]
 	}
 
-	// Identify all IDs that appear as a child of some agent.
 	childIDs := make(map[string]bool)
 	for _, a := range agents {
 		for _, sub := range a.SubAgents {
@@ -58,7 +50,6 @@ func BuildSessionGraph(agents []Agent) SessionGraph {
 		}
 	}
 
-	// Roots are agents whose ID does not appear in childIDs.
 	var roots []SessionNode
 	totalCount := 0
 	blockedCount := 0
@@ -85,7 +76,6 @@ func BuildSessionGraph(agents []Agent) SessionGraph {
 		}
 
 		totalCount++
-		// Count as blocked if there is a non-empty block reason that is not "done".
 		if blockReason != "" && blockReason != "done" {
 			blockedCount++
 		}
