@@ -56,7 +56,7 @@
   - **Scenario C — 현재 hook/transcript 로 불가능**: P1-4 를 Phase 2 로 이관, Phase 1 커밋 -2 차감
 - **종속성**: 이 판정이 Phase 1 commit 총량, Phase 2 commit 총량, ADR-3 deadline 세 가지를 동시에 확정한다
 
-**판정 상태**: PENDING (ADR-3 미작성)
+**판정 상태**: **ACCEPTED — Scenario B 채택** (2026-04-08, ADR-3 작성 완료, `docs/decisions/ADR-3-cost-telemetry.md` 참조). P1-4 는 Phase 1 에 포함, 예상 5-6 커밋. 가격표는 commit 1 에서 Anthropic 공식 가격 매핑.
 
 **커밋 수 재산정 (Ralph Round 2)**: 기존 16-22 → **12-17** (P1-5 이관으로 4-5 커밋 감소). P1-4 Scenario C 확정 시 추가 -2 커밋.
 
