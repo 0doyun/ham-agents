@@ -113,6 +113,7 @@ type Request struct {
 	FilePath         string         `json:"file_path,omitempty"`
 	FileEvent        string         `json:"file_event,omitempty"`
 	LastMessage      string         `json:"last_message,omitempty"`
+	Graph            bool           `json:"graph,omitempty"`
 }
 
 type Response struct {
@@ -125,6 +126,7 @@ type Response struct {
 	OpenTarget         *core.OpenTarget         `json:"open_target,omitempty"`
 	Settings           *core.Settings           `json:"settings,omitempty"`
 	Snapshot           *core.RuntimeSnapshot    `json:"snapshot,omitempty"`
+	SessionGraph       *core.SessionGraph       `json:"session_graph,omitempty"`
 	Error              string                   `json:"error,omitempty"`
 }
 

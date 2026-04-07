@@ -270,7 +270,12 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 		if err != nil {
 			return Response{}, err
 		}
-		return Response{Snapshot: &snapshot}, nil
+		resp := Response{Snapshot: &snapshot}
+		if request.Graph {
+			graph := core.BuildSessionGraph(snapshot.Agents)
+			resp.SessionGraph = &graph
+		}
+		return resp, nil
 	case CommandEvents:
 		events, err := s.registry.Events(ctx, request.Limit)
 		if err != nil {
