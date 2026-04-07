@@ -563,6 +563,33 @@ func compactToolPreview(value string) string {
 	return trimmed
 }
 
+func runInbox(ctx context.Context, client *ipc.Client, args []string) error {
+	opts, err := parseInboxOptions(args)
+	if err != nil {
+		return err
+	}
+
+	if opts.markRead {
+		n, err := client.InboxMarkRead(ctx, opts.markReadID)
+		if err != nil {
+			return err
+		}
+		if opts.markReadID != "" {
+			fmt.Printf("Marked item %s as read (%d unread remaining)\n", opts.markReadID, n)
+		} else {
+			fmt.Printf("Marked all items as read (%d unread remaining)\n", n)
+		}
+		return nil
+	}
+
+	unreadOnly := !opts.all
+	items, _, err := client.InboxList(ctx, opts.typeFilter, unreadOnly)
+	if err != nil {
+		return err
+	}
+	return renderInboxItems(os.Stdout, items)
+}
+
 func runStop(ctx context.Context, client *ipc.Client, args []string) error {
 	agentID, asJSON, err := parseStopInput(args)
 	if err != nil {

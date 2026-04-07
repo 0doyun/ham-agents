@@ -16,6 +16,8 @@ public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var summary: HamMenuBarSummary?
     @Published public private(set) var agents: [Agent] = []
     @Published public private(set) var sessionGraph: SessionGraph?
+    @Published public private(set) var inboxItems: [InboxItemPayload] = []
+    @Published public private(set) var unreadInboxCount: Int = 0
     @Published public private(set) var attachableSessions: [DaemonAttachableSessionPayload] = []
     @Published public private(set) var teams: [DaemonTeamPayload] = []
     @Published public private(set) var isRefreshing = false
@@ -435,6 +437,29 @@ public final class MenuBarViewModel: ObservableObject {
         }
     }
 
+    public func markAllInboxRead() async {
+        do {
+            let newCount = try await client.markAllInboxRead()
+            unreadInboxCount = newCount
+            inboxItems = inboxItems.map { item in
+                guard !item.read else { return item }
+                return InboxItemPayload(
+                    id: item.id,
+                    agentID: item.agentID,
+                    agentName: item.agentName,
+                    type: item.type,
+                    summary: item.summary,
+                    toolName: item.toolName,
+                    occurredAt: item.occurredAt,
+                    read: true,
+                    actionable: item.actionable
+                )
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     public func stopTracking(forAgentID id: Agent.ID?) async {
         guard let id else {
             errorMessage = "No agent selected."
@@ -506,6 +531,7 @@ public final class MenuBarViewModel: ObservableObject {
             let loadedAttachableSessionsValue = (try? await client.fetchAttachableSessions()) ?? []
             let loadedTeamsValue = (try? await client.fetchTeams()) ?? []
             let loadedSessionGraph = try? await client.fetchSessionGraph()
+            let loadedInbox = try? await client.fetchInbox(typeFilter: nil, unreadOnly: false)
             applyRefreshedState(
                 summary: summaryValue,
                 agents: loadedAgentsValue,
@@ -517,6 +543,10 @@ public final class MenuBarViewModel: ObservableObject {
             teams = loadedTeamsValue
             settings = loadedSettingsValue
             sessionGraph = loadedSessionGraph
+            if let inbox = loadedInbox {
+                inboxItems = inbox.items
+                unreadInboxCount = inbox.unreadCount
+            }
             notificationPermissionStatus = await permissionStatus
             if roleDraft.isEmpty, let firstAgent = agents.first {
                 roleDraft = firstAgent.role ?? ""

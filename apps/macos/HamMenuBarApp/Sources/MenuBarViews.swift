@@ -73,6 +73,8 @@ struct MenuBarContentView: View {
                     }
                 }
 
+                InboxSection(viewModel: viewModel)
+
                 if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .font(.caption)
@@ -1171,5 +1173,97 @@ private struct SummaryBadge: View {
         .padding(.vertical, 8)
         .background(Color.gray.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+struct InboxSection: View {
+    @ObservedObject var viewModel: MenuBarViewModel
+
+    var body: some View {
+        if !viewModel.inboxItems.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Inbox")
+                        .font(.headline)
+                    if viewModel.unreadInboxCount > 0 {
+                        Text("\(viewModel.unreadInboxCount)")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.red)
+                            .foregroundColor(.white)
+                            .clipShape(Capsule())
+                    }
+                    Spacer()
+                    Button("Mark all read") {
+                        Task { await viewModel.markAllInboxRead() }
+                    }
+                    .font(.caption)
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.unreadInboxCount == 0)
+                }
+                ForEach(viewModel.inboxItems) { item in
+                    InboxRowView(item: item)
+                }
+                Divider()
+            }
+        }
+    }
+}
+
+struct InboxRowView: View {
+    let item: InboxItemPayload
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: iconFor(type: item.type))
+                .foregroundColor(colorFor(type: item.type))
+            VStack(alignment: .leading) {
+                Text(item.agentName.isEmpty ? item.agentID : item.agentName)
+                    .font(.caption.bold())
+                Text(item.summary)
+                    .font(.caption)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Text(inboxRelativeTime(item.occurredAt))
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .opacity(item.read ? 0.5 : 1.0)
+    }
+
+    func iconFor(type: String) -> String {
+        switch type {
+        case "permission_request": return "exclamationmark.circle"
+        case "notification":       return "info.circle"
+        case "task_complete":      return "checkmark.circle"
+        case "error":              return "xmark.circle"
+        case "stop":               return "stop.circle"
+        default:                   return "questionmark.circle"
+        }
+    }
+
+    func colorFor(type: String) -> Color {
+        switch type {
+        case "permission_request": return .orange
+        case "error":              return .red
+        case "task_complete":      return .green
+        default:                   return .secondary
+        }
+    }
+}
+
+private func inboxRelativeTime(_ date: Date) -> String {
+    let d = Date().timeIntervalSince(date)
+    switch d {
+    case ..<60:
+        return "\(Int(d))s"
+    case ..<3600:
+        return "\(Int(d / 60))m"
+    case ..<86400:
+        return "\(Int(d / 3600))h"
+    default:
+        return "\(Int(d / 86400))d"
     }
 }

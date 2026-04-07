@@ -601,6 +601,29 @@ func (c *Client) HookFileChanged(ctx context.Context, agentID string, sessionID 
 	return err
 }
 
+func (c *Client) InboxList(ctx context.Context, typeFilter string, unreadOnly bool) ([]core.InboxItem, int, error) {
+	response, err := c.request(ctx, Request{
+		Command:    CommandInboxList,
+		TypeFilter: typeFilter,
+		UnreadOnly: unreadOnly,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	return response.InboxItems, response.UnreadCount, nil
+}
+
+func (c *Client) InboxMarkRead(ctx context.Context, id string) (int, error) {
+	response, err := c.request(ctx, Request{
+		Command:     CommandInboxMarkRead,
+		InboxItemID: id,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return response.UnreadCount, nil
+}
+
 func (c *Client) request(ctx context.Context, request Request) (Response, error) {
 	dialer := net.Dialer{Timeout: c.timeout}
 	connection, err := dialer.DialContext(ctx, "unix", c.socketPath)

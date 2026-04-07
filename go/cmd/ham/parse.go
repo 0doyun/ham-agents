@@ -398,6 +398,33 @@ func splitProvider(args []string) (string, []string) {
 	return args[0], args[1:]
 }
 
+type inboxOptions struct {
+	typeFilter string
+	all        bool
+	markRead   bool
+	markReadID string
+}
+
+func parseInboxOptions(args []string) (inboxOptions, error) {
+	flags := flag.NewFlagSet("inbox", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	typeFilter := flags.String("type", "", "filter by item type")
+	all := flags.Bool("all", false, "show read and unread items")
+	markRead := flags.Bool("mark-read", false, "mark all items as read")
+	if err := flags.Parse(args); err != nil {
+		return inboxOptions{}, err
+	}
+	opts := inboxOptions{
+		typeFilter: strings.TrimSpace(*typeFilter),
+		all:        *all,
+		markRead:   *markRead,
+	}
+	if len(flags.Args()) > 0 {
+		opts.markReadID = flags.Args()[0]
+	}
+	return opts, nil
+}
+
 type agentQueryOptions struct {
 	asJSON       bool
 	teamRef      string

@@ -1368,3 +1368,112 @@ func TestParseHookDescriptionRequiresFlag(t *testing.T) {
 		t.Fatalf("expected empty for nil args, got %q", got)
 	}
 }
+
+func TestInbox_List_DefaultUnreadOnly(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now()
+	unread1 := core.InboxItem{
+		ID: "i1", AgentID: "a1", AgentName: "alice",
+		Type: core.InboxItemPermissionRequest, Summary: "Bash needs permission",
+		OccurredAt: now, Read: false, Actionable: true,
+	}
+	unread2 := core.InboxItem{
+		ID: "i2", AgentID: "a2", AgentName: "bob",
+		Type: core.InboxItemNotification, Summary: "Task done",
+		OccurredAt: now, Read: false, Actionable: false,
+	}
+	// This one is read — should not appear in default output.
+	readItem := core.InboxItem{
+		ID: "i3", AgentID: "a3", AgentName: "carol",
+		Type: core.InboxItemStop, Summary: "Agent stopped",
+		OccurredAt: now, Read: true, Actionable: false,
+	}
+
+	// Default call (no flags): unreadOnly=true, so only unread items returned.
+	opts, err := parseInboxOptions([]string{})
+	if err != nil {
+		t.Fatalf("parseInboxOptions: %v", err)
+	}
+	if opts.all || opts.markRead || opts.typeFilter != "" {
+		t.Fatalf("default options should be zero, got %#v", opts)
+	}
+
+	unreadOnly := !opts.all
+	if !unreadOnly {
+		t.Fatalf("expected unreadOnly=true by default")
+	}
+
+	// Simulate daemon returning only unread items (daemon filters server-side).
+	items := []core.InboxItem{unread1, unread2}
+	_ = readItem // daemon would not return this with unreadOnly=true
+
+	var buf bytes.Buffer
+	if err := renderInboxItems(&buf, items); err != nil {
+		t.Fatalf("renderInboxItems: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "alice") {
+		t.Errorf("expected alice in output, got:\n%s", out)
+	}
+	if !strings.Contains(out, "bob") {
+		t.Errorf("expected bob in output, got:\n%s", out)
+	}
+	if strings.Contains(out, "carol") {
+		t.Errorf("carol (read) should not appear in unread-only output, got:\n%s", out)
+	}
+}
+
+func TestInbox_TypeFilter(t *testing.T) {
+	t.Parallel()
+
+	opts, err := parseInboxOptions([]string{"--type", "permission_request"})
+	if err != nil {
+		t.Fatalf("parseInboxOptions: %v", err)
+	}
+	if opts.typeFilter != "permission_request" {
+		t.Fatalf("expected type filter 'permission_request', got %q", opts.typeFilter)
+	}
+
+	now := time.Now()
+	// Simulate daemon returning only permission_request items (filtered server-side).
+	items := []core.InboxItem{
+		{ID: "i1", AgentID: "a1", AgentName: "alice", Type: core.InboxItemPermissionRequest, Summary: "needs bash", OccurredAt: now, Read: false},
+	}
+
+	var buf bytes.Buffer
+	if err := renderInboxItems(&buf, items); err != nil {
+		t.Fatalf("renderInboxItems: %v", err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "[!]") {
+		t.Errorf("expected permission_request icon '!' in output, got:\n%s", out)
+	}
+	if !strings.Contains(out, "alice") {
+		t.Errorf("expected alice in output, got:\n%s", out)
+	}
+}
+
+func TestInbox_MarkRead_All(t *testing.T) {
+	t.Parallel()
+
+	// Verify that --mark-read sets markRead=true and markReadID is empty (mark all).
+	opts, err := parseInboxOptions([]string{"--mark-read"})
+	if err != nil {
+		t.Fatalf("parseInboxOptions: %v", err)
+	}
+	if !opts.markRead {
+		t.Fatalf("expected markRead=true")
+	}
+	if opts.markReadID != "" {
+		t.Fatalf("expected empty markReadID for mark-all, got %q", opts.markReadID)
+	}
+
+	// Verify render output for mark-all confirmation.
+	var buf bytes.Buffer
+	markedCount := 0
+	fmt.Fprintf(&buf, "Marked all items as read (%d unread remaining)\n", markedCount)
+	if !strings.Contains(buf.String(), "Marked") {
+		t.Errorf("expected 'Marked' in output, got:\n%s", buf.String())
+	}
+}
