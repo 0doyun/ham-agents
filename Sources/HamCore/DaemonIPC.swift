@@ -23,6 +23,8 @@ public enum DaemonCommand: String, Codable, Sendable {
     case agentsRename = "agents.rename"
     case agentsOpenTarget = "agents.open_target"
     case tmuxSessions = "tmux.sessions"
+    case inboxList = "inbox.list"
+    case inboxMarkRead = "inbox.mark-read"
     /// Fallback for command strings not yet known to the Swift client.
     case unknown = "__unknown__"
 
@@ -86,6 +88,10 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
     public var waitMillis: Int?
     public var policy: String?
     public var settings: DaemonSettingsPayload?
+    public var graph: Bool?
+    public var typeFilter: String?
+    public var unreadOnly: Bool?
+    public var inboxItemID: String?
 
     public init(
         command: DaemonCommand,
@@ -100,7 +106,11 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         afterEventID: String? = nil,
         waitMillis: Int? = nil,
         policy: String? = nil,
-        settings: DaemonSettingsPayload? = nil
+        settings: DaemonSettingsPayload? = nil,
+        graph: Bool? = nil,
+        typeFilter: String? = nil,
+        unreadOnly: Bool? = nil,
+        inboxItemID: String? = nil
     ) {
         self.command = command
         self.agentID = agentID
@@ -115,6 +125,10 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         self.waitMillis = waitMillis
         self.policy = policy
         self.settings = settings
+        self.graph = graph
+        self.typeFilter = typeFilter
+        self.unreadOnly = unreadOnly
+        self.inboxItemID = inboxItemID
     }
 
     enum CodingKeys: String, CodingKey {
@@ -131,6 +145,10 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         case waitMillis = "wait_millis"
         case policy
         case settings
+        case graph
+        case typeFilter = "type_filter"
+        case unreadOnly = "unread_only"
+        case inboxItemID = "inbox_item_id"
     }
 }
 
@@ -444,6 +462,9 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
     public var events: [AgentEventPayload]?
     public var snapshot: DaemonRuntimeSnapshotPayload?
     public var settings: DaemonSettingsPayload?
+    public var sessionGraph: SessionGraph?
+    public var inboxItems: [InboxItemPayload]?
+    public var unreadCount: Int?
     public var error: String?
 
     public init(
@@ -455,6 +476,9 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
         events: [AgentEventPayload]? = nil,
         snapshot: DaemonRuntimeSnapshotPayload? = nil,
         settings: DaemonSettingsPayload? = nil,
+        sessionGraph: SessionGraph? = nil,
+        inboxItems: [InboxItemPayload]? = nil,
+        unreadCount: Int? = nil,
         error: String? = nil
     ) {
         self.agent = agent
@@ -465,6 +489,9 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
         self.events = events
         self.snapshot = snapshot
         self.settings = settings
+        self.sessionGraph = sessionGraph
+        self.inboxItems = inboxItems
+        self.unreadCount = unreadCount
         self.error = error
     }
 
@@ -477,6 +504,9 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
         case events
         case snapshot
         case settings
+        case sessionGraph = "session_graph"
+        case inboxItems = "inbox_items"
+        case unreadCount = "unread_count"
         case error
     }
 }

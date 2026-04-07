@@ -27,6 +27,15 @@ type Registry struct {
 	idProvider     func(time.Time) string
 	hostname       func() (string, error)
 	toolStartTimes sync.Map // key: agentID (string) -> value: time.Time
+	eventCallback  func(core.Event)
+}
+
+// SetEventCallback registers a callback that is called after each event is appended.
+// The callback must not hold the Registry mutex.
+func (r *Registry) SetEventCallback(cb func(core.Event)) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.eventCallback = cb
 }
 
 func NewRegistry(agentStore store.AgentStore, eventStore store.EventStore) *Registry {
@@ -353,6 +362,14 @@ func (r *Registry) appendEvent(ctx context.Context, event core.Event) {
 		}
 	}
 	_ = r.eventStore.Append(ctx, event)
+
+	// Fire the event callback outside the registry mutex to avoid deadlocks.
+	// appendEvent may be called while r.mu is held; the callback (e.g. InboxManager)
+	// takes its own mutex, so we must not hold r.mu when invoking it.
+	cb := r.eventCallback
+	if cb != nil {
+		go cb(event)
+	}
 }
 
 func (r *Registry) RecordInformationalEvent(ctx context.Context, event core.Event) {

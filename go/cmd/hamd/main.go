@@ -52,12 +52,33 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	inboxPath, err := store.DefaultInboxPath()
+	if err != nil {
+		return err
+	}
 	eventStore := store.NewFileEventStore(eventPath).
 		WithArtifactStore(store.NewFileArtifactStore(artifactPath))
 	registry := runtime.NewRegistry(
 		store.NewFileAgentStore(statePath),
 		eventStore,
 	)
+	inboxMgr, err := runtime.NewInboxManager(inboxPath)
+	if err != nil {
+		return err
+	}
+	inboxMgr.SetAgentNameResolver(func(id string) string {
+		agents, err := registry.List(context.Background())
+		if err != nil {
+			return ""
+		}
+		for _, a := range agents {
+			if a.ID == id {
+				return a.DisplayName
+			}
+		}
+		return ""
+	})
+	registry.SetEventCallback(inboxMgr.HandleEvent)
 	managedService := runtime.NewManagedService(registry)
 	settingsService := runtime.NewSettingsService(store.NewFileSettingsStore(settingsPath))
 	teamService := runtime.NewTeamService(store.NewFileTeamStore(teamPath))
@@ -112,7 +133,7 @@ func run(args []string) error {
 			cancel()
 		}()
 
-		server := ipc.NewServer(ipcConfig.SocketPath, registry, managedService, settingsService, teamService, itermAdapter, tmuxAdapter)
+		server := ipc.NewServer(ipcConfig.SocketPath, registry, managedService, settingsService, teamService, inboxMgr, itermAdapter, tmuxAdapter)
 		go pollRuntimeState(ctx, registry, settingsService, itermAdapter, tmuxAdapter, transcriptAdapter, 2*time.Second)
 		fmt.Printf("hamd serving on %s\n", ipcConfig.SocketPath)
 		return server.Serve(ctx)

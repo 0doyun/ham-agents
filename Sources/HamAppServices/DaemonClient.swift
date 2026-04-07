@@ -41,10 +41,23 @@ public protocol HamDaemonClientProtocol: Sendable {
     func updateNotificationPolicy(agentID: String, policy: NotificationPolicy) async throws -> Agent
     func updateRole(agentID: String, role: String) async throws -> Agent
     func removeAgent(agentID: String) async throws
+    func fetchSessionGraph() async throws -> SessionGraph
+    func fetchInbox(typeFilter: String?, unreadOnly: Bool) async throws -> (items: [InboxItemPayload], unreadCount: Int)
+    func markInboxRead(id: String) async throws -> Int
+    func markAllInboxRead() async throws -> Int
 }
 
 public extension HamDaemonClientProtocol {
     func fetchTeams() async throws -> [DaemonTeamPayload] { [] }
+    func fetchSessionGraph() async throws -> SessionGraph {
+        // Default no-op for clients that do not implement the graph endpoint.
+        throw HamDaemonClientError.missingPayload("session_graph")
+    }
+    func fetchInbox(typeFilter: String?, unreadOnly: Bool) async throws -> (items: [InboxItemPayload], unreadCount: Int) {
+        throw HamDaemonClientError.missingPayload("inbox_items")
+    }
+    func markInboxRead(id: String) async throws -> Int { 0 }
+    func markAllInboxRead() async throws -> Int { 0 }
 }
 
 public struct HamMenuBarSummary: Equatable, Sendable {
@@ -199,6 +212,41 @@ public final class HamDaemonClient: HamDaemonClientProtocol, @unchecked Sendable
         if let error = response.error {
             throw HamDaemonClientError.server(error)
         }
+    }
+
+    public func fetchSessionGraph() async throws -> SessionGraph {
+        let response = try await transport.send(.init(command: .status, graph: true))
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
+        guard let graph = response.sessionGraph else {
+            throw HamDaemonClientError.missingPayload("session_graph")
+        }
+        return graph
+    }
+
+    public func fetchInbox(typeFilter: String?, unreadOnly: Bool) async throws -> (items: [InboxItemPayload], unreadCount: Int) {
+        let response = try await transport.send(.init(
+            command: .inboxList,
+            typeFilter: typeFilter,
+            unreadOnly: unreadOnly
+        ))
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
+        return (items: response.inboxItems ?? [], unreadCount: response.unreadCount ?? 0)
+    }
+
+    public func markInboxRead(id: String) async throws -> Int {
+        let response = try await transport.send(.init(command: .inboxMarkRead, inboxItemID: id))
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
+        return response.unreadCount ?? 0
+    }
+
+    public func markAllInboxRead() async throws -> Int {
+        return try await markInboxRead(id: "")
     }
 }
 

@@ -73,6 +73,8 @@ struct MenuBarContentView: View {
                     }
                 }
 
+                InboxSection(viewModel: viewModel)
+
                 if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .font(.caption)
@@ -118,6 +120,13 @@ struct MenuBarContentView: View {
                 if filteredAttentionAgents.isEmpty && filteredNonAttentionAgents.isEmpty {
                     Text("No tracked agents")
                         .foregroundStyle(.secondary)
+                } else if let graph = viewModel.sessionGraph, !graph.roots.isEmpty {
+                    // Tree view: render session hierarchy when graph data is available.
+                    VStack(alignment: .leading, spacing: 2) {
+                        ForEach(graph.roots) { root in
+                            SessionNodeView(node: root)
+                        }
+                    }
                 } else {
                     VStack(alignment: .leading, spacing: 4) {
                         ForEach(filteredNonAttentionAgents) { agent in
@@ -1029,6 +1038,73 @@ private func eventBadgeBackground(for emphasis: AgentEventEmphasis) -> Color {
     }
 }
 
+// MARK: - Session tree view
+
+private struct SessionNodeView: View {
+    let node: SessionNode
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                // Depth indent: 12pt per level to mirror the tree structure.
+                if node.depth > 0 {
+                    Spacer()
+                        .frame(width: CGFloat(node.depth) * 12)
+                }
+                Image(systemName: sessionNodeIcon(status: node.agent.status))
+                    .font(.caption)
+                    .foregroundStyle(sessionNodeColor(status: node.agent.status))
+                Text(node.agent.displayName.isEmpty ? node.agent.id : node.agent.displayName)
+                    .font(.body)
+                Spacer()
+                Text(node.agent.status.humanizedLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if !node.blockReason.isEmpty {
+                    Text("(\(node.blockReason))")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                }
+            }
+            ForEach(node.children) { child in
+                SessionNodeView(node: child)
+            }
+        }
+    }
+
+    private func sessionNodeIcon(status: AgentStatus) -> String {
+        switch status {
+        case .error:
+            return "exclamationmark.circle"
+        case .waitingInput:
+            return "person.crop.circle.badge.questionmark"
+        case .disconnected:
+            return "wifi.slash"
+        case .done:
+            return "checkmark.circle"
+        case .runningTool, .reading, .thinking, .writing, .searching, .spawning:
+            return "circle.dotted"
+        case .booting, .idle, .sleeping:
+            return "circle"
+        }
+    }
+
+    private func sessionNodeColor(status: AgentStatus) -> Color {
+        switch status {
+        case .error:
+            return .red
+        case .waitingInput, .disconnected:
+            return .yellow
+        case .done:
+            return .green
+        case .runningTool, .reading, .thinking, .writing, .searching, .spawning:
+            return .blue
+        case .booting, .idle, .sleeping:
+            return .secondary
+        }
+    }
+}
+
 private struct AgentListCard: View {
     let agent: Agent
     let isSelected: Bool
@@ -1097,5 +1173,103 @@ private struct SummaryBadge: View {
         .padding(.vertical, 8)
         .background(Color.gray.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+struct InboxSection: View {
+    @ObservedObject var viewModel: MenuBarViewModel
+
+    var body: some View {
+        if !viewModel.inboxItems.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Inbox")
+                        .font(.headline)
+                    if viewModel.unreadInboxCount > 0 {
+                        Text("\(viewModel.unreadInboxCount)")
+                            .font(.caption.bold())
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.red)
+                            .foregroundColor(.white)
+                            .clipShape(Capsule())
+                    }
+                    Spacer()
+                    Button("Mark all read") {
+                        Task { await viewModel.markAllInboxRead() }
+                    }
+                    .font(.caption)
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.unreadInboxCount == 0)
+                }
+                ForEach(viewModel.inboxItems) { item in
+                    InboxRowView(item: item) {
+                        Task { @MainActor in await viewModel.openInboxItem(item) }
+                    }
+                }
+                Divider()
+            }
+        }
+    }
+}
+
+struct InboxRowView: View {
+    let item: InboxItemPayload
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 8) {
+                Image(systemName: iconFor(type: item.type))
+                    .foregroundColor(colorFor(type: item.type))
+                VStack(alignment: .leading) {
+                    Text(item.agentName.isEmpty ? item.agentID : item.agentName)
+                        .font(.caption.bold())
+                    Text(item.summary)
+                        .font(.caption)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Text(inboxRelativeTime(item.occurredAt))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .opacity(item.read ? 0.5 : 1.0)
+        }
+        .buttonStyle(.plain)
+    }
+
+    func iconFor(type: String) -> String {
+        switch type {
+        case "permission_request": return "exclamationmark.circle"
+        case "notification":       return "info.circle"
+        case "task_complete":      return "checkmark.circle"
+        case "error":              return "xmark.circle"
+        case "stop":               return "stop.circle"
+        default:                   return "questionmark.circle"
+        }
+    }
+
+    func colorFor(type: String) -> Color {
+        switch type {
+        case "permission_request": return .orange
+        case "error":              return .red
+        case "task_complete":      return .green
+        default:                   return .secondary
+        }
+    }
+}
+
+private func inboxRelativeTime(_ date: Date) -> String {
+    let d = Date().timeIntervalSince(date)
+    switch d {
+    case ..<60:
+        return "\(Int(d))s"
+    case ..<3600:
+        return "\(Int(d / 60))m"
+    case ..<86400:
+        return "\(Int(d / 3600))h"
+    default:
+        return "\(Int(d / 86400))d"
     }
 }

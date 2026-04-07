@@ -15,6 +15,9 @@ public enum StatusBarTint: String, Sendable {
 public final class MenuBarViewModel: ObservableObject {
     @Published public private(set) var summary: HamMenuBarSummary?
     @Published public private(set) var agents: [Agent] = []
+    @Published public private(set) var sessionGraph: SessionGraph?
+    @Published public private(set) var inboxItems: [InboxItemPayload] = []
+    @Published public private(set) var unreadInboxCount: Int = 0
     @Published public private(set) var attachableSessions: [DaemonAttachableSessionPayload] = []
     @Published public private(set) var teams: [DaemonTeamPayload] = []
     @Published public private(set) var isRefreshing = false
@@ -434,6 +437,56 @@ public final class MenuBarViewModel: ObservableObject {
         }
     }
 
+    public func markAllInboxRead() async {
+        do {
+            let newCount = try await client.markAllInboxRead()
+            unreadInboxCount = newCount
+            inboxItems = inboxItems.map { item in
+                guard !item.read else { return item }
+                return InboxItemPayload(
+                    id: item.id,
+                    agentID: item.agentID,
+                    agentName: item.agentName,
+                    type: item.type,
+                    summary: item.summary,
+                    toolName: item.toolName,
+                    occurredAt: item.occurredAt,
+                    read: true,
+                    actionable: item.actionable
+                )
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Opens the terminal session for an inbox item's agent and marks the item read.
+    /// If the agent has no reachable session or iTerm is not enabled, the item is
+    /// still marked read but no terminal navigation occurs.
+    public func openInboxItem(_ item: InboxItemPayload) async {
+        do {
+            let newCount = try await client.markInboxRead(id: item.id)
+            unreadInboxCount = newCount
+            inboxItems = inboxItems.map { i in
+                guard i.id == item.id, !i.read else { return i }
+                return InboxItemPayload(
+                    id: i.id,
+                    agentID: i.agentID,
+                    agentName: i.agentName,
+                    type: i.type,
+                    summary: i.summary,
+                    toolName: i.toolName,
+                    occurredAt: i.occurredAt,
+                    read: true,
+                    actionable: i.actionable
+                )
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        openSession(forAgentID: item.agentID)
+    }
+
     public func stopTracking(forAgentID id: Agent.ID?) async {
         guard let id else {
             errorMessage = "No agent selected."
@@ -504,6 +557,8 @@ public final class MenuBarViewModel: ObservableObject {
             let loadedSettingsValue = try await loadedSettings
             let loadedAttachableSessionsValue = (try? await client.fetchAttachableSessions()) ?? []
             let loadedTeamsValue = (try? await client.fetchTeams()) ?? []
+            let loadedSessionGraph = try? await client.fetchSessionGraph()
+            let loadedInbox = try? await client.fetchInbox(typeFilter: nil, unreadOnly: false)
             applyRefreshedState(
                 summary: summaryValue,
                 agents: loadedAgentsValue,
@@ -514,6 +569,11 @@ public final class MenuBarViewModel: ObservableObject {
             attachableSessions = loadedAttachableSessionsValue
             teams = loadedTeamsValue
             settings = loadedSettingsValue
+            sessionGraph = loadedSessionGraph
+            if let inbox = loadedInbox {
+                inboxItems = inbox.items
+                unreadInboxCount = inbox.unreadCount
+            }
             notificationPermissionStatus = await permissionStatus
             if roleDraft.isEmpty, let firstAgent = agents.first {
                 roleDraft = firstAgent.role ?? ""

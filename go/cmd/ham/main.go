@@ -78,6 +78,8 @@ func run(args []string) error {
 		return runEvents(ctx, client, args[1:])
 	case "rename":
 		return runRename(ctx, client, args[1:])
+	case "inbox":
+		return runInbox(ctx, client, args[1:])
 	case "down":
 		return runDown(ctx, client, args[1:])
 	case "uninstall":

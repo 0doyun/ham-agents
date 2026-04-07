@@ -436,3 +436,102 @@ func sanitizeSensitiveText(value string) string {
 	sanitized = homePathPattern.ReplaceAllString(sanitized, `/Users/***`)
 	return sanitized
 }
+
+// renderSessionGraph prints the session tree to out.
+// Each node is prefixed with indentation reflecting its depth.
+// Format:
+//
+//	SessionGraph: N agents (M blocked)
+//	  - alice [running] d0
+//	    - bob [waiting_input] d1
+//	      - carol [done] d2
+//	  - dan [idle] d0
+//
+// The simple indented format is used (2 spaces per depth level) so that it is
+// unambiguous and easy to test without requiring complex tree-drawing logic.
+func renderSessionGraph(out io.Writer, graph core.SessionGraph) error {
+	if _, err := fmt.Fprintf(out, "SessionGraph: %d agents (%d blocked)\n", graph.TotalCount, graph.BlockedCount); err != nil {
+		return err
+	}
+	var printNode func(node core.SessionNode) error
+	printNode = func(node core.SessionNode) error {
+		indent := strings.Repeat("  ", node.Depth)
+		name := node.Agent.DisplayName
+		if name == "" {
+			name = node.Agent.ID
+		}
+		status := string(node.Agent.Status)
+		if _, err := fmt.Fprintf(out, "%s- %s [%s] d%d\n", indent, name, status, node.Depth); err != nil {
+			return err
+		}
+		for _, child := range node.Children {
+			if err := printNode(child); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, root := range graph.Roots {
+		if err := printNode(root); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func inboxIconFor(itemType core.InboxItemType) string {
+	switch itemType {
+	case core.InboxItemPermissionRequest:
+		return "!"
+	case core.InboxItemNotification:
+		return "i"
+	case core.InboxItemTaskComplete:
+		return "v"
+	case core.InboxItemError:
+		return "x"
+	case core.InboxItemStop:
+		return "."
+	default:
+		return "?"
+	}
+}
+
+func inboxRelativeTime(t time.Time) string {
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return fmt.Sprintf("%ds ago", int(d.Seconds()))
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	default:
+		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+	}
+}
+
+func renderInboxItems(out io.Writer, items []core.InboxItem) error {
+	if len(items) == 0 {
+		_, err := fmt.Fprintln(out, "no inbox items")
+		return err
+	}
+	for _, item := range items {
+		icon := inboxIconFor(item.Type)
+		name := item.AgentName
+		if name == "" {
+			name = item.AgentID
+		}
+		_, err := fmt.Fprintf(out, "[%s] %s\t%s\t%s\n", icon, name, item.Summary, inboxRelativeTime(item.OccurredAt))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// buildFilteredGraph builds a SessionGraph from a filtered subset of agents.
+func buildFilteredGraph(agents []core.Agent, generatedAt time.Time) core.SessionGraph {
+	graph := core.BuildSessionGraph(agents)
+	graph.GeneratedAt = generatedAt
+	return graph
+}

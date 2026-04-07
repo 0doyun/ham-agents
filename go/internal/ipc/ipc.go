@@ -71,6 +71,9 @@ const (
 	CommandHookInstructions      Command = "hook.instructions-loaded"
 	CommandHookCwdChanged        Command = "hook.cwd-changed"
 	CommandHookFileChanged       Command = "hook.file-changed"
+
+	CommandInboxList     Command = "inbox.list"
+	CommandInboxMarkRead Command = "inbox.mark-read"
 )
 
 type Request struct {
@@ -113,6 +116,10 @@ type Request struct {
 	FilePath         string         `json:"file_path,omitempty"`
 	FileEvent        string         `json:"file_event,omitempty"`
 	LastMessage      string         `json:"last_message,omitempty"`
+	Graph            bool           `json:"graph,omitempty"`
+	TypeFilter       string         `json:"type_filter,omitempty"`
+	UnreadOnly       bool           `json:"unread_only,omitempty"`
+	InboxItemID      string         `json:"inbox_item_id,omitempty"`
 }
 
 type Response struct {
@@ -125,6 +132,9 @@ type Response struct {
 	OpenTarget         *core.OpenTarget         `json:"open_target,omitempty"`
 	Settings           *core.Settings           `json:"settings,omitempty"`
 	Snapshot           *core.RuntimeSnapshot    `json:"snapshot,omitempty"`
+	SessionGraph       *core.SessionGraph       `json:"session_graph,omitempty"`
+	InboxItems         []core.InboxItem         `json:"inbox_items,omitempty"`
+	UnreadCount        int                      `json:"unread_count,omitempty"`
 	Error              string                   `json:"error,omitempty"`
 }
 
@@ -357,6 +367,22 @@ func (c *Client) Status(ctx context.Context) (core.RuntimeSnapshot, error) {
 	return *response.Snapshot, nil
 }
 
+// StatusWithGraph requests the session tree alongside the runtime snapshot.
+// It returns the SessionGraph and the RuntimeSnapshot from the same response.
+func (c *Client) StatusWithGraph(ctx context.Context) (core.SessionGraph, core.RuntimeSnapshot, error) {
+	response, err := c.request(ctx, Request{Command: CommandStatus, Graph: true})
+	if err != nil {
+		return core.SessionGraph{}, core.RuntimeSnapshot{}, err
+	}
+	if response.Snapshot == nil {
+		return core.SessionGraph{}, core.RuntimeSnapshot{}, fmt.Errorf("daemon response missing snapshot payload")
+	}
+	if response.SessionGraph == nil {
+		return core.SessionGraph{}, core.RuntimeSnapshot{}, fmt.Errorf("daemon response missing session_graph payload")
+	}
+	return *response.SessionGraph, *response.Snapshot, nil
+}
+
 func (c *Client) Events(ctx context.Context, limit int) ([]core.Event, error) {
 	response, err := c.request(ctx, Request{Command: CommandEvents, Limit: limit})
 	if err != nil {
@@ -573,6 +599,29 @@ func (c *Client) HookCwdChanged(ctx context.Context, agentID string, sessionID s
 func (c *Client) HookFileChanged(ctx context.Context, agentID string, sessionID string, sessionRef string, filePath string, fileEvent string, omcMode string) error {
 	_, err := c.request(ctx, Request{Command: CommandHookFileChanged, AgentID: agentID, SessionID: sessionID, SessionRef: sessionRef, FilePath: filePath, FileEvent: fileEvent, OmcMode: omcMode})
 	return err
+}
+
+func (c *Client) InboxList(ctx context.Context, typeFilter string, unreadOnly bool) ([]core.InboxItem, int, error) {
+	response, err := c.request(ctx, Request{
+		Command:    CommandInboxList,
+		TypeFilter: typeFilter,
+		UnreadOnly: unreadOnly,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	return response.InboxItems, response.UnreadCount, nil
+}
+
+func (c *Client) InboxMarkRead(ctx context.Context, id string) (int, error) {
+	response, err := c.request(ctx, Request{
+		Command:     CommandInboxMarkRead,
+		InboxItemID: id,
+	})
+	if err != nil {
+		return 0, err
+	}
+	return response.UnreadCount, nil
 }
 
 func (c *Client) request(ctx context.Context, request Request) (Response, error) {

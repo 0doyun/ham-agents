@@ -398,10 +398,38 @@ func splitProvider(args []string) (string, []string) {
 	return args[0], args[1:]
 }
 
+type inboxOptions struct {
+	typeFilter string
+	all        bool
+	markRead   bool
+	markReadID string
+}
+
+func parseInboxOptions(args []string) (inboxOptions, error) {
+	flags := flag.NewFlagSet("inbox", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	typeFilter := flags.String("type", "", "filter by item type")
+	all := flags.Bool("all", false, "show read and unread items")
+	markRead := flags.Bool("mark-read", false, "mark all items as read")
+	if err := flags.Parse(args); err != nil {
+		return inboxOptions{}, err
+	}
+	opts := inboxOptions{
+		typeFilter: strings.TrimSpace(*typeFilter),
+		all:        *all,
+		markRead:   *markRead,
+	}
+	if len(flags.Args()) > 0 {
+		opts.markReadID = flags.Args()[0]
+	}
+	return opts, nil
+}
+
 type agentQueryOptions struct {
 	asJSON       bool
 	teamRef      string
 	workspaceRef string
+	graph        bool
 }
 
 func parseAgentQueryOptions(command string, args []string) (agentQueryOptions, error) {
@@ -410,6 +438,7 @@ func parseAgentQueryOptions(command string, args []string) (agentQueryOptions, e
 	asJSON := flags.Bool("json", false, "emit JSON")
 	teamRef := flags.String("team", "", "filter by team id or name")
 	workspaceRef := flags.String("workspace", "", "filter by workspace path or name")
+	graph := flags.Bool("graph", false, "render session tree")
 	if err := flags.Parse(args); err != nil {
 		return agentQueryOptions{}, err
 	}
@@ -420,5 +449,6 @@ func parseAgentQueryOptions(command string, args []string) (agentQueryOptions, e
 		asJSON:       *asJSON,
 		teamRef:      strings.TrimSpace(*teamRef),
 		workspaceRef: strings.TrimSpace(*workspaceRef),
+		graph:        *graph,
 	}, nil
 }

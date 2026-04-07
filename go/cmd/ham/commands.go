@@ -563,6 +563,33 @@ func compactToolPreview(value string) string {
 	return trimmed
 }
 
+func runInbox(ctx context.Context, client *ipc.Client, args []string) error {
+	opts, err := parseInboxOptions(args)
+	if err != nil {
+		return err
+	}
+
+	if opts.markRead {
+		n, err := client.InboxMarkRead(ctx, opts.markReadID)
+		if err != nil {
+			return err
+		}
+		if opts.markReadID != "" {
+			fmt.Printf("Marked item %s as read (%d unread remaining)\n", opts.markReadID, n)
+		} else {
+			fmt.Printf("Marked all items as read (%d unread remaining)\n", n)
+		}
+		return nil
+	}
+
+	unreadOnly := !opts.all
+	items, _, err := client.InboxList(ctx, opts.typeFilter, unreadOnly)
+	if err != nil {
+		return err
+	}
+	return renderInboxItems(os.Stdout, items)
+}
+
 func runStop(ctx context.Context, client *ipc.Client, args []string) error {
 	agentID, asJSON, err := parseStopInput(args)
 	if err != nil {
@@ -1011,6 +1038,23 @@ func runStatus(ctx context.Context, client *ipc.Client, args []string) error {
 	options, err := parseAgentQueryOptions("status", args)
 	if err != nil {
 		return err
+	}
+
+	if options.graph {
+		graph, snapshot, err := client.StatusWithGraph(ctx)
+		if err != nil {
+			return err
+		}
+		filteredAgents, err := filterAgentsForQuery(ctx, client, snapshot.Agents, options.teamRef, options.workspaceRef)
+		if err != nil {
+			return err
+		}
+		if options.teamRef != "" || options.workspaceRef != "" {
+			// Rebuild graph from filtered agent set.
+			rebuiltGraph := buildFilteredGraph(filteredAgents, graph.GeneratedAt)
+			return renderSessionGraph(os.Stdout, rebuiltGraph)
+		}
+		return renderSessionGraph(os.Stdout, graph)
 	}
 
 	snapshot, err := client.Status(ctx)

@@ -118,6 +118,52 @@ public struct AgentEventPayload: Codable, Equatable, Sendable, Identifiable {
     }
 }
 
+public struct InboxItemPayload: Codable, Equatable, Sendable, Identifiable {
+    public let id: String
+    public let agentID: String
+    public let agentName: String
+    public let type: String
+    public let summary: String
+    public let toolName: String?
+    public let occurredAt: Date
+    public let read: Bool
+    public let actionable: Bool
+
+    public init(
+        id: String,
+        agentID: String,
+        agentName: String,
+        type: String,
+        summary: String,
+        toolName: String? = nil,
+        occurredAt: Date,
+        read: Bool,
+        actionable: Bool
+    ) {
+        self.id = id
+        self.agentID = agentID
+        self.agentName = agentName
+        self.type = type
+        self.summary = summary
+        self.toolName = toolName
+        self.occurredAt = occurredAt
+        self.read = read
+        self.actionable = actionable
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case agentID = "agent_id"
+        case agentName = "agent_name"
+        case type
+        case summary
+        case toolName = "tool_name"
+        case occurredAt = "occurred_at"
+        case read
+        case actionable
+    }
+}
+
 public enum DaemonJSONDecoder {
     public static func make() -> JSONDecoder {
         let decoder = JSONDecoder()

@@ -210,7 +210,7 @@ func startDetachedProcess(target detachedLaunchTarget) error {
 
 func commandRequiresDaemon(command string) bool {
 	switch command {
-	case "run", "attach", "observe", "open", "ask", "stop", "detach", "logs", "team", "hook", "settings", "list", "status", "events", "down":
+	case "run", "attach", "observe", "open", "ask", "stop", "detach", "logs", "team", "hook", "settings", "list", "status", "events", "inbox", "down":
 		return true
 	default:
 		return false

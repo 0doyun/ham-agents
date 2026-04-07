@@ -61,6 +61,20 @@ func DefaultEventLogPath() (string, error) {
 	return filepath.Join(homeDir, "Library", "Application Support", "ham-agents", "events.jsonl"), nil
 }
 
+// DefaultInboxPath returns the path to the inbox JSON file, mirroring DefaultEventLogPath.
+func DefaultInboxPath() (string, error) {
+	if root := os.Getenv("HAM_AGENTS_HOME"); root != "" {
+		return filepath.Join(root, "inbox.json"), nil
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve user home: %w", err)
+	}
+
+	return filepath.Join(homeDir, "Library", "Application Support", "ham-agents", "inbox.json"), nil
+}
+
 func (s *FileEventStore) Append(ctx context.Context, event core.Event) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

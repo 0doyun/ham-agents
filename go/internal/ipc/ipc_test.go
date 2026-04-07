@@ -40,7 +40,7 @@ func TestClientServerRoundTripForManagedCommands(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, stubSessionLister{
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, stubSessionLister{
 		sessions: []core.AttachableSession{
 			{ID: "abc", Title: "Claude", SessionRef: "iterm2://session/abc", IsActive: true},
 		},
@@ -288,7 +288,7 @@ func TestServerRejectsDirectoryAtSocketPath(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil, nil)
 	err := server.Serve(context.Background())
 	if err == nil {
 		t.Fatal("expected server startup to fail when socket path is a directory")
@@ -320,7 +320,7 @@ func TestClientServerRoundTripForTeamCommands(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -410,7 +410,7 @@ func TestClientServerStopManagedStopsProcess(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -493,7 +493,7 @@ func TestClientServerRoundTripForHookCommands(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, stubSessionLister{}, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, stubSessionLister{}, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -675,7 +675,7 @@ func TestSessionStartAutoRegistersAgent(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, stubSessionLister{}, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, stubSessionLister{}, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -789,7 +789,7 @@ func TestHandleConnection_LimitReader_RejectsOversized(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -885,7 +885,7 @@ func TestPrepareHookRequest_NoDoubleRecordHookSessionSeen(t *testing.T) {
 		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
 	)
 
-	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, stubSessionLister{}, nil)
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, stubSessionLister{}, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
