@@ -247,6 +247,7 @@ func (r *Registry) RecordHookNotification(ctx context.Context, agentID string, n
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeAgentProcessOutput,
+			HookOrigin:          "hook.notification",
 			Summary:             summary,
 			LifecycleStatus:     string(agent.Status),
 			LifecycleMode:       string(agent.Mode),
@@ -276,6 +277,7 @@ func (r *Registry) RecordHookStopFailure(ctx context.Context, agentID string, er
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeAgentProcessExited,
+			HookOrigin:          "hook.stop-failure",
 			Summary:             summary,
 			LifecycleStatus:     string(agent.Status),
 			LifecycleMode:       string(agent.Mode),
@@ -336,6 +338,7 @@ func (r *Registry) RecordHookStop(ctx context.Context, agentID string, lastMessa
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeAgentStatusUpdated,
+			HookOrigin:          "hook.stop",
 			Summary:             "Response completed, waiting for input.",
 			LifecycleStatus:     string(agent.Status),
 			LifecycleMode:       string(agent.Mode),
@@ -553,7 +556,9 @@ func (r *Registry) RecordHookTaskCompleted(ctx context.Context, agentID string, 
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeTeamTaskCompleted,
+			HookOrigin:          "hook.task-completed",
 			Summary:             summary,
+			TaskName:            taskName,
 			LifecycleStatus:     string(agent.Status),
 			LifecycleMode:       string(agent.Mode),
 			LifecycleReason:     agent.StatusReason,
@@ -589,7 +594,9 @@ func (r *Registry) RecordHookToolFailed(ctx context.Context, agentID string, too
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeAgentProcessOutput,
+			HookOrigin:          "hook.tool-failed",
 			Summary:             agent.LastUserVisibleSummary,
+			ToolName:            toolName,
 			LifecycleStatus:     string(agent.Status),
 			LifecycleMode:       string(agent.Mode),
 			LifecycleReason:     agent.StatusReason,
@@ -644,7 +651,9 @@ func (r *Registry) RecordHookPermissionRequest(ctx context.Context, agentID stri
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeAgentStatusUpdated,
+			HookOrigin:          "hook.permission-request",
 			Summary:             reason,
+			ToolName:            toolName,
 			LifecycleStatus:     string(agent.Status),
 			LifecycleMode:       string(agent.Mode),
 			LifecycleReason:     agent.StatusReason,

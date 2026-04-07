@@ -26,6 +26,7 @@ type Server struct {
 	managed            *hamruntime.ManagedService
 	settings           *hamruntime.SettingsService
 	teams              *hamruntime.TeamService
+	inbox              *hamruntime.InboxManager
 	itermSessionLister SessionLister
 	tmuxSessionLister  SessionLister
 
@@ -33,13 +34,14 @@ type Server struct {
 	cancelFunc context.CancelFunc
 }
 
-func NewServer(socketPath string, registry *hamruntime.Registry, managed *hamruntime.ManagedService, settings *hamruntime.SettingsService, teams *hamruntime.TeamService, itermSessionLister SessionLister, tmuxSessionLister SessionLister) *Server {
+func NewServer(socketPath string, registry *hamruntime.Registry, managed *hamruntime.ManagedService, settings *hamruntime.SettingsService, teams *hamruntime.TeamService, inbox *hamruntime.InboxManager, itermSessionLister SessionLister, tmuxSessionLister SessionLister) *Server {
 	return &Server{
 		socketPath:         socketPath,
 		registry:           registry,
 		managed:            managed,
 		settings:           settings,
 		teams:              teams,
+		inbox:              inbox,
 		itermSessionLister: itermSessionLister,
 		tmuxSessionLister:  tmuxSessionLister,
 	}
@@ -623,6 +625,28 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			return Response{}, err
 		}
 		return Response{}, nil
+	case CommandInboxList:
+		if s.inbox == nil {
+			return Response{InboxItems: []core.InboxItem{}, UnreadCount: 0}, nil
+		}
+		items := s.inbox.List(core.InboxItemType(request.TypeFilter), request.UnreadOnly)
+		if items == nil {
+			items = []core.InboxItem{}
+		}
+		return Response{InboxItems: items, UnreadCount: s.inbox.UnreadCount()}, nil
+	case CommandInboxMarkRead:
+		if s.inbox != nil {
+			if request.InboxItemID == "" {
+				s.inbox.MarkAllRead()
+			} else {
+				s.inbox.MarkRead(request.InboxItemID)
+			}
+		}
+		unread := 0
+		if s.inbox != nil {
+			unread = s.inbox.UnreadCount()
+		}
+		return Response{UnreadCount: unread}, nil
 	case CommandShutdown:
 		if s.managed != nil {
 			s.managed.StopAll(ctx)

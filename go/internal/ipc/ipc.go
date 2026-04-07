@@ -71,6 +71,9 @@ const (
 	CommandHookInstructions      Command = "hook.instructions-loaded"
 	CommandHookCwdChanged        Command = "hook.cwd-changed"
 	CommandHookFileChanged       Command = "hook.file-changed"
+
+	CommandInboxList     Command = "inbox.list"
+	CommandInboxMarkRead Command = "inbox.mark-read"
 )
 
 type Request struct {
@@ -114,6 +117,9 @@ type Request struct {
 	FileEvent        string         `json:"file_event,omitempty"`
 	LastMessage      string         `json:"last_message,omitempty"`
 	Graph            bool           `json:"graph,omitempty"`
+	TypeFilter       string         `json:"type_filter,omitempty"`
+	UnreadOnly       bool           `json:"unread_only,omitempty"`
+	InboxItemID      string         `json:"inbox_item_id,omitempty"`
 }
 
 type Response struct {
@@ -127,6 +133,8 @@ type Response struct {
 	Settings           *core.Settings           `json:"settings,omitempty"`
 	Snapshot           *core.RuntimeSnapshot    `json:"snapshot,omitempty"`
 	SessionGraph       *core.SessionGraph       `json:"session_graph,omitempty"`
+	InboxItems         []core.InboxItem         `json:"inbox_items,omitempty"`
+	UnreadCount        int                      `json:"unread_count,omitempty"`
 	Error              string                   `json:"error,omitempty"`
 }
 

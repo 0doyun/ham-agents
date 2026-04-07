@@ -156,6 +156,7 @@ type Event struct {
 	ID                   string    `json:"id"`
 	AgentID              string    `json:"agent_id"`
 	Type                 EventType `json:"type"`
+	HookOrigin           string    `json:"hook_origin,omitempty"` // canonical hook command name (e.g. "hook.permission-request") for hook-sourced events
 	Summary              string    `json:"summary"`
 	OccurredAt           time.Time `json:"occurred_at"`
 	PresentationLabel    string    `json:"presentation_label,omitempty"`
