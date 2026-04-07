@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
@@ -224,5 +225,134 @@ func TestRegistry_RecordHook_StateTransitions(t *testing.T) {
 				t.Errorf("expected status %q, got %q (reason: %q)", tc.expectedStatus, agent.Status, agent.StatusReason)
 			}
 		})
+	}
+}
+
+// loadLatestEvent returns the most recent event for agentID.
+func loadLatestEvent(t *testing.T, reg *runtime.Registry, agentID string) core.Event {
+	t.Helper()
+	ctx := context.Background()
+	events, err := reg.Events(ctx, 100)
+	if err != nil {
+		t.Fatalf("load events: %v", err)
+	}
+	for i := len(events) - 1; i >= 0; i-- {
+		if events[i].AgentID == agentID {
+			return events[i]
+		}
+	}
+	t.Fatalf("no events found for agent %q", agentID)
+	return core.Event{}
+}
+
+func TestRecordHookToolStart_PopulatesToolFields(t *testing.T) {
+	t.Parallel()
+	reg, agentID := newRegistryForHookTest(t)
+	ctx := context.Background()
+
+	if err := reg.RecordHookToolStart(ctx, agentID, "Read", "test-input", ""); err != nil {
+		t.Fatalf("RecordHookToolStart: %v", err)
+	}
+
+	ev := loadLatestEvent(t, reg, agentID)
+	if ev.ToolName != "Read" {
+		t.Errorf("ToolName: want %q, got %q", "Read", ev.ToolName)
+	}
+	if len(ev.ToolInput) == 0 || ev.ToolInput[:len("test-input")] != "test-input" {
+		t.Errorf("ToolInput: want prefix %q, got %q", "test-input", ev.ToolInput)
+	}
+	if ev.ToolType == "" {
+		t.Errorf("ToolType: want non-empty, got empty")
+	}
+}
+
+func TestRecordHookToolStart_TruncatesLargeInput(t *testing.T) {
+	t.Parallel()
+	reg, agentID := newRegistryForHookTest(t)
+	ctx := context.Background()
+
+	large := make([]byte, 8192)
+	for i := range large {
+		large[i] = 'x'
+	}
+	if err := reg.RecordHookToolStart(ctx, agentID, "Bash", string(large), ""); err != nil {
+		t.Fatalf("RecordHookToolStart: %v", err)
+	}
+
+	ev := loadLatestEvent(t, reg, agentID)
+	if len(ev.ToolInput) > 4096 {
+		t.Errorf("ToolInput not truncated: len=%d", len(ev.ToolInput))
+	}
+}
+
+func TestRecordHookToolDone_ComputesDuration(t *testing.T) {
+	t.Parallel()
+	reg, agentID := newRegistryForHookTest(t)
+	ctx := context.Background()
+
+	if err := reg.RecordHookToolStart(ctx, agentID, "Bash", "sleep-test", ""); err != nil {
+		t.Fatalf("RecordHookToolStart: %v", err)
+	}
+	time.Sleep(12 * time.Millisecond)
+	if err := reg.RecordHookToolDone(ctx, agentID, "Bash", "sleep-test", ""); err != nil {
+		t.Fatalf("RecordHookToolDone: %v", err)
+	}
+
+	ev := loadLatestEvent(t, reg, agentID)
+	if ev.ToolDuration < 10 {
+		t.Errorf("ToolDuration: want >= 10ms, got %d", ev.ToolDuration)
+	}
+}
+
+func TestRecordHookTaskCreated_PopulatesTaskFields(t *testing.T) {
+	t.Parallel()
+	reg, agentID := newRegistryForHookTest(t)
+	ctx := context.Background()
+
+	if err := reg.RecordHookTaskCreated(ctx, agentID, "write tests", "unit tests for the hook layer", ""); err != nil {
+		t.Fatalf("RecordHookTaskCreated: %v", err)
+	}
+
+	ev := loadLatestEvent(t, reg, agentID)
+	if ev.TaskName != "write tests" {
+		t.Errorf("TaskName: want %q, got %q", "write tests", ev.TaskName)
+	}
+	if ev.TaskDesc != "unit tests for the hook layer" {
+		t.Errorf("TaskDesc: want %q, got %q", "unit tests for the hook layer", ev.TaskDesc)
+	}
+}
+
+func TestRecordHookAgentSpawned_PopulatesParent(t *testing.T) {
+	t.Parallel()
+	reg, agentID := newRegistryForHookTest(t)
+	ctx := context.Background()
+
+	if err := reg.RecordHookAgentSpawned(ctx, agentID, "sub-executor", ""); err != nil {
+		t.Fatalf("RecordHookAgentSpawned: %v", err)
+	}
+
+	ev := loadLatestEvent(t, reg, agentID)
+	if ev.ParentAgentID != agentID {
+		t.Errorf("ParentAgentID: want %q, got %q", agentID, ev.ParentAgentID)
+	}
+}
+
+func TestRecordHook_PropagatesSessionID(t *testing.T) {
+	t.Parallel()
+	reg, agentID := newRegistryForHookTest(t)
+	ctx := context.Background()
+	sessionID := "sess-test-001"
+
+	// Simulate what prepareHookRequest does: record session seen first.
+	if err := reg.RecordHookSessionSeen(ctx, agentID, sessionID); err != nil {
+		t.Fatalf("RecordHookSessionSeen: %v", err)
+	}
+	if err := reg.RecordHookToolStart(ctx, agentID, "Read", "/etc/hosts", ""); err != nil {
+		t.Fatalf("RecordHookToolStart: %v", err)
+	}
+
+	ev := loadLatestEvent(t, reg, agentID)
+	if ev.SessionID != sessionID {
+		t.Errorf("SessionID: want %q, got %q", sessionID, ev.SessionID)
 	}
 }

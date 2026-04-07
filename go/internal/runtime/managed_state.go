@@ -10,6 +10,31 @@ import (
 	"github.com/ham-agents/ham-agents/go/internal/core"
 )
 
+// truncateString truncates s to at most max bytes.
+func truncateString(s string, max int) string {
+	if len(s) > max {
+		return s[:max]
+	}
+	return s
+}
+
+// classifyToolType returns a broad category for a tool name.
+func classifyToolType(name string) string {
+	lower := strings.ToLower(strings.TrimSpace(name))
+	switch lower {
+	case "read", "glob", "grep":
+		return "read"
+	case "write", "edit", "notebookedit":
+		return "write"
+	case "bash":
+		return "exec"
+	case "webfetch", "websearch":
+		return "network"
+	default:
+		return "unknown"
+	}
+}
+
 func (r *Registry) RecordManagedStarted(ctx context.Context, agentID string, pid int, command string) (core.Agent, error) {
 	return r.mutateAgent(ctx, agentID, func(agent *core.Agent, now time.Time) (*core.Event, error) {
 		agent.SessionProcessID = pid
@@ -143,6 +168,7 @@ func (r *Registry) RecordHookToolStart(ctx context.Context, agentID string, tool
 		pushRecentTool(agent, summary)
 		pushRecentToolDetailed(agent, toolName, toolInputPreview, summary, now)
 		agent.LastEventAt = now
+		r.toolStartTimes.Store(agentID, now)
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeAgentProcessOutput,
@@ -151,6 +177,10 @@ func (r *Registry) RecordHookToolStart(ctx context.Context, agentID string, tool
 			LifecycleMode:       string(agent.Mode),
 			LifecycleReason:     agent.StatusReason,
 			LifecycleConfidence: agent.StatusConfidence,
+			SessionID:           agent.SessionID,
+			ToolName:            toolName,
+			ToolInput:           truncateString(toolInputPreview, 4096),
+			ToolType:            classifyToolType(toolName),
 		}, nil
 	})
 	return err
@@ -169,6 +199,10 @@ func (r *Registry) RecordHookToolDone(ctx context.Context, agentID string, toolN
 		}
 		completeRecentToolDetailed(agent, toolName, now)
 		agent.LastEventAt = now
+		var durationMs int
+		if v, ok := r.toolStartTimes.LoadAndDelete(agentID); ok {
+			durationMs = int(now.Sub(v.(time.Time)).Milliseconds())
+		}
 		return &core.Event{
 			AgentID:             agent.ID,
 			Type:                core.EventTypeAgentProcessOutput,
@@ -177,6 +211,9 @@ func (r *Registry) RecordHookToolDone(ctx context.Context, agentID string, toolN
 			LifecycleMode:       string(agent.Mode),
 			LifecycleReason:     agent.StatusReason,
 			LifecycleConfidence: agent.StatusConfidence,
+			SessionID:           agent.SessionID,
+			ToolName:            toolName,
+			ToolDuration:        durationMs,
 		}, nil
 	})
 	return err
@@ -373,6 +410,8 @@ func (r *Registry) RecordHookAgentSpawned(ctx context.Context, agentID string, d
 			LifecycleMode:       string(agent.Mode),
 			LifecycleReason:     agent.StatusReason,
 			LifecycleConfidence: agent.StatusConfidence,
+			SessionID:           agent.SessionID,
+			ParentAgentID:       agent.ID,
 		}, nil
 	})
 	return err
@@ -464,6 +503,9 @@ func (r *Registry) RecordHookTaskCreated(ctx context.Context, agentID string, ta
 			LifecycleMode:       string(agent.Mode),
 			LifecycleReason:     agent.StatusReason,
 			LifecycleConfidence: agent.StatusConfidence,
+			SessionID:           agent.SessionID,
+			TaskName:            taskName,
+			TaskDesc:            taskDescription,
 		}, nil
 	})
 	return err
