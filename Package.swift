@@ -17,6 +17,9 @@ let package = Package(
         .executable(name: "ham", targets: ["HamCLI"]),
         .executable(name: "ham-menubar", targets: ["HamMenuBarApp"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/migueldeicaza/SwiftTerm", from: "1.13.0"),
+    ],
     targets: [
         .target(
             name: "HamCore",
@@ -24,7 +27,11 @@ let package = Package(
         ),
         .target(
             name: "HamAppServices",
-            dependencies: ["HamCore", "HamNotifications"],
+            dependencies: [
+                "HamCore",
+                "HamNotifications",
+                .product(name: "SwiftTerm", package: "SwiftTerm"),
+            ],
             path: "Sources/HamAppServices"
         ),
         .target(
