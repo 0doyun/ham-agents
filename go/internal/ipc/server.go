@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -108,7 +109,7 @@ func (s *Server) handleConnection(ctx context.Context, connection net.Conn) {
 	_ = connection.SetReadDeadline(time.Now().Add(10 * time.Second))
 
 	var request Request
-	if err := json.NewDecoder(connection).Decode(&request); err != nil {
+	if err := json.NewDecoder(io.LimitReader(connection, 1<<20)).Decode(&request); err != nil {
 		_ = json.NewEncoder(connection).Encode(Response{Error: fmt.Sprintf("decode request: %v", err)})
 		closeWrite(connection)
 		return
@@ -637,11 +638,6 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 func (s *Server) prepareHookRequest(ctx context.Context, request *Request) error {
 	if request == nil {
 		return fmt.Errorf("hook request is required")
-	}
-	if strings.TrimSpace(request.SessionID) != "" && strings.TrimSpace(request.AgentID) != "" {
-		if err := s.registry.RecordHookSessionSeen(ctx, request.AgentID, request.SessionID); err != nil {
-			return err
-		}
 	}
 	resolvedAgentID, err := s.resolveHookAgentID(ctx, *request)
 	if err != nil {

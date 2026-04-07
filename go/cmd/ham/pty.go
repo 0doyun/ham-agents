@@ -52,7 +52,10 @@ func runWithPTY(
 			_ = inheritTerminalSize(ptmx)
 		}
 	}()
-	defer signal.Stop(sigwinch)
+	defer func() {
+		signal.Stop(sigwinch)
+		close(sigwinch)
+	}()
 
 	// Put the real terminal into raw mode so keystrokes pass through directly.
 	// Skip if stdin is not a terminal (e.g. running inside a pipe or socket).
