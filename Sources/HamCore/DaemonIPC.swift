@@ -17,6 +17,21 @@ public enum DaemonCommand: String, Codable, Sendable {
     case removeAgent = "agents.remove"
     case getSettings = "settings.get"
     case updateSettings = "settings.update"
+    // Added in P1-0-B — must match Go Command* constants exactly.
+    case registerManaged = "register.managed"
+    case managedStop = "managed.stop"
+    case managedExited = "managed.exited"
+    case agentsRename = "agents.rename"
+    case agentsOpenTarget = "agents.open_target"
+    case tmuxSessions = "tmux.sessions"
+    /// Fallback for command strings not yet known to the Swift client.
+    case unknown = "__unknown__"
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        let raw = try container.decode(String.self)
+        self = DaemonCommand(rawValue: raw) ?? .unknown
+    }
 }
 
 public struct DaemonTeamPayload: Codable, Equatable, Sendable, Identifiable {

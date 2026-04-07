@@ -557,8 +557,8 @@ public final class MenuBarViewModel: ObservableObject {
     }
 
     deinit {
-        refreshTask?.cancel()
-        eventFollowTask?.cancel()
+        // Cleanup is handled by stop(), which must be called before releasing this object.
+        // Tasks hold only [weak self] references so they will complete safely without cancellation.
     }
 
     private func filteredNotificationCandidates(
@@ -666,6 +666,14 @@ public final class MenuBarViewModel: ObservableObject {
 
     private func shouldSuppressNotification(_ candidate: NotificationCandidate, at date: Date, previousAgents: [Agent]) -> Bool {
         let key = notificationKey(for: candidate)
+        // Heartbeat uses its own configurable window — skip the generic 60s check.
+        if case .heartbeat = candidate.event {
+            let heartbeatWindow = TimeInterval(max(1, settings.notifications.heartbeatMinutes) * 60)
+            if let recent = notificationHistory.last(where: { $0.key == key }) {
+                return date.timeIntervalSince(recent.createdAt) < heartbeatWindow
+            }
+            return false
+        }
         let recentWindow: TimeInterval = 60
         if let recent = notificationHistory.last(where: { $0.key == key }) {
             return date.timeIntervalSince(recent.createdAt) < recentWindow
@@ -680,11 +688,6 @@ public final class MenuBarViewModel: ObservableObject {
             let longRunningThreshold: TimeInterval = 5 * 60
             if let previousAgent = previousAgents.first(where: { $0.id == agent.id }) {
                 return date.timeIntervalSince(previousAgent.lastEventAt) < longRunningThreshold
-            }
-        case .heartbeat:
-            let heartbeatWindow = TimeInterval(max(1, settings.notifications.heartbeatMinutes) * 60)
-            if let recent = notificationHistory.last(where: { $0.key == key }) {
-                return date.timeIntervalSince(recent.createdAt) < heartbeatWindow
             }
         default:
             break

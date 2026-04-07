@@ -321,6 +321,11 @@ public final class UnixSocketDaemonTransport: DaemonTransport, @unchecked Sendab
                         throw HamDaemonClientError.transportFailed("write() incomplete")
                     }
 
+                    // Signal end-of-send so the server's decoder sees EOF.
+                    if Darwin.shutdown(fd, Int32(SHUT_WR)) != 0 {
+                        NSLog("[ham-transport] shutdown(SHUT_WR) failed: \(errno) (non-fatal)")
+                    }
+
                     // Receive until EOF
                     var responseData = Data()
                     var buf = [UInt8](repeating: 0, count: 65536)
