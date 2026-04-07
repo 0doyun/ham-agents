@@ -6,17 +6,21 @@
 
 ---
 
-## TL;DR — Verdict: **BLOCKS (conditionally)**
+## TL;DR — Verdict: 2 layers separated
 
-Claude Code's hook contract is documented, deterministic, and synchronous. The tool call is gated on the hook handler process exiting and emitting a `hookSpecificOutput` JSON decision. Latency on the IPC layer between `ham hook` CLI and `hamd` propagates 1:1 to the hook handler exit time, which means it propagates 1:1 to the user-visible permission dialog.
+**Verdict — 2 layers separated:**
+- **Transport layer: BLOCKS** — hamd IPC request/response cycle is synchronous. Python proxy experiment confirmed server-side delay propagates 1:1 to client (0/500/1000/5000ms matrix, <10ms overhead).
+- **Application layer: Fire-and-forget today** — hamd currently returns empty `Response{}` without a PermissionDecision field; no wait primitive in CommandHookPermissionReq handler; runHook emits empty stdout. P2-3 implementation must add the decision payload and wait primitive on top of the existing sync transport.
 
-**However**, the *current* hamd `CommandHookPermissionReq` handler **is fire-and-forget at the application level**: it records an event and returns `{}` without ever waiting for or emitting a decision. **P2-3 will need to add the wait/decision-emit semantics.** The plumbing supports it; the logic does not exist yet.
+**P2-3 verdict**: proceed with design as written in ham-studio.md. Required implementation: 4 additions (see below).
 
 ---
 
 ## Phase 1 — Static analysis
 
-### 1. Official Claude Code hook contract (docs.claude.com/en/docs/claude-code/hooks)
+### 1. Official Claude Code hook contract
+
+Source: `docs/external/claude-code-hooks-2026-04-08.md` (archived copy; fetched 2026-04-08 from https://code.claude.com/docs/en/hooks, which is the canonical redirect destination of https://docs.anthropic.com/en/docs/claude-code/hooks)
 
 - **`PermissionRequest`** is a documented, dedicated hook event that "Runs when the user is shown a permission dialog. Use PermissionRequest decision control to allow or deny on behalf of the user."
 - Hook handler reads JSON from **stdin**, writes a decision to **stdout**, and Claude Code waits for the process to **exit** before resolving the dialog.
@@ -109,6 +113,29 @@ Confirms: hamd accepts the command, returns an **empty** body, completes in <0.5
 
 Latency overhead: <10 ms across all rows. The client (acting as `ham hook permission-request` would) blocks 1:1 with server-side delay. Since `ham hook` CLI uses the same synchronous `c.request` primitive, and Claude Code blocks on `ham hook` process exit, the same latency would propagate end-to-end to the Claude Code permission dialog.
 
+### Subprocess Wall-Clock Measurement
+
+**Method**: Built `/tmp/ham-spike` (from `go/cmd/ham`) and `/tmp/hamd-spike` (from `go/cmd/hamd`) at dev/phase2-spike HEAD. Started hamd in isolated `HAM_AGENTS_HOME=/tmp/ham-spike-run3`. Registered a managed agent via direct IPC (newline-delimited JSON socket). Timed three sequential `ham hook permission-request` subprocess invocations using the `time` builtin with `HAM_AGENT_ID` set (the env var the CLI reads for agent identity).
+
+**Command**:
+```
+time HAM_AGENT_ID=<agent-id> HAM_AGENTS_HOME=/tmp/ham-spike-run3 /tmp/ham-spike hook permission-request Bash < /dev/null
+```
+
+**Results**:
+
+| Run | Wall-clock time | Exit code | Stdout |
+|-----|----------------|-----------|--------|
+| 1   | 11 ms          | 0         | (empty) |
+| 2   | 9 ms           | 0         | (empty) |
+| 3   | 11 ms          | 0         | (empty) |
+
+Mean: ~10ms. Consistent across runs.
+
+**Interpretation**: The ~10ms includes Go binary startup (~7ms) + unix socket connect/request/response roundtrip (<1ms, consistent with Experiment A). The subprocess path is synchronous end-to-end: `os.exec.Wait()` in Claude Code blocks until the ham process exits, which only happens after the IPC response returns from hamd. No goroutine detachment, no background work — `c.request()` is a single synchronous `json.NewEncoder/Decoder` exchange on a blocking unix socket connection.
+
+**Cleanup**: hamd PID killed, `/tmp/ham-spike*` directories and binaries removed, `git diff go/` clean.
+
 ---
 
 ## Verdict: **BLOCKS**
@@ -121,7 +148,7 @@ The full chain — Claude Code → `ham hook` subprocess → `ham` IPC client �
 
 **P2-3 Approval Interception can proceed as designed in `docs/spec/ham-studio.md`** — the transport supports synchronous request/response with arbitrary latency.
 
-But the design must include three concrete additions, none of which exist today:
+The design must include four concrete additions, none of which exist today:
 
 1. **`Response` struct gains a permission-decision field** (`go/internal/ipc/ipc.go:118`) — e.g.
    ```go
@@ -129,18 +156,16 @@ But the design must include three concrete additions, none of which exist today:
    ```
    carrying `behavior` (`allow`/`deny`), `reason`, and optional `updated_input`.
 
-2. **`CommandHookPermissionReq` handler gains a wait primitive** (`go/internal/ipc/server.go:478`) — record the event, then `select` on either an external decision channel (filled by ham-studio UI via a `decision.permission` IPC command) or a context-deadline. Return the decision in the response body. Default to `behavior=ask` (no decision) on timeout so Claude Code falls through to the native dialog.
+2. **New IPC command `decision.permission`** (Studio → hamd) with `{agent_id, request_id, behavior, message}` payload — allows the ham-studio UI to push a user's approval/denial choice back into the waiting handler. Implies tracking pending permission requests by `(agent_id, request_id)` in `managed_state.go`, with cleanup on context cancellation.
 
-3. **`runHook` permission-request branch emits JSON to stdout** (`go/cmd/ham/commands.go:386-388`) — when hamd returns a non-nil `PermissionDecision`, marshal it to the Claude Code wire format:
+3. **`CommandHookPermissionReq` handler gains a wait primitive** (`go/internal/ipc/server.go:478`) — record the event, then `select` on either an external decision channel (filled by the `decision.permission` command above) or a context-deadline. Return the decision in the response body. Default to `behavior=ask` (no decision) on timeout so Claude Code falls through to the native dialog.
+
+4. **`runHook` permission-request branch emits JSON to stdout** (`go/cmd/ham/commands.go:386-388`) — when hamd returns a non-nil `PermissionDecision`, marshal it to the Claude Code wire format:
    ```json
    {"hookSpecificOutput": {"hookEventName": "PermissionRequest",
       "decision": {"behavior": "deny", "message": "<reason>"}}}
    ```
    and write to `os.Stdout` before exiting 0.
-
-A new IPC command (e.g. `decision.permission` with `agent_id`, `request_id`, `behavior`, `reason`) is needed for the ham-studio UI to push a user's choice back into the waiting handler. This implies tracking pending permission requests by `(agent_id, request_id)` in `managed_state.go`, with cleanup on context cancellation.
-
-**Risk to flag:** if Claude Code sends concurrent `PermissionRequest` events for two tools on the same agent, the design must key by request_id, not agent_id, or one decision will satisfy the wrong dialog.
 
 **Inconclusive area:** this spike cannot prove that Claude Code handles a >60s hook latency without showing a fallback UI. Spec says 600 s timeout, but real-world UX may vary. Recommend a follow-up manual smoke test with a real Claude Code session before P2-3 ships.
 
