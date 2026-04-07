@@ -111,8 +111,8 @@ public final class UserNotificationSink: NSObject, NotificationSink, Notificatio
         self.center = center
             ?? LiveUserNotificationCenter.makeIfAvailable()
             ?? NoopUserNotificationCenter()
-        self._interactionHandler = interactionHandler
         super.init()
+        self._interactionHandler = interactionHandler
         self.center.setNotificationCategories(Self.notificationCategories)
         self.center.setDelegate(self)
     }
