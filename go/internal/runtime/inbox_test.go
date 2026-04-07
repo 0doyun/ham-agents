@@ -207,7 +207,35 @@ func TestInboxManager_Persist_RoundTrip(t *testing.T) {
 	}
 }
 
-// Test 8: loading from a missing file returns empty inbox with no error.
+// Test 8: resolver populates AgentName.
+func TestInboxManager_HandleEvent_ResolvesAgentName(t *testing.T) {
+	m := newTestInboxManager(t)
+	m.SetAgentNameResolver(func(id string) string {
+		if id == "a1" {
+			return "alice"
+		}
+		return ""
+	})
+	m.HandleEvent(makeEventWithTool("e1", "hook.permission-request", "a1", "Bash"))
+	items := m.List("", false)
+	if len(items) != 1 || items[0].AgentName != "alice" {
+		t.Fatalf("want AgentName=alice, got %+v", items)
+	}
+}
+
+// Test 9: nil resolver leaves AgentName empty.
+func TestInboxManager_HandleEvent_ResolverNil_FallsBackToEmpty(t *testing.T) {
+	m := newTestInboxManager(t)
+	// No resolver set
+	m.HandleEvent(makeEventWithTool("e1", "hook.permission-request", "a1", "Bash"))
+	items := m.List("", false)
+	if items[0].AgentName != "" {
+		t.Fatalf("want empty AgentName fallback, got %q", items[0].AgentName)
+	}
+}
+
+// Test 10: loading from a missing file returns empty inbox with no error.
+// (was Test 8 before resolver tests were added)
 func TestInboxManager_LoadFromMissingFile_Empty(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "nonexistent", "inbox.json")
 	m, err := NewInboxManager(path)

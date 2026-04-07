@@ -66,6 +66,18 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	inboxMgr.SetAgentNameResolver(func(id string) string {
+		agents, err := registry.List(context.Background())
+		if err != nil {
+			return ""
+		}
+		for _, a := range agents {
+			if a.ID == id {
+				return a.DisplayName
+			}
+		}
+		return ""
+	})
 	registry.SetEventCallback(inboxMgr.HandleEvent)
 	managedService := runtime.NewManagedService(registry)
 	settingsService := runtime.NewSettingsService(store.NewFileSettingsStore(settingsPath))

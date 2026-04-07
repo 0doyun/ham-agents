@@ -1203,7 +1203,9 @@ struct InboxSection: View {
                     .disabled(viewModel.unreadInboxCount == 0)
                 }
                 ForEach(viewModel.inboxItems) { item in
-                    InboxRowView(item: item)
+                    InboxRowView(item: item) {
+                        Task { @MainActor in await viewModel.openInboxItem(item) }
+                    }
                 }
                 Divider()
             }
@@ -1213,24 +1215,28 @@ struct InboxSection: View {
 
 struct InboxRowView: View {
     let item: InboxItemPayload
+    let onTap: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: iconFor(type: item.type))
-                .foregroundColor(colorFor(type: item.type))
-            VStack(alignment: .leading) {
-                Text(item.agentName.isEmpty ? item.agentID : item.agentName)
-                    .font(.caption.bold())
-                Text(item.summary)
-                    .font(.caption)
-                    .lineLimit(1)
+        Button(action: onTap) {
+            HStack(spacing: 8) {
+                Image(systemName: iconFor(type: item.type))
+                    .foregroundColor(colorFor(type: item.type))
+                VStack(alignment: .leading) {
+                    Text(item.agentName.isEmpty ? item.agentID : item.agentName)
+                        .font(.caption.bold())
+                    Text(item.summary)
+                        .font(.caption)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Text(inboxRelativeTime(item.occurredAt))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
-            Spacer()
-            Text(inboxRelativeTime(item.occurredAt))
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            .opacity(item.read ? 0.5 : 1.0)
         }
-        .opacity(item.read ? 0.5 : 1.0)
+        .buttonStyle(.plain)
     }
 
     func iconFor(type: String) -> String {

@@ -460,6 +460,33 @@ public final class MenuBarViewModel: ObservableObject {
         }
     }
 
+    /// Opens the terminal session for an inbox item's agent and marks the item read.
+    /// If the agent has no reachable session or iTerm is not enabled, the item is
+    /// still marked read but no terminal navigation occurs.
+    public func openInboxItem(_ item: InboxItemPayload) async {
+        do {
+            let newCount = try await client.markInboxRead(id: item.id)
+            unreadInboxCount = newCount
+            inboxItems = inboxItems.map { i in
+                guard i.id == item.id, !i.read else { return i }
+                return InboxItemPayload(
+                    id: i.id,
+                    agentID: i.agentID,
+                    agentName: i.agentName,
+                    type: i.type,
+                    summary: i.summary,
+                    toolName: i.toolName,
+                    occurredAt: i.occurredAt,
+                    read: true,
+                    actionable: i.actionable
+                )
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        openSession(forAgentID: item.agentID)
+    }
+
     public func stopTracking(forAgentID id: Agent.ID?) async {
         guard let id else {
             errorMessage = "No agent selected."

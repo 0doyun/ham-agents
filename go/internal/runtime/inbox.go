@@ -15,9 +15,10 @@ const inboxRingSize = 100
 
 // InboxManager keeps a ring buffer of recent user-facing notifications and persists them.
 type InboxManager struct {
-	mu    sync.Mutex
-	items []core.InboxItem // newest at end
-	path  string
+	mu               sync.Mutex
+	items            []core.InboxItem // newest at end
+	path             string
+	resolveAgentName func(agentID string) string
 }
 
 // NewInboxManager creates an InboxManager backed by the given path.
@@ -30,6 +31,16 @@ func NewInboxManager(path string) (*InboxManager, error) {
 	return m, nil
 }
 
+// SetAgentNameResolver installs an optional callback that maps an agent ID to a
+// human-readable display name. It must be goroutine-safe (the resolver is called
+// while the manager lock is NOT held). Call this before HandleEvent fires, or
+// ensure the resolver itself is safe for concurrent use.
+func (m *InboxManager) SetAgentNameResolver(fn func(agentID string) string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.resolveAgentName = fn
+}
+
 // HandleEvent converts a hook event into an InboxItem if its Type matches one of the
 // 6 inbox-eligible hooks. Other event types are ignored.
 func (m *InboxManager) HandleEvent(event core.Event) {
@@ -37,6 +48,14 @@ func (m *InboxManager) HandleEvent(event core.Event) {
 	if !ok {
 		return
 	}
+	m.mu.Lock()
+	resolver := m.resolveAgentName
+	m.mu.Unlock()
+
+	if resolver != nil {
+		item.AgentName = resolver(item.AgentID)
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.items = append(m.items, item)
