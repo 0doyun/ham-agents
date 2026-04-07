@@ -452,9 +452,7 @@ PTY 출력은 raw bytes 로 흐르지만, 동시에 hamd 는 line-tee 해서 `Se
 - **Transport layer: BLOCKS** — hamd IPC request/response cycle is synchronous. Python proxy experiment confirmed server-side delay propagates 1:1 to client (0/500/1000/5000ms matrix, <10ms overhead).
 - **Application layer: Fire-and-forget today** — hamd currently returns empty `Response{}` without a PermissionDecision field; no wait primitive in CommandHookPermissionReq handler; runHook emits empty stdout. P2-3 implementation must add the decision payload and wait primitive on top of the existing sync transport.
 
-**P2-3 verdict**: proceed with design as written in ham-studio.md. Required implementation: 4 additions (see below).
-
-**방법**: 
+**방법**:
 1. 정적 분석으로 `ham hook` CLI → IPC → hamd 체인이 동기인지 확인
 2. Claude Code hook 계약 (`docs/external/claude-code-hooks-2026-04-08.md`; fetched 2026-04-08 from https://code.claude.com/docs/en/hooks) 에서 PermissionRequest 응답 semantics 확인
 3. 격리 환경 (`HAM_AGENTS_HOME=/tmp/ham-spike-*`) 에서 hamd 띄우고 Python 프록시로 서버 응답 지연 주입하여 IPC client latency 측정
@@ -513,7 +511,7 @@ Mean ~10ms. Go binary startup ~7ms + IPC roundtrip <1ms. 서브프로세스 경�
 #### Phase 2 설계 영향 요약
 
 - P2-1 Embedded PTY Runtime → SwiftTerm 1.13.0 확정 사용, Package.swift 는 이 spike 커밋에서 이미 dependency 선언됨
-- P2-3 Approval Interception → 설계 재설계 불필요. 기존 `docs/spec/ham-studio.md` P2-3 섹션 그대로 진행하되, 위 3개 IPC 확장을 태스크로 분해
+- P2-3 Approval Interception → 설계 재설계 불필요. 기존 `docs/spec/ham-studio.md` P2-3 섹션 그대로 진행하되, 위 4개 IPC 확장을 태스크로 분해
 - ADR-2 Option 1 (NDJSON 스트림) 권장안 유지 — 이 spike 는 ADR-2 결정을 뒤집지 않음
 
 ---
