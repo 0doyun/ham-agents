@@ -82,6 +82,8 @@ func run(args []string) error {
 		return runInbox(ctx, client, args[1:])
 	case "down":
 		return runDown(ctx, client, args[1:])
+	case "cost":
+		return runCost(ctx, client, args[1:])
 	case "uninstall":
 		return runUninstall(ctx, client, args[1:], os.Stdin, os.Stdout, os.Stderr)
 	default:
@@ -131,6 +133,7 @@ Usage:
   ham list [--json] [--team ref] [--workspace ref]
   ham status [--json] [--team ref] [--workspace ref]
   ham events [--json] [--limit N] [--follow] [--after-id ID] [--wait-ms N]
+  ham cost [--agent id] [--days N] [--by model|day|agent] [--json]
   ham uninstall [--purge]
   ham down
 

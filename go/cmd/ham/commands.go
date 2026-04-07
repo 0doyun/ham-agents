@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +20,115 @@ import (
 	"github.com/ham-agents/ham-agents/go/internal/ipc"
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
 )
+
+// runCost handles `ham cost`. It parses options, asks the daemon for the cost
+// summary, then renders either the structured table or JSON.
+func runCost(ctx context.Context, client *ipc.Client, args []string) error {
+	options, err := parseCostInput(args)
+	if err != nil {
+		return err
+	}
+	response, err := client.CostSummary(ctx, options.agentFilter, options.sinceDays, options.groupBy)
+	if err != nil {
+		return err
+	}
+	view := buildCostSummaryView(response, options.groupBy)
+	return renderCostSummary(os.Stdout, view, options.asJSON)
+}
+
+// buildCostSummaryView projects an ipc.Response into the renderer view. It
+// aggregates per-model token totals so the model rollup can show input /
+// cache_read / output columns separately even though the IPC payload only
+// carries the USD breakdown.
+func buildCostSummaryView(response ipc.Response, groupBy string) costSummaryView {
+	view := costSummaryView{
+		GroupBy:     groupBy,
+		TotalUSD:    response.TotalUSD,
+		RecordCount: len(response.CostRecords),
+	}
+	switch groupBy {
+	case "model":
+		modelTokens := make(map[string]*costRow)
+		for _, record := range response.CostRecords {
+			row, ok := modelTokens[record.Model]
+			if !ok {
+				row = &costRow{Key: record.Model}
+				modelTokens[record.Model] = row
+			}
+			row.InputTokens += record.InputTokens
+			row.CacheReadTokens += record.CacheReadTokens
+			row.OutputTokens += record.OutputTokens
+			row.RecordCount++
+			row.USD += record.EstimatedUSD
+		}
+		for model, total := range response.ByModel {
+			if row, ok := modelTokens[model]; ok {
+				row.USD = total
+			} else {
+				modelTokens[model] = &costRow{Key: model, USD: total}
+			}
+		}
+		keys := sortedKeys(modelTokens)
+		for _, key := range keys {
+			view.Rows = append(view.Rows, *modelTokens[key])
+		}
+	case "day":
+		keys := sortedFloatKeys(response.ByDay)
+		for _, key := range keys {
+			view.Rows = append(view.Rows, costRow{
+				Key:         key,
+				USD:         response.ByDay[key],
+				RecordCount: countMatching(response.CostRecords, func(r core.CostRecord) bool {
+					return !r.RecordedAt.IsZero() && r.RecordedAt.UTC().Format("2006-01-02") == key
+				}),
+			})
+		}
+	case "agent":
+		keys := sortedFloatKeys(response.ByAgent)
+		for _, key := range keys {
+			matchKey := key
+			if key == "(orphan)" {
+				matchKey = ""
+			}
+			view.Rows = append(view.Rows, costRow{
+				Key:         key,
+				USD:         response.ByAgent[key],
+				RecordCount: countMatching(response.CostRecords, func(r core.CostRecord) bool {
+					return r.AgentID == matchKey
+				}),
+			})
+		}
+	}
+	return view
+}
+
+func sortedKeys(m map[string]*costRow) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func sortedFloatKeys(m map[string]float64) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func countMatching(records []core.CostRecord, pred func(core.CostRecord) bool) int {
+	count := 0
+	for _, record := range records {
+		if pred(record) {
+			count++
+		}
+	}
+	return count
+}
 
 func runRegister(ctx context.Context, client *ipc.Client, args []string) error {
 	input, err := parseRunInput(args)

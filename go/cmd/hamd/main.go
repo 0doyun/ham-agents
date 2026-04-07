@@ -56,8 +56,13 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	costPath, err := store.DefaultCostLogPath()
+	if err != nil {
+		return err
+	}
 	eventStore := store.NewFileEventStore(eventPath).
 		WithArtifactStore(store.NewFileArtifactStore(artifactPath))
+	costStore := store.NewFileCostStore(costPath)
 	registry := runtime.NewRegistry(
 		store.NewFileAgentStore(statePath),
 		eventStore,
@@ -134,6 +139,13 @@ func run(args []string) error {
 		}()
 
 		server := ipc.NewServer(ipcConfig.SocketPath, registry, managedService, settingsService, teamService, inboxMgr, itermAdapter, tmuxAdapter)
+		server.SetCostStore(costStore)
+		if transcriptDir, err := runtime.DefaultClaudeTranscriptDir(); err == nil {
+			tracker := runtime.NewCostTracker(transcriptDir, costStore, registry, runtime.DefaultCostPollInterval)
+			tracker.Start(ctx)
+		} else {
+			log.Printf("hamd: cost tracker disabled — transcript dir resolve failed: %v", err)
+		}
 		go pollRuntimeState(ctx, registry, settingsService, itermAdapter, tmuxAdapter, transcriptAdapter, 2*time.Second)
 		fmt.Printf("hamd serving on %s\n", ipcConfig.SocketPath)
 		return server.Serve(ctx)
