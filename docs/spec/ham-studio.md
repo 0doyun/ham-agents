@@ -134,6 +134,8 @@ Studio 헤더의 "New Session" 버튼으로 새 탭 생성.
 
 ## P2-3. Approval Interception (Govern 축의 핵심)
 
+> **Spike Validated (2026-04-08)**: Phase 2 Step 0b spike confirmed that hook.permission-request → hamd → Claude Code 전송 체인이 동기 블로킹이라는 것을 정적 분석 + 동적 실험으로 검증함. P2-3 은 기존 설계대로 진행 가능. 필요 작업은 (1) `Response.PermissionDecision` 필드 추가, (2) 새 IPC 커맨드 `decision.permission` 추가, (3) `CommandHookPermissionReq` 핸들러에 wait primitive, (4) `runHook` 이 decision 을 `hookSpecificOutput` JSON 으로 stdout 에 emit. 상세 근거는 `docs/spec/tech-migration.md` ADR-2 Spike Results (2026-04-08) 참조.
+
 ### 문제
 Phase 1 에서는 `hook.permission-request` 가 발생하면 Inbox 에 읽기 전용으로 기록되고, 실제 Claude Code 는 `ham ask` 시스템을 거치지 않고 자체 결정을 내렸다. 즉 ham-agents 는 "알림만" 줬다.
 

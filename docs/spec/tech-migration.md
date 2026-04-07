@@ -427,6 +427,93 @@ PTY 출력은 raw bytes 로 흐르지만, 동시에 hamd 는 line-tee 해서 `Se
 - **소켓 끊김**: Studio 는 `seq` 를 저장하고 있다가 재연결 시 `resume_from_seq` 로 buffered 프레임을 재생
 - **PTY write 실패 (예: Claude Code 종료 중)**: `CommandWritePTY` 가 에러 리턴, Studio 는 탭을 read-only 로 전환
 
+### Spike Results (2026-04-08)
+
+> Ralph Phase 2 spike run. Investigation only — no implementation code. See commits `fc9f62e` (Step 0a) and `1855cb4` (Step 0b) on dev/phase2-spike.
+
+#### Step 0a — SwiftTerm SPM Integration: **PASS**
+
+**방법**: Package.swift 에 SwiftTerm 1.13.0 dependency 추가 + HamAppServices 타겟에 product 링크 후 Swift/Go 빌드 회귀 확인.
+
+**증거**:
+- 사용 버전: SwiftTerm 1.13.0 (revision `8e7a1e154f470e19c709a00a8768df348ba5fc43`)
+- Transitive: swift-argument-parser 1.7.1
+- `swift build --disable-sandbox`: Build complete, 94 SwiftTerm + HamAppServices + HamMenuBarApp 모듈 컴파일 (10.72s)
+- `swift test --disable-sandbox --filter HamCoreTests`: 16 tests, 0 failures
+- `go build ./go/cmd/ham ./go/cmd/hamd`: clean
+- `go test ./... -count=1 -short`: 8 packages PASS
+- Platform: 기존 `.macOS(.v13)` 이 SwiftTerm 11+ 요구를 이미 초과 → 변경 없음
+
+**결론**: SwiftTerm SPM 통합에 블로커 없음. P2-1 Embedded PTY Runtime 의 Swift 쪽 터미널 에뮬레이터 의존성을 SwiftTerm 으로 확정 가능.
+
+#### Step 0b — Permission Interception: 2 layers separated (P2-3 진행 가능)
+
+**Verdict — 2 layers separated:**
+- **Transport layer: BLOCKS** — hamd IPC request/response cycle is synchronous. Python proxy experiment confirmed server-side delay propagates 1:1 to client (0/500/1000/5000ms matrix, <10ms overhead).
+- **Application layer: Fire-and-forget today** — hamd currently returns empty `Response{}` without a PermissionDecision field; no wait primitive in CommandHookPermissionReq handler; runHook emits empty stdout. P2-3 implementation must add the decision payload and wait primitive on top of the existing sync transport.
+
+**방법**:
+1. 정적 분석으로 `ham hook` CLI → IPC → hamd 체인이 동기인지 확인
+2. Claude Code hook 계약 (`docs/external/claude-code-hooks-2026-04-08.md`; fetched 2026-04-08 from https://code.claude.com/docs/en/hooks) 에서 PermissionRequest 응답 semantics 확인
+3. 격리 환경 (`HAM_AGENTS_HOME=/tmp/ham-spike-*`) 에서 hamd 띄우고 Python 프록시로 서버 응답 지연 주입하여 IPC client latency 측정
+4. 실제 `ham hook permission-request` 서브프로세스를 `time` wrapper 로 직접 계측하여 end-to-end wall-clock 측정
+
+**Claude Code hook 계약**:
+- `PermissionRequest` 는 동기 이벤트
+- 핸들러가 stdin 으로 JSON 읽고 stdout 으로 `hookSpecificOutput.decision.{behavior, message}` JSON 쓰고 exit 할 때까지 Claude 가 블록
+- 기본 timeout: command hooks **600s**, agent hooks 60s
+- exit 2 또는 `behavior=deny` → 거절
+
+**hamd 체인 증거**:
+| 레이어 | 파일:라인 | 현재 상태 |
+|--------|----------|----------|
+| CLI 진입 | `go/cmd/ham/commands.go:386-388` `runHook` | 동기 `client.HookPermissionRequest` 호출, exit 0 + 빈 stdout |
+| IPC client | `go/internal/ipc/ipc.go:513-516` | 동기 request/response 소켓 |
+| IPC server dispatch | `go/internal/ipc/server.go:478-488` `CommandHookPermissionReq` | `RecordHookPermissionRequest` 호출 후 빈 `Response{}` 반환 |
+| Registry 상태 | `go/internal/runtime/managed_state.go:632-655` | Status → WaitingInput, 이벤트 기록, 상태 쓰기만 |
+
+→ 전송은 동기이지만 응용 로직은 현재 fire-and-forget (Response 에 decision 필드 없음, hamd 쪽 wait primitive 없음, runHook 이 decision 을 stdout 으로 emit 하지 않음).
+
+**동적 실험 매트릭스 — IPC layer (Python proxy)**:
+| 서버 응답 지연 | 클라이언트 관찰 latency | 응답 body |
+|---------------|----------------------|----------|
+| 0 ms | 0.6 ms | `{}` |
+| 500 ms | 502.9 ms | `{}` |
+| 1000 ms | 1002.0 ms | `{}` |
+| 5000 ms | 5009.9 ms | `{}` |
+
+오버헤드 < 10ms, 서버 지연이 1:1 로 클라이언트까지 전파됨 확인.
+
+**서브프로세스 wall-clock 측정 — ham hook subprocess (실제 생산 경로)**:
+
+방법: `HAM_AGENT_ID=<id> HAM_AGENTS_HOME=/tmp/ham-spike-run3 /tmp/ham-spike hook permission-request Bash < /dev/null` 을 `time` builtin 으로 3회 계측. hamd 정상 기동 상태, 실제 managed agent 등록 후 측정.
+
+| Run | Wall-clock | Exit | Stdout |
+|-----|-----------|------|--------|
+| 1   | 11 ms     | 0    | (empty) |
+| 2   | 9 ms      | 0    | (empty) |
+| 3   | 11 ms     | 0    | (empty) |
+
+Mean ~10ms. Go binary startup ~7ms + IPC roundtrip <1ms. 서브프로세스 경로가 완전히 동기임을 실증 — `c.request()` 는 unix socket 위 blocking `json.NewEncoder/Decoder` 교환이며 goroutine detachment 없음. 자세한 분석: `.omc/phase2-step0b-results.md` "Subprocess Wall-Clock Measurement" 섹션 참조.
+
+**결론**: **BLOCKS (transport layer)** — 전송 계층은 이미 동기 블로킹. P2-3 Approval Interception 은 기존 설계 방향대로 진행 가능. 단 아래 **4개** 추가 작업이 필요:
+
+1. **IPC Response 확장**: `go/internal/ipc/ipc.go:118` `Response` 구조체에 `PermissionDecision *PermissionDecision` 필드 추가.
+2. **새 IPC 커맨드 `decision.permission`** (Studio → hamd): `{agent_id, request_id, behavior, message}` payload. ham-studio UI 가 사용자 결정을 대기 중인 핸들러에 주입.
+3. **hamd wait primitive**: `go/internal/ipc/server.go:478` `CommandHookPermissionReq` 핸들러에서 decision channel 과 context deadline 을 `select` 로 기다림. timeout 에는 no-decision (Claude native dialog fallback) 반환.
+4. **runHook decision emit**: `go/cmd/ham/commands.go:386-388` `runHook` 이 permission-request 브랜치에서 hamd 응답의 `PermissionDecision` 이 non-nil 이면 `hookSpecificOutput` JSON 형식으로 stdout 에 쓰고 exit.
+
+**리스크 / 불확실성**:
+- 동일 agent 에 동시 permission 요청 발생 시 request_id 로 키잉 필요 (agent_id 만으로는 race)
+- Claude Code 가 60s+ hook latency 를 UI fallback 없이 견디는지는 spike 로 실증 불가 — 실제 `claude` 세션에서 수동 smoke test 필요
+- Claude Code hook 실행 환경이 PTY 가 아니고 stdin/stdout pipe 기반이므로, P2-1 PTY 런타임 과 P2-3 Permission Interception 은 독립 경로 (PTY 는 렌더용, hook 은 개입용)
+
+#### Phase 2 설계 영향 요약
+
+- P2-1 Embedded PTY Runtime → SwiftTerm 1.13.0 확정 사용, Package.swift 는 이 spike 커밋에서 이미 dependency 선언됨
+- P2-3 Approval Interception → 설계 재설계 불필요. 기존 `docs/spec/ham-studio.md` P2-3 섹션 그대로 진행하되, 위 4개 IPC 확장을 태스크로 분해
+- ADR-2 Option 1 (NDJSON 스트림) 권장안 유지 — 이 spike 는 ADR-2 결정을 뒤집지 않음
+
 ---
 
 ## 6-3. 저장소를 event log + read model로 분리
