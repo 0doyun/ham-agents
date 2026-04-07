@@ -17,7 +17,6 @@ public enum DaemonCommand: String, Codable, Sendable {
     case removeAgent = "agents.remove"
     case getSettings = "settings.get"
     case updateSettings = "settings.update"
-    // Added in P1-0-B — must match Go Command* constants exactly.
     case registerManaged = "register.managed"
     case managedStop = "managed.stop"
     case managedExited = "managed.exited"

@@ -42,8 +42,6 @@ func DefaultArtifactStorePath() (string, error) {
 	return filepath.Join(homeDir, "Library", "Application Support", "ham-agents", "artifacts"), nil
 }
 
-// Save writes data to {root}/{agentID}/{eventID}.bin using an atomic
-// write (tmp file + rename). Returns the absolute path as the ref.
 func (s *FileArtifactStore) Save(agentID, eventID string, data []byte) (string, error) {
 	dir := filepath.Join(s.root, agentID)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -63,7 +61,6 @@ func (s *FileArtifactStore) Save(agentID, eventID string, data []byte) (string, 
 	return dest, nil
 }
 
-// Load reads and returns the artifact at the given ref (absolute path).
 func (s *FileArtifactStore) Load(ref string) ([]byte, error) {
 	data, err := os.ReadFile(ref)
 	if err != nil {

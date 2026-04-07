@@ -344,17 +344,12 @@ func TestContract_HookCommands_JSONRoundTrip(t *testing.T) {
 				t.Errorf("round-trip mismatch for %q:\n  want: %+v\n  got:  %+v", tc.name, tc.req, got)
 			}
 
-			// Verify Command field specifically (catches silent omitempty drift).
 			if got.Command != tc.req.Command {
 				t.Errorf("Command field lost: want %q, got %q", tc.req.Command, got.Command)
 			}
-
-			// Verify AgentID survives.
 			if got.AgentID != tc.req.AgentID {
 				t.Errorf("AgentID field lost: want %q, got %q", tc.req.AgentID, got.AgentID)
 			}
-
-			// Verify SessionID survives.
 			if got.SessionID != tc.req.SessionID {
 				t.Errorf("SessionID field lost: want %q, got %q", tc.req.SessionID, got.SessionID)
 			}
