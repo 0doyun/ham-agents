@@ -165,6 +165,17 @@ type Event struct {
 	LifecycleMode        string    `json:"lifecycle_mode,omitempty"`
 	LifecycleReason      string    `json:"lifecycle_reason,omitempty"`
 	LifecycleConfidence  float64   `json:"lifecycle_confidence,omitempty"`
+	SessionID            string    `json:"session_id,omitempty"`
+	ParentAgentID        string    `json:"parent_agent_id,omitempty"`
+	TaskName             string    `json:"task_name,omitempty"`
+	TaskDesc             string    `json:"task_desc,omitempty"`
+	ArtifactType         string    `json:"artifact_type,omitempty"`
+	ArtifactRef          string    `json:"artifact_ref,omitempty"`
+	ArtifactData         string    `json:"artifact_data,omitempty"`
+	ToolName             string    `json:"tool_name,omitempty"`
+	ToolInput            string    `json:"tool_input,omitempty"`
+	ToolType             string    `json:"tool_type,omitempty"`
+	ToolDuration         int       `json:"tool_duration_ms,omitempty"`
 }
 
 type OpenTargetKind string

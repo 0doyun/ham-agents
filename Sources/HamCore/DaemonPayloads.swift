@@ -29,6 +29,17 @@ public struct AgentEventPayload: Codable, Equatable, Sendable, Identifiable {
     public var lifecycleMode: String?
     public var lifecycleReason: String?
     public var lifecycleConfidence: Double?
+    public var sessionID: String?
+    public var parentAgentID: String?
+    public var taskName: String?
+    public var taskDesc: String?
+    public var artifactType: String?
+    public var artifactRef: String?
+    public var artifactData: String?
+    public var toolName: String?
+    public var toolInput: String?
+    public var toolType: String?
+    public var toolDurationMs: Int?
 
     public init(
         id: String,
@@ -42,7 +53,18 @@ public struct AgentEventPayload: Codable, Equatable, Sendable, Identifiable {
         lifecycleStatus: String? = nil,
         lifecycleMode: String? = nil,
         lifecycleReason: String? = nil,
-        lifecycleConfidence: Double? = nil
+        lifecycleConfidence: Double? = nil,
+        sessionID: String? = nil,
+        parentAgentID: String? = nil,
+        taskName: String? = nil,
+        taskDesc: String? = nil,
+        artifactType: String? = nil,
+        artifactRef: String? = nil,
+        artifactData: String? = nil,
+        toolName: String? = nil,
+        toolInput: String? = nil,
+        toolType: String? = nil,
+        toolDurationMs: Int? = nil
     ) {
         self.id = id
         self.agentID = agentID
@@ -56,6 +78,17 @@ public struct AgentEventPayload: Codable, Equatable, Sendable, Identifiable {
         self.lifecycleMode = lifecycleMode
         self.lifecycleReason = lifecycleReason
         self.lifecycleConfidence = lifecycleConfidence
+        self.sessionID = sessionID
+        self.parentAgentID = parentAgentID
+        self.taskName = taskName
+        self.taskDesc = taskDesc
+        self.artifactType = artifactType
+        self.artifactRef = artifactRef
+        self.artifactData = artifactData
+        self.toolName = toolName
+        self.toolInput = toolInput
+        self.toolType = toolType
+        self.toolDurationMs = toolDurationMs
     }
 
     enum CodingKeys: String, CodingKey {
@@ -71,6 +104,17 @@ public struct AgentEventPayload: Codable, Equatable, Sendable, Identifiable {
         case lifecycleMode = "lifecycle_mode"
         case lifecycleReason = "lifecycle_reason"
         case lifecycleConfidence = "lifecycle_confidence"
+        case sessionID = "session_id"
+        case parentAgentID = "parent_agent_id"
+        case taskName = "task_name"
+        case taskDesc = "task_desc"
+        case artifactType = "artifact_type"
+        case artifactRef = "artifact_ref"
+        case artifactData = "artifact_data"
+        case toolName = "tool_name"
+        case toolInput = "tool_input"
+        case toolType = "tool_type"
+        case toolDurationMs = "tool_duration_ms"
     }
 }
 
