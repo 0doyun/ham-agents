@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -47,9 +48,15 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	artifactPath, err := store.DefaultArtifactStorePath()
+	if err != nil {
+		return err
+	}
+	eventStore := store.NewFileEventStore(eventPath).
+		WithArtifactStore(store.NewFileArtifactStore(artifactPath))
 	registry := runtime.NewRegistry(
 		store.NewFileAgentStore(statePath),
-		store.NewFileEventStore(eventPath),
+		eventStore,
 	)
 	managedService := runtime.NewManagedService(registry)
 	settingsService := runtime.NewSettingsService(store.NewFileSettingsStore(settingsPath))
@@ -135,18 +142,29 @@ func pollRuntimeState(ctx context.Context, registry *runtime.Registry, settings 
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			_ = registry.RefreshObserved(ctx)
-			settingsSnapshot, err := settings.Get(ctx)
-			if err == nil && settingsSnapshot.Integrations.ProviderAdapters["transcript"] {
-				_ = ensureObservedTranscripts(ctx, registry, transcriptAdapter, settingsSnapshot.Integrations.TranscriptDirs)
+			if refreshErr := registry.RefreshObserved(ctx); refreshErr != nil {
+				log.Printf("pollRuntimeState: RefreshObserved: %v", refreshErr)
 			}
-			if sessions, err := itermAdapter.ListSessions(); err == nil {
-				_ = registry.RefreshAttachedByScheme(ctx, "iterm2", sessions)
+			settingsSnapshot, settingsErr := settings.Get(ctx)
+			if settingsErr != nil {
+				log.Printf("pollRuntimeState: settings.Get: %v", settingsErr)
 			}
-			if sessions, err := tmuxAdapter.ListSessions(); err == nil {
-				_ = registry.RefreshAttachedByScheme(ctx, "tmux", sessions)
+			if settingsErr == nil && settingsSnapshot.Integrations.ProviderAdapters["transcript"] {
+				if transcriptErr := ensureObservedTranscripts(ctx, registry, transcriptAdapter, settingsSnapshot.Integrations.TranscriptDirs); transcriptErr != nil {
+					log.Printf("pollRuntimeState: ensureObservedTranscripts: %v", transcriptErr)
+				}
 			}
-			if err == nil {
+			if sessions, itermErr := itermAdapter.ListSessions(); itermErr != nil {
+				log.Printf("pollRuntimeState: iterm2 ListSessions: %v", itermErr)
+			} else if refreshErr := registry.RefreshAttachedByScheme(ctx, "iterm2", sessions); refreshErr != nil {
+				log.Printf("pollRuntimeState: RefreshAttachedByScheme iterm2: %v", refreshErr)
+			}
+			if sessions, tmuxErr := tmuxAdapter.ListSessions(); tmuxErr != nil {
+				log.Printf("pollRuntimeState: tmux ListSessions: %v", tmuxErr)
+			} else if refreshErr := registry.RefreshAttachedByScheme(ctx, "tmux", sessions); refreshErr != nil {
+				log.Printf("pollRuntimeState: RefreshAttachedByScheme tmux: %v", refreshErr)
+			}
+			if settingsErr == nil {
 				emitHeartbeatEvents(ctx, registry, settingsSnapshot, heartbeatSentAt)
 			}
 		}

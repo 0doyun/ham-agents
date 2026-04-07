@@ -25,7 +25,6 @@ func runWithPTY(
 	providerName string,
 	projectPath string,
 ) error {
-	// Open a new PTY pair.
 	ptmx, ttyPath, err := openPTY()
 	if err != nil {
 		return fmt.Errorf("open pty: %w", err)
@@ -38,13 +37,11 @@ func runWithPTY(
 	}
 	defer tty.Close()
 
-	// Match the PTY size to the real terminal.
 	if err := inheritTerminalSize(ptmx); err != nil {
 		// Non-fatal — the session will still work, just maybe wrong size.
 		fmt.Fprintf(os.Stderr, "ham: warning: could not set terminal size: %v\n", err)
 	}
 
-	// Propagate SIGWINCH (terminal resize) to the PTY.
 	sigwinch := make(chan os.Signal, 1)
 	signal.Notify(sigwinch, syscall.SIGWINCH)
 	go func() {
@@ -52,10 +49,11 @@ func runWithPTY(
 			_ = inheritTerminalSize(ptmx)
 		}
 	}()
-	defer signal.Stop(sigwinch)
+	defer func() {
+		signal.Stop(sigwinch)
+		close(sigwinch)
+	}()
 
-	// Put the real terminal into raw mode so keystrokes pass through directly.
-	// Skip if stdin is not a terminal (e.g. running inside a pipe or socket).
 	var oldState *termios
 	if isTerminal(os.Stdin.Fd()) {
 		oldState, err = makeRaw(os.Stdin.Fd())
@@ -65,7 +63,6 @@ func runWithPTY(
 	}
 	defer restoreTerminal(os.Stdin.Fd(), oldState)
 
-	// Build the provider command using the PTY as stdin/stdout/stderr.
 	cmd := exec.Command(providerBin)
 	cmd.Stdin = tty
 	cmd.Stdout = tty
@@ -87,22 +84,17 @@ func runWithPTY(
 	// Close the slave side in the parent — the child owns it now.
 	tty.Close()
 
-	// Copy stdin → ptmx (user input to provider).
 	go func() {
 		_, _ = io.Copy(ptmx, os.Stdin)
 	}()
 
-	// Copy ptmx → stdout, and tee output to daemon.
 	go func() {
 		buf := make([]byte, 4096)
 		var lineBuf strings.Builder
 		for {
 			n, err := ptmx.Read(buf)
 			if n > 0 {
-				// Show to user.
 				_, _ = os.Stdout.Write(buf[:n])
-
-				// Accumulate lines and send to daemon.
 				for _, b := range buf[:n] {
 					if b == '\n' || b == '\r' {
 						line := strings.TrimSpace(lineBuf.String())
@@ -132,19 +124,16 @@ func openPTY() (ptmx *os.File, ttyPath string, err error) {
 	}
 	ptmx = os.NewFile(uintptr(ptmxFD), "/dev/ptmx")
 
-	// grantpt
 	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(ptmxFD), syscall.TIOCPTYGRANT, 0); errno != 0 {
 		ptmx.Close()
 		return nil, "", fmt.Errorf("grantpt: %v", errno)
 	}
 
-	// unlockpt
 	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(ptmxFD), syscall.TIOCPTYUNLK, 0); errno != 0 {
 		ptmx.Close()
 		return nil, "", fmt.Errorf("unlockpt: %v", errno)
 	}
 
-	// ptsname — get the path of the slave device
 	nameBuf := make([]byte, 128)
 	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, uintptr(ptmxFD), syscall.TIOCPTYGNAME, uintptr(unsafe.Pointer(&nameBuf[0]))); errno != 0 {
 		ptmx.Close()

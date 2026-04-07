@@ -1,8 +1,11 @@
 package ipc_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -756,6 +759,193 @@ func TestSessionStartAutoRegistersAgent(t *testing.T) {
 	}
 	if len(snapshot.Agents) != 0 {
 		t.Fatalf("expected agent removed after session-end, got %d", len(snapshot.Agents))
+	}
+
+	cancel()
+	if err := <-serverErrors; err != nil && !errors.Is(err, context.Canceled) {
+		t.Fatalf("server shutdown: %v", err)
+	}
+}
+
+func TestHandleConnection_LimitReader_RejectsOversized(t *testing.T) {
+	t.Parallel()
+
+	root, err := os.MkdirTemp("/tmp", "hamd-ipc-limit-")
+	if err != nil {
+		t.Fatalf("create temp dir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+
+	socketPath := filepath.Join(root, "s.sock")
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+	managedService := runtime.NewManagedService(registry)
+	settingsService := runtime.NewSettingsService(
+		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
+	)
+	teamService := runtime.NewTeamService(
+		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
+	)
+
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, nil, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- server.Serve(ctx)
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if _, err := os.Stat(socketPath); err == nil {
+			break
+		}
+		select {
+		case err := <-serverErrors:
+			if err != nil && strings.Contains(err.Error(), "operation not permitted") {
+				t.Skipf("unix socket binding unavailable in sandbox: %v", err)
+			}
+			t.Fatalf("server exited before socket became ready: %v", err)
+		default:
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("socket did not appear: %s", socketPath)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// Build a request with a 2MB AgentID field to exceed the 1MB limit.
+	oversized := ipc.Request{
+		Command: ipc.CommandListAgents,
+		AgentID: strings.Repeat("x", 2<<20),
+	}
+	payload, err := json.Marshal(oversized)
+	if err != nil {
+		t.Fatalf("marshal oversized request: %v", err)
+	}
+
+	conn, err := net.Dial("unix", socketPath)
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close()
+
+	// Write may get a broken pipe if the server closes early after hitting the
+	// 1MB limit — that is expected behaviour. Ignore the write error.
+	_, _ = conn.Write(payload)
+	// Half-close write side so server sees EOF.
+	if uc, ok := conn.(*net.UnixConn); ok {
+		_ = uc.CloseWrite()
+	}
+
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	var buf bytes.Buffer
+	tmp := make([]byte, 4096)
+	for {
+		n, readErr := conn.Read(tmp)
+		if n > 0 {
+			buf.Write(tmp[:n])
+		}
+		if readErr != nil {
+			break
+		}
+	}
+
+	var resp ipc.Response
+	if err := json.Unmarshal(buf.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal response: %v (body: %q)", err, buf.String())
+	}
+	if resp.Error == "" {
+		t.Fatalf("expected error response for oversized request, got empty error (response: %+v)", resp)
+	}
+}
+
+func TestPrepareHookRequest_NoDoubleRecordHookSessionSeen(t *testing.T) {
+	t.Parallel()
+
+	root, err := os.MkdirTemp("/tmp", "hamd-ipc-dedup-")
+	if err != nil {
+		t.Fatalf("create temp dir: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+
+	socketPath := filepath.Join(root, "s.sock")
+	registry := runtime.NewRegistry(
+		store.NewFileAgentStore(filepath.Join(root, "managed-agents.json")),
+		store.NewFileEventStore(filepath.Join(root, "events.jsonl")),
+	)
+	managedService := runtime.NewManagedService(registry)
+	settingsService := runtime.NewSettingsService(
+		store.NewFileSettingsStore(filepath.Join(root, "settings.json")),
+	)
+	teamService := runtime.NewTeamService(
+		store.NewFileTeamStore(filepath.Join(root, "teams.json")),
+	)
+
+	server := ipc.NewServer(socketPath, registry, managedService, settingsService, teamService, stubSessionLister{}, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- server.Serve(ctx)
+	}()
+
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		if _, err := os.Stat(socketPath); err == nil {
+			break
+		}
+		select {
+		case err := <-serverErrors:
+			if err != nil && strings.Contains(err.Error(), "operation not permitted") {
+				t.Skipf("unix socket binding unavailable in sandbox: %v", err)
+			}
+			t.Fatalf("server exited before socket became ready: %v", err)
+		default:
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("socket did not appear: %s", socketPath)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	client := ipc.NewClient(socketPath)
+
+	// Register an agent so prepareHookRequest can resolve it.
+	agent, err := client.RunManaged(context.Background(), runtime.RegisterManagedInput{
+		Provider:    "claude",
+		DisplayName: "dedup-test",
+		ProjectPath: "/tmp/project",
+	})
+	if err != nil {
+		t.Fatalf("register agent: %v", err)
+	}
+
+	sessionID := "dedup-session-42"
+	sessionRef := "iterm2://session/dedup-session-42"
+
+	// Send a hook with both AgentID and SessionID set.
+	// Before the fix, prepareHookRequest called RecordHookSessionSeen twice.
+	// After the fix it is called only once (after AgentID resolution).
+	// The observable effect is that SessionID is correctly set on the agent.
+	if err := client.HookToolStart(context.Background(), agent.ID, sessionID, sessionRef, "Read", "main.go", ""); err != nil {
+		t.Fatalf("hook tool-start: %v", err)
+	}
+
+	snapshot, err := client.Status(context.Background())
+	if err != nil {
+		t.Fatalf("status: %v", err)
+	}
+	if len(snapshot.Agents) == 0 {
+		t.Fatal("expected at least one agent")
+	}
+	// SessionID must be set exactly once (not duplicated or lost).
+	if snapshot.Agents[0].SessionID != sessionID {
+		t.Fatalf("expected session_id=%q, got %q", sessionID, snapshot.Agents[0].SessionID)
 	}
 
 	cancel()

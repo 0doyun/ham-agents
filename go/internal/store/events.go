@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -21,14 +22,30 @@ type EventStore interface {
 // When exceeded, the oldest entries are pruned during Append.
 const maxEventEntries = 10000
 
+const (
+	artifactInlineMaxBytes = 4 * 1024        // 4 KB  — keep inline
+	artifactFileMaxBytes   = 1 * 1024 * 1024 // 1 MB  — truncate above this
+)
+
 type FileEventStore struct {
-	path       string
-	mu         sync.Mutex
-	appendCount int
+	path          string
+	mu            sync.Mutex
+	appendCount   int
+	artifactStore ArtifactStore
 }
 
 func NewFileEventStore(path string) *FileEventStore {
 	return &FileEventStore{path: path}
+}
+
+// WithArtifactStore attaches an ArtifactStore so that Append offloads
+// ArtifactData larger than artifactInlineMaxBytes to files.
+// Safe to call before first Append; returns the receiver for chaining.
+func (s *FileEventStore) WithArtifactStore(as ArtifactStore) *FileEventStore {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.artifactStore = as
+	return s
 }
 
 func DefaultEventLogPath() (string, error) {
@@ -56,6 +73,24 @@ func (s *FileEventStore) Append(ctx context.Context, event core.Event) error {
 
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
 		return fmt.Errorf("create event log directory: %w", err)
+	}
+
+	// Offload large ArtifactData to the artifact store when one is configured.
+	if s.artifactStore != nil && len(event.ArtifactData) > artifactInlineMaxBytes {
+		data := []byte(event.ArtifactData)
+		if len(data) > artifactFileMaxBytes {
+			data = data[:artifactFileMaxBytes]
+			// Mark truncation by appending ":truncated" to ArtifactType.
+			event.ArtifactType = event.ArtifactType + ":truncated"
+		}
+		ref, saveErr := s.artifactStore.Save(event.AgentID, event.ID, data)
+		if saveErr != nil {
+			// Artifact offload is best-effort; keep ArtifactData inline on failure.
+			log.Printf("store: artifact offload failed for event %s: %v", event.ID, saveErr)
+		} else {
+			event.ArtifactRef = ref
+			event.ArtifactData = ""
+		}
 	}
 
 	payload, err := json.Marshal(event)

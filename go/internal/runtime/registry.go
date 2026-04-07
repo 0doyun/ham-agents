@@ -20,12 +20,13 @@ import (
 var eventSeq uint64
 
 type Registry struct {
-	mu         sync.Mutex
-	store      store.AgentStore
-	eventStore store.EventStore
-	clock      func() time.Time
-	idProvider func(time.Time) string
-	hostname   func() (string, error)
+	mu             sync.Mutex
+	store          store.AgentStore
+	eventStore     store.EventStore
+	clock          func() time.Time
+	idProvider     func(time.Time) string
+	hostname       func() (string, error)
+	toolStartTimes sync.Map // key: agentID (string) -> value: time.Time
 }
 
 func NewRegistry(agentStore store.AgentStore, eventStore store.EventStore) *Registry {

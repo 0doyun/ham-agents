@@ -94,7 +94,14 @@ public struct NoopNotificationPermissionController: NotificationPermissionContro
 public final class UserNotificationSink: NSObject, NotificationSink, NotificationPermissionControlling, UNUserNotificationCenterDelegate, @unchecked Sendable {
     private let center: UserNotificationCentering
     private let authorizationState = AuthorizationState()
-    private var interactionHandler: (@Sendable (NotificationInteraction) -> Void)?
+    private let interactionLock = NSLock()
+    private var _interactionHandler: (@Sendable (NotificationInteraction) -> Void)?
+    private var interactionHandler: (@Sendable (NotificationInteraction) -> Void)? {
+        get { interactionLock.lock(); defer { interactionLock.unlock() }; return _interactionHandler }
+        set { interactionLock.lock(); defer { interactionLock.unlock() }; _interactionHandler = newValue }
+    }
+    private let taskLock = NSLock()
+    private var activeTasks: [Task<Void, Never>] = []
 
     private static let attentionCategoryIdentifier = "ham.agent.attention"
     private static let openTerminalActionIdentifier = "ham.open_terminal"
@@ -104,21 +111,32 @@ public final class UserNotificationSink: NSObject, NotificationSink, Notificatio
         self.center = center
             ?? LiveUserNotificationCenter.makeIfAvailable()
             ?? NoopUserNotificationCenter()
-        self.interactionHandler = interactionHandler
         super.init()
+        self._interactionHandler = interactionHandler
         self.center.setNotificationCategories(Self.notificationCategories)
         self.center.setDelegate(self)
     }
 
+    deinit {
+        taskLock.lock()
+        let tasks = activeTasks
+        taskLock.unlock()
+        tasks.forEach { $0.cancel() }
+    }
+
     public func send(_ candidate: NotificationCandidate) {
-        Task {
+        let task = Task { [weak self] in
+            guard let self else { return }
             do {
-                guard try await ensureAuthorization() else { return }
-                try await center.add(makeRequest(for: candidate))
+                guard try await self.ensureAuthorization() else { return }
+                try await self.center.add(self.makeRequest(for: candidate))
             } catch {
                 return
             }
         }
+        taskLock.lock()
+        activeTasks.append(task)
+        taskLock.unlock()
     }
 
     public func currentPermissionStatus() async -> NotificationPermissionStatus {
