@@ -141,8 +141,8 @@ func run(args []string) error {
 		server := ipc.NewServer(ipcConfig.SocketPath, registry, managedService, settingsService, teamService, inboxMgr, itermAdapter, tmuxAdapter)
 		server.SetCostStore(costStore)
 		if transcriptDir, err := runtime.DefaultClaudeTranscriptDir(); err == nil {
-			tracker := runtime.NewCostTracker(transcriptDir, costStore, registry, runtime.DefaultCostPollInterval)
-			tracker.Start(ctx)
+			tracker := runtime.NewCostTracker(transcriptDir, costStore, registry, 0)
+			server.SetCostTracker(tracker)
 		} else {
 			log.Printf("hamd: cost tracker disabled — transcript dir resolve failed: %v", err)
 		}
