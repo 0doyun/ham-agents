@@ -45,6 +45,7 @@ public protocol HamDaemonClientProtocol: Sendable {
     func fetchInbox(typeFilter: String?, unreadOnly: Bool) async throws -> (items: [InboxItemPayload], unreadCount: Int)
     func markInboxRead(id: String) async throws -> Int
     func markAllInboxRead() async throws -> Int
+    func fetchCostSummary(sinceDays: Int) async throws -> CostSummaryPayload
 }
 
 public extension HamDaemonClientProtocol {
@@ -58,6 +59,10 @@ public extension HamDaemonClientProtocol {
     }
     func markInboxRead(id: String) async throws -> Int { 0 }
     func markAllInboxRead() async throws -> Int { 0 }
+    func fetchCostSummary(sinceDays: Int) async throws -> CostSummaryPayload {
+        // Default no-op for clients that have not yet wired the cost endpoint.
+        CostSummaryPayload(totalUSD: 0, todayUSD: 0, byModel: [:], byDay: [:], byAgent: [:], records: [])
+    }
 }
 
 public struct HamMenuBarSummary: Equatable, Sendable {
@@ -247,6 +252,18 @@ public final class HamDaemonClient: HamDaemonClientProtocol, @unchecked Sendable
 
     public func markAllInboxRead() async throws -> Int {
         return try await markInboxRead(id: "")
+    }
+
+    public func fetchCostSummary(sinceDays: Int) async throws -> CostSummaryPayload {
+        let response = try await transport.send(.init(
+            command: .costSummary,
+            sinceDays: sinceDays > 0 ? sinceDays : nil,
+            groupBy: "model"
+        ))
+        if let error = response.error {
+            throw HamDaemonClientError.server(error)
+        }
+        return CostSummaryPayload.from(response: response)
     }
 }
 

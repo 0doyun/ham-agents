@@ -25,6 +25,7 @@ public enum DaemonCommand: String, Codable, Sendable {
     case tmuxSessions = "tmux.sessions"
     case inboxList = "inbox.list"
     case inboxMarkRead = "inbox.mark-read"
+    case costSummary = "cost.summary"
     /// Fallback for command strings not yet known to the Swift client.
     case unknown = "__unknown__"
 
@@ -92,6 +93,9 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
     public var typeFilter: String?
     public var unreadOnly: Bool?
     public var inboxItemID: String?
+    public var agentIDFilter: String?
+    public var sinceDays: Int?
+    public var groupBy: String?
 
     public init(
         command: DaemonCommand,
@@ -110,7 +114,10 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         graph: Bool? = nil,
         typeFilter: String? = nil,
         unreadOnly: Bool? = nil,
-        inboxItemID: String? = nil
+        inboxItemID: String? = nil,
+        agentIDFilter: String? = nil,
+        sinceDays: Int? = nil,
+        groupBy: String? = nil
     ) {
         self.command = command
         self.agentID = agentID
@@ -129,6 +136,9 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         self.typeFilter = typeFilter
         self.unreadOnly = unreadOnly
         self.inboxItemID = inboxItemID
+        self.agentIDFilter = agentIDFilter
+        self.sinceDays = sinceDays
+        self.groupBy = groupBy
     }
 
     enum CodingKeys: String, CodingKey {
@@ -149,6 +159,9 @@ public struct DaemonRequest: Codable, Equatable, Sendable {
         case typeFilter = "type_filter"
         case unreadOnly = "unread_only"
         case inboxItemID = "inbox_item_id"
+        case agentIDFilter = "agent_id_filter"
+        case sinceDays = "since_days"
+        case groupBy = "group_by"
     }
 }
 
@@ -465,6 +478,11 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
     public var sessionGraph: SessionGraph?
     public var inboxItems: [InboxItemPayload]?
     public var unreadCount: Int?
+    public var costRecords: [CostRecordPayload]?
+    public var totalUSD: Double?
+    public var byModel: [String: Double]?
+    public var byDay: [String: Double]?
+    public var byAgent: [String: Double]?
     public var error: String?
 
     public init(
@@ -479,6 +497,11 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
         sessionGraph: SessionGraph? = nil,
         inboxItems: [InboxItemPayload]? = nil,
         unreadCount: Int? = nil,
+        costRecords: [CostRecordPayload]? = nil,
+        totalUSD: Double? = nil,
+        byModel: [String: Double]? = nil,
+        byDay: [String: Double]? = nil,
+        byAgent: [String: Double]? = nil,
         error: String? = nil
     ) {
         self.agent = agent
@@ -492,6 +515,11 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
         self.sessionGraph = sessionGraph
         self.inboxItems = inboxItems
         self.unreadCount = unreadCount
+        self.costRecords = costRecords
+        self.totalUSD = totalUSD
+        self.byModel = byModel
+        self.byDay = byDay
+        self.byAgent = byAgent
         self.error = error
     }
 
@@ -507,6 +535,11 @@ public struct DaemonResponse: Codable, Equatable, Sendable {
         case sessionGraph = "session_graph"
         case inboxItems = "inbox_items"
         case unreadCount = "unread_count"
+        case costRecords = "cost_records"
+        case totalUSD = "total_usd"
+        case byModel = "by_model"
+        case byDay = "by_day"
+        case byAgent = "by_agent"
         case error
     }
 }
