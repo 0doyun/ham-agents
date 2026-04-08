@@ -43,6 +43,7 @@ type CostTracker struct {
 	store           store.CostStore
 	registry        *Registry
 	lastSeenOffsets sync.Map // key: file path -> value: int64
+	tickMu          sync.Mutex
 	clock           func() time.Time
 }
 
@@ -68,6 +69,10 @@ func (t *CostTracker) Tick(ctx context.Context) error {
 	if strings.TrimSpace(t.transcriptDir) == "" {
 		return nil
 	}
+	// Serialize concurrent Tick calls so two cost.summary IPC requests
+	// don't both ingest the same records before either finishes writing.
+	t.tickMu.Lock()
+	defer t.tickMu.Unlock()
 	files, err := t.discoverTranscriptFiles()
 	if err != nil {
 		return err
