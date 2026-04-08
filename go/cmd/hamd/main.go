@@ -6,6 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"strings"
@@ -102,6 +104,7 @@ func run(args []string) error {
 		flags := flag.NewFlagSet("serve", flag.ContinueOnError)
 		flags.SetOutput(os.Stderr)
 		once := flags.Bool("once", false, "emit bootstrap status and exit")
+		debugAddr := flags.String("debug-addr", "", "if set, start pprof HTTP server on this address (e.g. localhost:6060)")
 		if err := flags.Parse(args); err != nil {
 			return err
 		}
@@ -127,6 +130,15 @@ func run(args []string) error {
 			removePIDFile(ipcConfig.SocketPath)
 		}()
 
+		if *debugAddr != "" {
+			go func() {
+				log.Printf("hamd: pprof server listening on %s", *debugAddr)
+				if err := http.ListenAndServe(*debugAddr, nil); err != nil {
+					log.Printf("hamd: pprof server failed: %v", err)
+				}
+			}()
+		}
+
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
@@ -138,11 +150,15 @@ func run(args []string) error {
 			cancel()
 		}()
 
+		// Prune stale data at startup then every 24h. cost.jsonl drops records
+		// older than 30 days; artifacts are capped at 100 MB total.
+		pruneStores(ctx, costStore, store.NewFileArtifactStore(artifactPath))
+
 		server := ipc.NewServer(ipcConfig.SocketPath, registry, managedService, settingsService, teamService, inboxMgr, itermAdapter, tmuxAdapter)
 		server.SetCostStore(costStore)
 		if transcriptDir, err := runtime.DefaultClaudeTranscriptDir(); err == nil {
-			tracker := runtime.NewCostTracker(transcriptDir, costStore, registry, runtime.DefaultCostPollInterval)
-			tracker.Start(ctx)
+			tracker := runtime.NewCostTracker(transcriptDir, costStore, registry, 0)
+			server.SetCostTracker(tracker)
 		} else {
 			log.Printf("hamd: cost tracker disabled — transcript dir resolve failed: %v", err)
 		}
@@ -242,6 +258,35 @@ func emitHeartbeatEvents(ctx context.Context, registry *runtime.Registry, settin
 		})
 		heartbeatSentAt[agent.ID] = now
 	}
+}
+
+// pruneStores runs an immediate prune then ticks every 24h until ctx is
+// cancelled. Cost records older than 30 days are deleted; artifacts are
+// capped at 100 MB total.
+func pruneStores(ctx context.Context, costStore *store.FileCostStore, artifactStore *store.FileArtifactStore) {
+	doPrune := func() {
+		cutoff := time.Now().UTC().AddDate(0, 0, -30)
+		if err := costStore.Prune(ctx, cutoff); err != nil {
+			log.Printf("hamd: cost prune: %v", err)
+		}
+		const maxArtifactBytes = 100 * 1024 * 1024 // 100 MB
+		if err := artifactStore.Prune(maxArtifactBytes); err != nil {
+			log.Printf("hamd: artifact prune: %v", err)
+		}
+	}
+	doPrune()
+	go func() {
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				doPrune()
+			}
+		}
+	}()
 }
 
 func heartbeatEligible(agent core.Agent) bool {

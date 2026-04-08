@@ -74,6 +74,9 @@ func NewTmuxAdapter(runner ScriptOutputRunner) TmuxAdapter {
 }
 
 func (a TmuxAdapter) ListSessions() ([]core.AttachableSession, error) {
+	if !processRunning(a.runner, "tmux") {
+		return []core.AttachableSession{}, nil
+	}
 	sessionNames, err := a.sessionNames()
 	if err != nil {
 		return nil, err

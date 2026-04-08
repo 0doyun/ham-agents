@@ -14,9 +14,12 @@ import (
 	"github.com/ham-agents/ham-agents/go/internal/store"
 )
 
-// DefaultCostPollInterval is how often CostTracker re-scans the transcript
-// directory for new usage records when no override is supplied. ADR-3 calls
-// for 5 second polling.
+// DefaultCostPollInterval was the original 5-second polling interval used
+// before P1-4.1 converted CostTracker to on-demand mode. Kept only for
+// backward compatibility with callers that reference it; new code should
+// call Tick directly from the IPC handler instead of starting a goroutine.
+//
+// Deprecated: use Tick() on-demand via the cost.summary IPC handler.
 const DefaultCostPollInterval = 5 * time.Second
 
 // DefaultClaudeTranscriptDir returns the on-disk location where Claude Code
@@ -30,66 +33,31 @@ func DefaultClaudeTranscriptDir() (string, error) {
 	return filepath.Join(homeDir, ".claude", "projects"), nil
 }
 
-// CostTracker polls a Claude Code transcript directory and ingests new
-// assistant-message usage records into a CostStore. Records are deduped on
-// RequestID/MessageID and tagged with the matching agent's ID when the
-// session can be resolved through the Registry; orphaned records keep an
-// empty AgentID per ADR-3.
-//
-// On first Tick the tracker warms `seenIDs` from the existing CostStore so
-// that a daemon restart does not re-ingest historical records.
+// CostTracker scans a Claude Code transcript directory on-demand and ingests
+// new assistant-message usage records into a CostStore. Records are deduped
+// against the existing store contents so duplicates are never persisted.
+// The tracker is invoked via Tick() from the cost.summary IPC handler; there
+// is no background goroutine (converted from 5-second polling in P1-4.1).
 type CostTracker struct {
 	transcriptDir   string
 	store           store.CostStore
 	registry        *Registry
-	pollInterval    time.Duration
 	lastSeenOffsets sync.Map // key: file path -> value: int64
-	seenIDs         sync.Map // key: dedupKey -> value: struct{}
-	warmupOnce      sync.Once
+	tickMu          sync.Mutex
 	clock           func() time.Time
 }
 
-// NewCostTracker constructs a tracker. A zero pollInterval is replaced with
-// DefaultCostPollInterval. The Registry argument may be nil; in that case
-// every record is treated as orphaned.
+// NewCostTracker constructs a tracker. The pollInterval parameter is ignored
+// (kept for backward-compatible call sites); all scanning happens on-demand
+// via Tick(). The Registry argument may be nil; in that case every record is
+// treated as orphaned.
 func NewCostTracker(transcriptDir string, costStore store.CostStore, registry *Registry, pollInterval time.Duration) *CostTracker {
-	if pollInterval <= 0 {
-		pollInterval = DefaultCostPollInterval
-	}
 	return &CostTracker{
 		transcriptDir: transcriptDir,
 		store:         costStore,
 		registry:      registry,
-		pollInterval:  pollInterval,
 		clock:         time.Now,
 	}
-}
-
-// Start launches the polling goroutine. The tracker stops when ctx is
-// cancelled. Start returns immediately.
-func (t *CostTracker) Start(ctx context.Context) {
-	if t == nil || t.store == nil {
-		return
-	}
-	go func() {
-		ticker := time.NewTicker(t.pollInterval)
-		defer ticker.Stop()
-		// Run an initial tick so callers don't have to wait pollInterval
-		// for the first scan.
-		if err := t.Tick(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			log.Printf("cost_tracker: initial tick: %v", err)
-		}
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				if err := t.Tick(ctx); err != nil && !errors.Is(err, context.Canceled) {
-					log.Printf("cost_tracker: tick: %v", err)
-				}
-			}
-		}
-	}()
 }
 
 // Tick performs one scan-and-ingest cycle. Exposed so tests can drive the
@@ -101,18 +69,22 @@ func (t *CostTracker) Tick(ctx context.Context) error {
 	if strings.TrimSpace(t.transcriptDir) == "" {
 		return nil
 	}
-	t.warmupSeenIDsOnce(ctx)
+	// Serialize concurrent Tick calls so two cost.summary IPC requests
+	// don't both ingest the same records before either finishes writing.
+	t.tickMu.Lock()
+	defer t.tickMu.Unlock()
 	files, err := t.discoverTranscriptFiles()
 	if err != nil {
 		return err
 	}
+	seenIDs := t.buildSeenIDs(ctx)
 	for _, file := range files {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
 		}
-		if err := t.ingestFile(ctx, file); err != nil {
+		if err := t.ingestFile(ctx, file, seenIDs); err != nil {
 			log.Printf("cost_tracker: ingest %s: %v", file, err)
 		}
 	}
@@ -155,7 +127,7 @@ func (t *CostTracker) discoverTranscriptFiles() ([]string, error) {
 	return files, nil
 }
 
-func (t *CostTracker) ingestFile(ctx context.Context, path string) error {
+func (t *CostTracker) ingestFile(ctx context.Context, path string, seenIDs map[string]struct{}) error {
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
@@ -165,10 +137,6 @@ func (t *CostTracker) ingestFile(ctx context.Context, path string) error {
 	if info.Size() == previousSize {
 		return nil
 	}
-	// We always reparse the whole file because Claude Code rotates
-	// transcript writes by appending JSON objects, and a partial line at
-	// the end of a previous read would otherwise be lost. Dedup on
-	// RequestID prevents double counting.
 	records, err := store.ParseTranscriptFile(path)
 	if err != nil {
 		return err
@@ -178,9 +146,10 @@ func (t *CostTracker) ingestFile(ctx context.Context, path string) error {
 		if key == "" {
 			continue
 		}
-		if _, dup := t.seenIDs.LoadOrStore(key, struct{}{}); dup {
+		if _, dup := seenIDs[key]; dup {
 			continue
 		}
+		seenIDs[key] = struct{}{}
 		t.assignAgent(ctx, &record)
 		if err := t.store.Append(ctx, record); err != nil {
 			return err
@@ -201,20 +170,21 @@ func (t *CostTracker) assignAgent(ctx context.Context, record *core.CostRecord) 
 	record.AgentID = agent.ID
 }
 
-// warmupSeenIDsOnce loads any existing CostRecords from the store and seeds
-// the in-memory dedup set so a daemon restart does not double-count records
-// that were already persisted. The lookup runs once per tracker instance.
-func (t *CostTracker) warmupSeenIDsOnce(ctx context.Context) {
-	t.warmupOnce.Do(func() {
-		records, err := t.store.Load(ctx, store.CostFilter{})
-		if err != nil {
-			log.Printf("cost_tracker: warmup load failed: %v", err)
-			return
+// buildSeenIDs loads all existing records from the store and returns a
+// dedup set so the current Tick does not re-persist them. The set is
+// ephemeral — it lives only for the duration of the Tick call, which
+// prevents the unbounded growth that plagued the old sync.Map approach.
+func (t *CostTracker) buildSeenIDs(ctx context.Context) map[string]struct{} {
+	seen := make(map[string]struct{})
+	records, err := t.store.Load(ctx, store.CostFilter{})
+	if err != nil {
+		log.Printf("cost_tracker: buildSeenIDs load failed: %v", err)
+		return seen
+	}
+	for _, record := range records {
+		if key := record.DedupKey(); key != "" {
+			seen[key] = struct{}{}
 		}
-		for _, record := range records {
-			if key := record.DedupKey(); key != "" {
-				t.seenIDs.Store(key, struct{}{})
-			}
-		}
-	})
+	}
+	return seen
 }

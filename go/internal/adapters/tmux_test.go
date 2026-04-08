@@ -49,12 +49,16 @@ func TestTmuxAdapterCurrentPaneSessionRefRequiresTMUXEnv(t *testing.T) {
 	}
 }
 
-func TestTmuxAdapterListSessionsReturnsRunnerError(t *testing.T) {
+func TestTmuxAdapterListSessionsReturnsEmptyWhenProcessNotRunning(t *testing.T) {
 	t.Parallel()
 
 	adapter := NewTmuxAdapter(recordingOutputRunner{err: errors.New("boom")})
-	if _, err := adapter.ListSessions(); err == nil {
-		t.Fatal("expected list sessions error")
+	sessions, err := adapter.ListSessions()
+	if err != nil {
+		t.Fatalf("expected nil error when process not running, got %v", err)
+	}
+	if len(sessions) != 0 {
+		t.Fatalf("expected 0 sessions, got %d", len(sessions))
 	}
 }
 

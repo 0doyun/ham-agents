@@ -31,9 +31,17 @@ type Server struct {
 	itermSessionLister SessionLister
 	tmuxSessionLister  SessionLister
 	costStore          store.CostStore
+	costTracker        costTickable
 
 	listener   net.Listener
 	cancelFunc context.CancelFunc
+}
+
+// costTickable is the subset of CostTracker that the server needs. Using an
+// interface so tests can inject a stub without depending on the full runtime
+// package.
+type costTickable interface {
+	Tick(ctx context.Context) error
 }
 
 // SetCostStore wires a CostStore so the server can serve CommandCostSummary
@@ -41,6 +49,12 @@ type Server struct {
 // response. Must be called before Serve.
 func (s *Server) SetCostStore(costStore store.CostStore) {
 	s.costStore = costStore
+}
+
+// SetCostTracker wires a CostTracker so the cost.summary handler can
+// trigger an on-demand transcript scan before loading records. Optional.
+func (s *Server) SetCostTracker(tracker costTickable) {
+	s.costTracker = tracker
 }
 
 func NewServer(socketPath string, registry *hamruntime.Registry, managed *hamruntime.ManagedService, settings *hamruntime.SettingsService, teams *hamruntime.TeamService, inbox *hamruntime.InboxManager, itermSessionLister SessionLister, tmuxSessionLister SessionLister) *Server {
@@ -778,6 +792,15 @@ var errNoAgent = fmt.Errorf("no matching agent")
 //     CostRecords is omitted so a long-running daemon doesn't ship megabytes
 //     of history every poll.
 func (s *Server) handleCostSummary(ctx context.Context, request Request) (Response, error) {
+	// On-demand scan: parse any new transcript records before reading the
+	// store. This replaces the background 5-second polling goroutine.
+	if s.costTracker != nil {
+		if err := s.costTracker.Tick(ctx); err != nil {
+			// Log but do not fail the request — stale data is better
+			// than no data when the transcript dir is unreachable.
+			fmt.Fprintf(os.Stderr, "cost.summary: tick failed: %v\n", err)
+		}
+	}
 	if s.costStore == nil {
 		return Response{
 			CostRecords: []core.CostRecord{},

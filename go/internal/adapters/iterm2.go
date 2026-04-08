@@ -64,6 +64,9 @@ func (a Iterm2Adapter) Focus(request FocusRequest) (FocusResult, error) {
 }
 
 func (a Iterm2Adapter) ListSessions() ([]core.AttachableSession, error) {
+	if !processRunning(a.runner, "iTerm2") {
+		return []core.AttachableSession{}, nil
+	}
 	payload, err := a.runner.Output("osascript", "-e", listSessionsAppleScript())
 	if err != nil {
 		return nil, fmt.Errorf("list iTerm2 sessions: %w", err)
@@ -164,11 +167,15 @@ func enrichAttachableSessions(sessions []core.AttachableSession, runner ScriptOu
 		runner = ExecOutputRunner{}
 	}
 
+	// Single ps -ax call for all sessions (fixes AP-3 from the hamd
+	// polling audit: N sessions no longer means N fork+exec).
+	ttyMap := buildTTYProcessMap(runner)
+
 	for index, session := range sessions {
 		if strings.TrimSpace(session.TTY) == "" {
 			continue
 		}
-		activity, pid, command := sessionActivityForTTY(runner, session.TTY)
+		activity, pid, command := sessionActivityFromMap(ttyMap, session.TTY)
 		if activity != "" {
 			sessions[index].Activity = activity
 		}
@@ -183,37 +190,48 @@ func enrichAttachableSessions(sessions []core.AttachableSession, runner ScriptOu
 	return sessions
 }
 
-func sessionActivityForTTY(runner ScriptOutputRunner, tty string) (activity string, pid int, command string) {
+// buildTTYProcessMap runs ps -ax once and returns a lookup from normalized
+// TTY (e.g. "ttys001") to the process samples on that TTY.
+func buildTTYProcessMap(runner ScriptOutputRunner) map[string][]sessionProcessSample {
 	output, err := runner.Output("ps", "-ax", "-o", "tty=,pid=,command=")
 	if err != nil {
-		return "", 0, ""
+		return nil
 	}
-
-	normalizedTTY := strings.TrimPrefix(strings.TrimSpace(tty), "/dev/")
-	var candidates []sessionProcessSample
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	for _, line := range lines {
+	m := make(map[string][]sessionProcessSample)
+	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
 		fields := strings.Fields(strings.TrimSpace(line))
-		if len(fields) < 3 || fields[0] != normalizedTTY {
+		if len(fields) < 3 {
 			continue
 		}
-		parsedPID, err := strconv.Atoi(fields[1])
+		tty := fields[0]
+		pid, err := strconv.Atoi(fields[1])
 		if err != nil {
 			continue
 		}
-		command = strings.Join(fields[2:], " ")
-		candidates = append(candidates, sessionProcessSample{
-			pid:     parsedPID,
-			command: command,
-		})
+		cmd := strings.Join(fields[2:], " ")
+		m[tty] = append(m[tty], sessionProcessSample{pid: pid, command: cmd})
 	}
+	return m
+}
 
+// sessionActivityFromMap looks up the given TTY in the pre-built map
+// instead of forking ps per session.
+func sessionActivityFromMap(ttyMap map[string][]sessionProcessSample, tty string) (activity string, pid int, command string) {
+	normalizedTTY := strings.TrimPrefix(strings.TrimSpace(tty), "/dev/")
+	candidates := ttyMap[normalizedTTY]
 	best := bestSessionProcess(candidates)
 	if best.pid == 0 {
 		return "", 0, ""
 	}
-
 	return activityLabel(best.command), best.pid, best.command
+}
+
+// processRunning checks whether a process with the given name is currently
+// running. Used as a fast early-exit so we avoid expensive osascript / tmux
+// calls when the target application is not even open.
+func processRunning(runner ScriptOutputRunner, name string) bool {
+	_, err := runner.Output("pgrep", "-q", name)
+	return err == nil
 }
 
 func workingDirectoryForPID(runner ScriptOutputRunner, pid string) string {

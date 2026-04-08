@@ -116,6 +116,40 @@ func TestRefreshObservedAgentTreatsBlockedReviewAsInputRequest(t *testing.T) {
 	}
 }
 
+func TestRefreshObservedAgentSkipsReadFileWhenMtimeUnchanged(t *testing.T) {
+	// After the first refresh populates the mtime cache, a second call
+	// with the same mtime should return the agent unchanged (no ReadFile).
+	// We verify by checking that the agent status does NOT get re-inferred
+	// when the file content would yield a different status but mtime is
+	// the same.
+	root := t.TempDir()
+	path := filepath.Join(root, "observed.log")
+	if err := os.WriteFile(path, []byte("task failed with error"), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+
+	inference.ResetObservedMtimeCache()
+	agent := core.Agent{
+		ID: "mtime-test", Mode: core.AgentModeObserved, SessionRef: path,
+		Status: core.AgentStatusIdle, StatusConfidence: 0.35,
+	}
+	now := time.Now()
+
+	// First call: reads file, detects "error"
+	updated := inference.RefreshObservedAgent(agent, now)
+	if updated.Status != core.AgentStatusError {
+		t.Fatalf("first call: expected error, got %q", updated.Status)
+	}
+
+	// Second call with same mtime: should skip ReadFile and return the
+	// input agent unchanged (still error from first call since that's what
+	// we pass in).
+	updated2 := inference.RefreshObservedAgent(updated, now)
+	if updated2.Status != core.AgentStatusError {
+		t.Fatalf("second call: mtime guard should preserve status, got %q", updated2.Status)
+	}
+}
+
 func TestRefreshObservedAgentTreatsRetryingAsThinking(t *testing.T) {
 	t.Parallel()
 

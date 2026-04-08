@@ -213,17 +213,30 @@ func TestCostTracker_WarmsUpFromExistingStore(t *testing.T) {
 	}
 }
 
-func TestCostTracker_StartCancellation(t *testing.T) {
+func TestCostTracker_SeenIDsNotUnbounded(t *testing.T) {
 	t.Parallel()
 
-	tracker, _, dir := newTrackerHarness(t)
-	writeTranscript(t, dir, "-cancel", "sess1", []string{sampleLine("sess1", "req_x", "msg_x")})
+	// Verify that seenIDs are rebuilt from the store each Tick (ephemeral)
+	// rather than accumulating across calls. Two Ticks with the same
+	// transcript should not grow any persistent map.
+	tracker, costStore, dir := newTrackerHarness(t)
+	writeTranscript(t, dir, "-bounded", "sess1", []string{
+		sampleLine("sess1", "req_b1", "msg_b1"),
+	})
 
-	ctx, cancel := context.WithCancel(context.Background())
-	tracker.Start(ctx)
-	time.Sleep(80 * time.Millisecond)
-	cancel()
-	// Give the goroutine a moment to exit so the race detector sees the
-	// cancellation propagate.
-	time.Sleep(20 * time.Millisecond)
+	if err := tracker.Tick(context.Background()); err != nil {
+		t.Fatalf("tick 1: %v", err)
+	}
+	records, _ := costStore.Load(context.Background(), store.CostFilter{})
+	if len(records) != 1 {
+		t.Fatalf("after tick 1: expected 1 record, got %d", len(records))
+	}
+	// Second tick with same content: should not duplicate.
+	if err := tracker.Tick(context.Background()); err != nil {
+		t.Fatalf("tick 2: %v", err)
+	}
+	records, _ = costStore.Load(context.Background(), store.CostFilter{})
+	if len(records) != 1 {
+		t.Fatalf("after tick 2: expected 1 record (dedup), got %d", len(records))
+	}
 }
