@@ -178,16 +178,27 @@ P1-4 는 Phase 1 에 포함하며, 예상 커밋 수는 `docs/spec/implementatio
 
 ## Pricing Table (Reference, 2026-04-08 기준)
 
-> ⚠️ 이 표는 ADR 작성 시점 스냅샷. 실제 `pricing.go` 에 박을 값은 Anthropic 공식 가격표 (`https://www.anthropic.com/pricing` 또는 API 문서) 와 매칭하여 P1-4 commit 1 에서 확정한다. 가격이 변경되면 PR 로 업데이트.
+> ✅ P1-4 commit `feat(cost): core CostRecord types and Anthropic pricing table` 시점에 [Anthropic 공식 pricing 페이지](https://platform.claude.com/docs/en/docs/about-claude/pricing) 에서 fetch 완료. 실제 코드는 `go/internal/core/pricing.go` 의 `modelPriceTable` 에 박혀 있으며, 가격 변경 시 본 표 + `pricing.go` 양쪽을 업데이트해야 한다.
 
 | 모델 ID | input ($/1M) | cache write 5m ($/1M) | cache write 1h ($/1M) | cache read ($/1M) | output ($/1M) |
 |---|---|---|---|---|---|
-| claude-opus-4-6 | TBD | TBD | TBD | TBD | TBD |
-| claude-sonnet-4-6 | TBD | TBD | TBD | TBD | TBD |
-| claude-haiku-4-5 | TBD | TBD | TBD | TBD | TBD |
-| (이전 세대 fallback) | … | … | … | … | … |
+| claude-opus-4-6 | 5.00 | 6.25 | 10.00 | 0.50 | 25.00 |
+| claude-opus-4-5 | 5.00 | 6.25 | 10.00 | 0.50 | 25.00 |
+| claude-opus-4-1 | 15.00 | 18.75 | 30.00 | 1.50 | 75.00 |
+| claude-opus-4 | 15.00 | 18.75 | 30.00 | 1.50 | 75.00 |
+| claude-sonnet-4-6 | 3.00 | 3.75 | 6.00 | 0.30 | 15.00 |
+| claude-sonnet-4-5 | 3.00 | 3.75 | 6.00 | 0.30 | 15.00 |
+| claude-sonnet-4 | 3.00 | 3.75 | 6.00 | 0.30 | 15.00 |
+| claude-3-7-sonnet (deprecated) | 3.00 | 3.75 | 6.00 | 0.30 | 15.00 |
+| claude-3-5-sonnet | 3.00 | 3.75 | 6.00 | 0.30 | 15.00 |
+| claude-haiku-4-5 | 1.00 | 1.25 | 2.00 | 0.10 | 5.00 |
+| claude-3-5-haiku | 0.80 | 1.00 | 1.60 | 0.08 | 4.00 |
+| claude-3-haiku | 0.25 | 0.30 | 0.50 | 0.03 | 1.25 |
 
-P1-4 commit 1 작성 시 이 표를 채우고 단위 테스트로 sanity check (예: opus > sonnet > haiku 순).
+Sanity check (`go/internal/core/pricing_test.go`):
+- `TestPricing_OpusCostlierThanSonnetCostlierThanHaiku` 에서 input/output 모두 opus > sonnet > haiku 순서 검증
+- `TestLookupModelPrice_StripsDatedSuffix` 에서 `claude-opus-4-6-20260101` 같은 dated suffix 도 base 모델로 fallback
+- `TestLookupModelPrice_UnknownReturnsFalse` 에서 미지 모델은 `(ModelPrice{}, false)` 반환 → CalculateUSD 호출자가 0 USD 로 처리
 
 ---
 
