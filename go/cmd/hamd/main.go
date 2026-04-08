@@ -6,6 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"strings"
@@ -102,6 +104,7 @@ func run(args []string) error {
 		flags := flag.NewFlagSet("serve", flag.ContinueOnError)
 		flags.SetOutput(os.Stderr)
 		once := flags.Bool("once", false, "emit bootstrap status and exit")
+		debugAddr := flags.String("debug-addr", "", "if set, start pprof HTTP server on this address (e.g. localhost:6060)")
 		if err := flags.Parse(args); err != nil {
 			return err
 		}
@@ -126,6 +129,15 @@ func run(args []string) error {
 			pidFile.Close()
 			removePIDFile(ipcConfig.SocketPath)
 		}()
+
+		if *debugAddr != "" {
+			go func() {
+				log.Printf("hamd: pprof server listening on %s", *debugAddr)
+				if err := http.ListenAndServe(*debugAddr, nil); err != nil {
+					log.Printf("hamd: pprof server failed: %v", err)
+				}
+			}()
+		}
 
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
