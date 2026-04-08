@@ -21,14 +21,20 @@ import (
 	"github.com/ham-agents/ham-agents/go/internal/runtime"
 )
 
-// runCost handles `ham cost`. It parses options, asks the daemon for the cost
-// summary, then renders either the structured table or JSON.
+// runCost handles `ham cost`. It parses options, asks the daemon for the
+// full cost record set scoped by agent + days, then aggregates and renders
+// client-side. Aggregation lives in the CLI (not the daemon) so the renderer
+// can show per-model token columns that the rollup-only IPC payload would
+// not carry.
 func runCost(ctx context.Context, client *ipc.Client, args []string) error {
 	options, err := parseCostInput(args)
 	if err != nil {
 		return err
 	}
-	response, err := client.CostSummary(ctx, options.agentFilter, options.sinceDays, options.groupBy)
+	// Send an empty groupBy so the daemon returns the raw record list along
+	// with the rollup maps. The renderer uses the records to compute token
+	// columns and the maps to validate USD totals.
+	response, err := client.CostSummary(ctx, options.agentFilter, options.sinceDays, "")
 	if err != nil {
 		return err
 	}

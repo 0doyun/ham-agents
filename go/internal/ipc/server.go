@@ -771,6 +771,12 @@ var errNoAgent = fmt.Errorf("no matching agent")
 // builds the response payload. When no store is wired (e.g. in tests) it
 // returns an empty response so callers can still hit the daemon without
 // crashing.
+//
+// GroupBy controls payload shape so the wire stays bounded:
+//   - "" (empty)         — return raw records plus all rollup maps
+//   - "model"/"day"/"agent" — return only the matching rollup map and TotalUSD;
+//     CostRecords is omitted so a long-running daemon doesn't ship megabytes
+//     of history every poll.
 func (s *Server) handleCostSummary(ctx context.Context, request Request) (Response, error) {
 	if s.costStore == nil {
 		return Response{
@@ -794,26 +800,45 @@ func (s *Server) handleCostSummary(ctx context.Context, request Request) (Respon
 		records = []core.CostRecord{}
 	}
 
-	response := Response{
-		CostRecords: records,
-		ByModel:     map[string]float64{},
-		ByDay:       map[string]float64{},
-		ByAgent:     map[string]float64{},
+	groupBy := strings.TrimSpace(request.GroupBy)
+	response := Response{}
+
+	wantModel := groupBy == "" || groupBy == CostGroupByModel
+	wantDay := groupBy == "" || groupBy == CostGroupByDay
+	wantAgent := groupBy == "" || groupBy == CostGroupByAgent
+
+	if wantModel {
+		response.ByModel = map[string]float64{}
 	}
+	if wantDay {
+		response.ByDay = map[string]float64{}
+	}
+	if wantAgent {
+		response.ByAgent = map[string]float64{}
+	}
+
 	for _, record := range records {
 		response.TotalUSD += record.EstimatedUSD
-		if record.Model != "" {
+		if wantModel && record.Model != "" {
 			response.ByModel[record.Model] += record.EstimatedUSD
 		}
-		if !record.RecordedAt.IsZero() {
+		if wantDay && !record.RecordedAt.IsZero() {
 			day := record.RecordedAt.UTC().Format("2006-01-02")
 			response.ByDay[day] += record.EstimatedUSD
 		}
-		if record.AgentID != "" {
-			response.ByAgent[record.AgentID] += record.EstimatedUSD
-		} else {
-			response.ByAgent["(orphan)"] += record.EstimatedUSD
+		if wantAgent {
+			if record.AgentID != "" {
+				response.ByAgent[record.AgentID] += record.EstimatedUSD
+			} else {
+				response.ByAgent["(orphan)"] += record.EstimatedUSD
+			}
 		}
+	}
+
+	if groupBy == "" {
+		// Raw view: include the full record list so the CLI can render
+		// per-model token columns. Bounded by SinceDays/AgentIDFilter.
+		response.CostRecords = records
 	}
 	return response, nil
 }

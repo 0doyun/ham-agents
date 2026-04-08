@@ -178,6 +178,43 @@ func TestCostTracker_AssignsAgentIDFromSession(t *testing.T) {
 	_ = core.CostRecord{}
 }
 
+func TestCostTracker_WarmsUpFromExistingStore(t *testing.T) {
+	t.Parallel()
+
+	// Simulate a daemon restart: pre-populate the cost store with a record,
+	// then start a fresh tracker against a transcript file containing the
+	// same record. The tracker must skip the duplicate.
+	transcriptDir := t.TempDir()
+	costPath := filepath.Join(t.TempDir(), "cost.jsonl")
+	costStore := store.NewFileCostStore(costPath)
+
+	preexisting := core.CostRecord{
+		Model:        "claude-opus-4-6",
+		InputTokens:  1,
+		OutputTokens: 2,
+		EstimatedUSD: 0.001,
+		RecordedAt:   time.Now().UTC(),
+		RequestID:    "req_warm",
+		Source:       "assistant",
+	}
+	if err := costStore.Append(context.Background(), preexisting); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	writeTranscript(t, transcriptDir, "-warm", "sess-warm", []string{
+		sampleLine("sess-warm", "req_warm", "msg_warm"),
+	})
+
+	tracker := runtime.NewCostTracker(transcriptDir, costStore, nil, 50*time.Millisecond)
+	if err := tracker.Tick(context.Background()); err != nil {
+		t.Fatalf("tick: %v", err)
+	}
+	records, _ := costStore.Load(context.Background(), store.CostFilter{})
+	if len(records) != 1 {
+		t.Fatalf("expected dedup against pre-existing store, got %d records", len(records))
+	}
+}
+
 func TestCostTracker_StartCancellation(t *testing.T) {
 	t.Parallel()
 

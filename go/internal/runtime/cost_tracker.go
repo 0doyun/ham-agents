@@ -35,6 +35,9 @@ func DefaultClaudeTranscriptDir() (string, error) {
 // RequestID/MessageID and tagged with the matching agent's ID when the
 // session can be resolved through the Registry; orphaned records keep an
 // empty AgentID per ADR-3.
+//
+// On first Tick the tracker warms `seenIDs` from the existing CostStore so
+// that a daemon restart does not re-ingest historical records.
 type CostTracker struct {
 	transcriptDir   string
 	store           store.CostStore
@@ -42,6 +45,7 @@ type CostTracker struct {
 	pollInterval    time.Duration
 	lastSeenOffsets sync.Map // key: file path -> value: int64
 	seenIDs         sync.Map // key: dedupKey -> value: struct{}
+	warmupOnce      sync.Once
 	clock           func() time.Time
 }
 
@@ -97,6 +101,7 @@ func (t *CostTracker) Tick(ctx context.Context) error {
 	if strings.TrimSpace(t.transcriptDir) == "" {
 		return nil
 	}
+	t.warmupSeenIDsOnce(ctx)
 	files, err := t.discoverTranscriptFiles()
 	if err != nil {
 		return err
@@ -194,4 +199,22 @@ func (t *CostTracker) assignAgent(ctx context.Context, record *core.CostRecord) 
 		return
 	}
 	record.AgentID = agent.ID
+}
+
+// warmupSeenIDsOnce loads any existing CostRecords from the store and seeds
+// the in-memory dedup set so a daemon restart does not double-count records
+// that were already persisted. The lookup runs once per tracker instance.
+func (t *CostTracker) warmupSeenIDsOnce(ctx context.Context) {
+	t.warmupOnce.Do(func() {
+		records, err := t.store.Load(ctx, store.CostFilter{})
+		if err != nil {
+			log.Printf("cost_tracker: warmup load failed: %v", err)
+			return
+		}
+		for _, record := range records {
+			if key := record.DedupKey(); key != "" {
+				t.seenIDs.Store(key, struct{}{})
+			}
+		}
+	})
 }
