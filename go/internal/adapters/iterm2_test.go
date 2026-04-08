@@ -48,12 +48,19 @@ func TestIterm2AdapterListsSessions(t *testing.T) {
 	}
 }
 
-func TestIterm2AdapterListSessionsReturnsRunnerError(t *testing.T) {
+func TestIterm2AdapterListSessionsReturnsEmptyWhenProcessNotRunning(t *testing.T) {
 	t.Parallel()
 
+	// When all runner calls fail (simulating iTerm2 not installed), the
+	// processRunning guard returns false and ListSessions returns an empty
+	// slice without error — no fork+exec beyond the initial pgrep.
 	adapter := NewIterm2Adapter(recordingOutputRunner{err: errors.New("boom")})
-	if _, err := adapter.ListSessions(); err == nil {
-		t.Fatal("expected list sessions error")
+	sessions, err := adapter.ListSessions()
+	if err != nil {
+		t.Fatalf("expected nil error when process not running, got %v", err)
+	}
+	if len(sessions) != 0 {
+		t.Fatalf("expected 0 sessions, got %d", len(sessions))
 	}
 }
 
@@ -87,11 +94,12 @@ func TestIterm2AdapterPrefersForegroundToolOverShellNoise(t *testing.T) {
 func TestSessionActivityFallsBackToShellLabelWhenOnlyShellPresent(t *testing.T) {
 	t.Parallel()
 
-	activity, pid, command := sessionActivityForTTY(recordingOutputRunner{
+	ttyMap := buildTTYProcessMap(recordingOutputRunner{
 		outputs: map[string][]byte{
 			"ps|-ax|-o|tty=,pid=,command=": []byte("ttys001 1200 /bin/zsh -l\n"),
 		},
-	}, "ttys001")
+	})
+	activity, pid, command := sessionActivityFromMap(ttyMap, "ttys001")
 
 	if pid != 1200 {
 		t.Fatalf("expected shell pid 1200, got %d", pid)
