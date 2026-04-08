@@ -5,10 +5,23 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
 )
+
+// observedMtimeCache tracks the last-seen mtime for each observed agent
+// source file. When the mtime has not changed since the previous refresh
+// cycle, RefreshObservedAgent skips the os.ReadFile and returns the agent
+// as-is, eliminating the full-file-read-per-tick overhead flagged in AP-1
+// of the 2026-04-08 hamd polling audit.
+//
+// Uses sync.Map for safe concurrent access from parallel test goroutines.
+var observedMtimeCache sync.Map // key: string (path) -> value: time.Time
+
+// ResetObservedMtimeCache clears the cache (used by tests).
+func ResetObservedMtimeCache() { observedMtimeCache = sync.Map{} }
 
 func RefreshObservedAgent(agent core.Agent, now time.Time) core.Agent {
 	path := strings.TrimSpace(agent.SessionRef)
@@ -30,6 +43,17 @@ func RefreshObservedAgent(agent core.Agent, now time.Time) core.Agent {
 		agent.LastEventAt = now.UTC()
 		return agent
 	}
+
+	// Mtime guard: if the file has not been modified since the last
+	// refresh, skip the expensive ReadFile + parse and keep the agent
+	// state from the previous cycle.
+	mtime := info.ModTime().UTC()
+	if prev, ok := observedMtimeCache.Load(path); ok {
+		if prevTime, _ := prev.(time.Time); mtime.Equal(prevTime) {
+			return agent
+		}
+	}
+	observedMtimeCache.Store(path, mtime)
 
 	payload, err := os.ReadFile(path)
 	if err != nil {
