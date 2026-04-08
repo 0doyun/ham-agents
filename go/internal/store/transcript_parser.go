@@ -102,9 +102,10 @@ func ParseTranscriptLine(line []byte) (*core.CostRecord, bool, error) {
 		record.CacheCreate5mTokens = usage.CacheCreation.Ephemeral5mInputTokens
 		record.CacheCreate1hTokens = usage.CacheCreation.Ephemeral1hInputTokens
 	} else if usage.CacheCreationInputTokens > 0 {
-		// Unknown split — assume the cheaper 5m bucket so we don't
-		// over-bill. Logged so callers know about the schema gap.
+		// Unknown split — bucket into the cheaper 5m tier so we don't
+		// over-bill, and log so operators notice the schema gap.
 		record.CacheCreate5mTokens = usage.CacheCreationInputTokens
+		log.Printf("transcript_parser: %s usage block missing cache_creation split — bucketing %d tokens as 5m", raw.UUID, usage.CacheCreationInputTokens)
 	}
 
 	if usage.ServerToolUse != nil {

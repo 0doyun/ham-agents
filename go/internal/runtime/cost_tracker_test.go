@@ -174,8 +174,6 @@ func TestCostTracker_AssignsAgentIDFromSession(t *testing.T) {
 	if records[0].AgentID != agent.ID {
 		t.Fatalf("expected AgentID %q, got %q", agent.ID, records[0].AgentID)
 	}
-	// Sanity: ensure CostRecord type stays compatible.
-	_ = core.CostRecord{}
 }
 
 func TestCostTracker_WarmsUpFromExistingStore(t *testing.T) {
