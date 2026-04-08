@@ -529,6 +529,68 @@ func renderInboxItems(out io.Writer, items []core.InboxItem) error {
 	return nil
 }
 
+// renderCostSummary writes the cost summary response in either text or JSON.
+// The text format prints one row per group key with input/output token totals
+// and the rolled-up USD value, followed by a Total USD line so the eye can
+// verify the rollup matches the per-row sum.
+func renderCostSummary(out io.Writer, response costSummaryView, asJSON bool) error {
+	if asJSON {
+		return writeJSONTo(out, response)
+	}
+
+	switch response.GroupBy {
+	case "model":
+		if _, err := fmt.Fprintln(out, "MODEL\tINPUT\tCACHE_READ\tOUTPUT\tUSD"); err != nil {
+			return err
+		}
+	case "day":
+		if _, err := fmt.Fprintln(out, "DAY\tRECORDS\tUSD"); err != nil {
+			return err
+		}
+	case "agent":
+		if _, err := fmt.Fprintln(out, "AGENT\tRECORDS\tUSD"); err != nil {
+			return err
+		}
+	}
+
+	for _, row := range response.Rows {
+		switch response.GroupBy {
+		case "model":
+			if _, err := fmt.Fprintf(out, "%s\t%d\t%d\t%d\t$%.4f\n", row.Key, row.InputTokens, row.CacheReadTokens, row.OutputTokens, row.USD); err != nil {
+				return err
+			}
+		default:
+			if _, err := fmt.Fprintf(out, "%s\t%d\t$%.4f\n", row.Key, row.RecordCount, row.USD); err != nil {
+				return err
+			}
+		}
+	}
+	if _, err := fmt.Fprintf(out, "TOTAL\t$%.4f (%d records)\n", response.TotalUSD, response.RecordCount); err != nil {
+		return err
+	}
+	return nil
+}
+
+// costSummaryView is the renderer-friendly projection of an ipc.Response with
+// the cost.summary fields populated. It is decoupled from ipc.Response so the
+// CLI can hold the rendering logic without dragging in the IPC package in
+// every test.
+type costSummaryView struct {
+	GroupBy     string         `json:"group_by"`
+	TotalUSD    float64        `json:"total_usd"`
+	RecordCount int            `json:"record_count"`
+	Rows        []costRow      `json:"rows"`
+}
+
+type costRow struct {
+	Key             string  `json:"key"`
+	USD             float64 `json:"usd"`
+	RecordCount     int     `json:"record_count,omitempty"`
+	InputTokens     int64   `json:"input_tokens,omitempty"`
+	CacheReadTokens int64   `json:"cache_read_tokens,omitempty"`
+	OutputTokens    int64   `json:"output_tokens,omitempty"`
+}
+
 // buildFilteredGraph builds a SessionGraph from a filtered subset of agents.
 func buildFilteredGraph(agents []core.Agent, generatedAt time.Time) core.SessionGraph {
 	graph := core.BuildSessionGraph(agents)

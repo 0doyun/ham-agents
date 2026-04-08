@@ -74,6 +74,15 @@ const (
 
 	CommandInboxList     Command = "inbox.list"
 	CommandInboxMarkRead Command = "inbox.mark-read"
+
+	CommandCostSummary Command = "cost.summary"
+)
+
+// CostGroupBy enumerates the supported grouping axes for CommandCostSummary.
+const (
+	CostGroupByModel = "model"
+	CostGroupByDay   = "day"
+	CostGroupByAgent = "agent"
 )
 
 type Request struct {
@@ -120,6 +129,9 @@ type Request struct {
 	TypeFilter       string         `json:"type_filter,omitempty"`
 	UnreadOnly       bool           `json:"unread_only,omitempty"`
 	InboxItemID      string         `json:"inbox_item_id,omitempty"`
+	AgentIDFilter    string         `json:"agent_id_filter,omitempty"`
+	SinceDays        int            `json:"since_days,omitempty"`
+	GroupBy          string         `json:"group_by,omitempty"`
 }
 
 type Response struct {
@@ -135,6 +147,11 @@ type Response struct {
 	SessionGraph       *core.SessionGraph       `json:"session_graph,omitempty"`
 	InboxItems         []core.InboxItem         `json:"inbox_items,omitempty"`
 	UnreadCount        int                      `json:"unread_count,omitempty"`
+	CostRecords        []core.CostRecord        `json:"cost_records,omitempty"`
+	TotalUSD           float64                  `json:"total_usd,omitempty"`
+	ByModel            map[string]float64       `json:"by_model,omitempty"`
+	ByDay              map[string]float64       `json:"by_day,omitempty"`
+	ByAgent            map[string]float64       `json:"by_agent,omitempty"`
 	Error              string                   `json:"error,omitempty"`
 }
 
@@ -611,6 +628,19 @@ func (c *Client) InboxList(ctx context.Context, typeFilter string, unreadOnly bo
 		return nil, 0, err
 	}
 	return response.InboxItems, response.UnreadCount, nil
+}
+
+// CostSummary requests aggregated cost data from the daemon. agentIDFilter
+// scopes results to a single agent (empty = all). sinceDays bounds the time
+// window (0 = no lower bound). groupBy selects the rollup axis ("model",
+// "day", "agent"); an empty string returns the raw record list.
+func (c *Client) CostSummary(ctx context.Context, agentIDFilter string, sinceDays int, groupBy string) (Response, error) {
+	return c.request(ctx, Request{
+		Command:       CommandCostSummary,
+		AgentIDFilter: agentIDFilter,
+		SinceDays:     sinceDays,
+		GroupBy:       groupBy,
+	})
 }
 
 func (c *Client) InboxMarkRead(ctx context.Context, id string) (int, error) {

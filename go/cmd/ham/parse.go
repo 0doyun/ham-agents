@@ -425,6 +425,43 @@ func parseInboxOptions(args []string) (inboxOptions, error) {
 	return opts, nil
 }
 
+// costOptions captures the parsed flags accepted by `ham cost`.
+type costOptions struct {
+	agentFilter string
+	sinceDays   int
+	groupBy     string
+	asJSON      bool
+}
+
+func parseCostInput(args []string) (costOptions, error) {
+	flags := flag.NewFlagSet("cost", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	agentFilter := flags.String("agent", "", "filter by agent id")
+	days := flags.Int("days", 0, "include records from the last N days (0 = all)")
+	groupBy := flags.String("by", "model", "group by: model, day, or agent")
+	asJSON := flags.Bool("json", false, "emit JSON")
+	if err := flags.Parse(args); err != nil {
+		return costOptions{}, err
+	}
+	if len(flags.Args()) > 0 {
+		return costOptions{}, fmt.Errorf("unexpected argument %q", flags.Args()[0])
+	}
+	if *days < 0 {
+		return costOptions{}, fmt.Errorf("--days must be >= 0")
+	}
+	switch strings.TrimSpace(*groupBy) {
+	case "model", "day", "agent":
+	default:
+		return costOptions{}, fmt.Errorf("--by must be one of model|day|agent, got %q", *groupBy)
+	}
+	return costOptions{
+		agentFilter: strings.TrimSpace(*agentFilter),
+		sinceDays:   *days,
+		groupBy:     strings.TrimSpace(*groupBy),
+		asJSON:      *asJSON,
+	}, nil
+}
+
 type agentQueryOptions struct {
 	asJSON       bool
 	teamRef      string

@@ -14,6 +14,7 @@ import (
 
 	"github.com/ham-agents/ham-agents/go/internal/core"
 	hamruntime "github.com/ham-agents/ham-agents/go/internal/runtime"
+	"github.com/ham-agents/ham-agents/go/internal/store"
 )
 
 type SessionLister interface {
@@ -29,9 +30,17 @@ type Server struct {
 	inbox              *hamruntime.InboxManager
 	itermSessionLister SessionLister
 	tmuxSessionLister  SessionLister
+	costStore          store.CostStore
 
 	listener   net.Listener
 	cancelFunc context.CancelFunc
+}
+
+// SetCostStore wires a CostStore so the server can serve CommandCostSummary
+// requests. Optional — when nil the cost.summary command returns an empty
+// response. Must be called before Serve.
+func (s *Server) SetCostStore(costStore store.CostStore) {
+	s.costStore = costStore
 }
 
 func NewServer(socketPath string, registry *hamruntime.Registry, managed *hamruntime.ManagedService, settings *hamruntime.SettingsService, teams *hamruntime.TeamService, inbox *hamruntime.InboxManager, itermSessionLister SessionLister, tmuxSessionLister SessionLister) *Server {
@@ -647,6 +656,8 @@ func (s *Server) dispatch(ctx context.Context, request Request) (Response, error
 			unread = s.inbox.UnreadCount()
 		}
 		return Response{UnreadCount: unread}, nil
+	case CommandCostSummary:
+		return s.handleCostSummary(ctx, request)
 	case CommandShutdown:
 		if s.managed != nil {
 			s.managed.StopAll(ctx)
@@ -755,3 +766,79 @@ func autoDisplayName(projectPath string, registry *hamruntime.Registry, ctx cont
 // errNoAgent is returned when a hook fires but no matching agent exists.
 // The server treats this as a no-op rather than an error.
 var errNoAgent = fmt.Errorf("no matching agent")
+
+// handleCostSummary loads cost records from the configured CostStore and
+// builds the response payload. When no store is wired (e.g. in tests) it
+// returns an empty response so callers can still hit the daemon without
+// crashing.
+//
+// GroupBy controls payload shape so the wire stays bounded:
+//   - "" (empty)         — return raw records plus all rollup maps
+//   - "model"/"day"/"agent" — return only the matching rollup map and TotalUSD;
+//     CostRecords is omitted so a long-running daemon doesn't ship megabytes
+//     of history every poll.
+func (s *Server) handleCostSummary(ctx context.Context, request Request) (Response, error) {
+	if s.costStore == nil {
+		return Response{
+			CostRecords: []core.CostRecord{},
+			ByModel:     map[string]float64{},
+			ByDay:       map[string]float64{},
+			ByAgent:     map[string]float64{},
+		}, nil
+	}
+
+	filter := store.CostFilter{AgentID: strings.TrimSpace(request.AgentIDFilter)}
+	if request.SinceDays > 0 {
+		filter.Since = time.Now().UTC().AddDate(0, 0, -request.SinceDays)
+	}
+
+	records, err := s.costStore.Load(ctx, filter)
+	if err != nil {
+		return Response{}, err
+	}
+	if records == nil {
+		records = []core.CostRecord{}
+	}
+
+	groupBy := strings.TrimSpace(request.GroupBy)
+	response := Response{}
+
+	wantModel := groupBy == "" || groupBy == CostGroupByModel
+	wantDay := groupBy == "" || groupBy == CostGroupByDay
+	wantAgent := groupBy == "" || groupBy == CostGroupByAgent
+
+	if wantModel {
+		response.ByModel = map[string]float64{}
+	}
+	if wantDay {
+		response.ByDay = map[string]float64{}
+	}
+	if wantAgent {
+		response.ByAgent = map[string]float64{}
+	}
+
+	for _, record := range records {
+		response.TotalUSD += record.EstimatedUSD
+		if wantModel && record.Model != "" {
+			response.ByModel[record.Model] += record.EstimatedUSD
+		}
+		if wantDay && !record.RecordedAt.IsZero() {
+			day := record.RecordedAt.UTC().Format("2006-01-02")
+			response.ByDay[day] += record.EstimatedUSD
+		}
+		if wantAgent {
+			if record.AgentID != "" {
+				response.ByAgent[record.AgentID] += record.EstimatedUSD
+			} else {
+				response.ByAgent["(orphan)"] += record.EstimatedUSD
+			}
+		}
+	}
+
+	if groupBy == "" {
+		// Raw view: include the full record list so the CLI can render
+		// per-model token columns. Bounded by SinceDays/AgentIDFilter.
+		response.CostRecords = records
+	}
+	return response, nil
+}
