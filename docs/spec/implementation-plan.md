@@ -468,6 +468,28 @@ swift test --disable-sandbox
 
 ---
 
+### P1-4.1: 리소스 최적화 + on-demand 비용 조회
+
+> P1-4 의 5초 폴링 CostTracker 를 on-demand 로 전환하고, hamd polling audit (2026-04-08) 에서 발견된 quick wins 를 처리. 자세한 audit 결과는 `docs/reviews/2026-04-08-hamd-polling-audit.md` 참조.
+
+**변경 파일 목록:**
+- `go/internal/runtime/cost_tracker.go` — Start() goroutine 제거, on-demand Tick(), seenIDs ephemeral rebuild
+- `go/internal/ipc/server.go` — cost.summary 핸들러에서 Tick() 호출 후 Load()
+- `go/cmd/hamd/main.go` — tracker.Start 제거, SetCostTracker 주입, pruneStores 24h 타이머, pprof -debug-addr flag
+- `go/internal/inference/observed.go` — mtime guard (sync.Map 캐시)
+- `go/internal/adapters/iterm2.go` — processRunning guard, ps -ax 단일 호출 통합
+- `go/internal/adapters/tmux.go` — processRunning guard
+
+**완료 조건:**
+- hamd 기동 시 CostTracker goroutine 없음. ham cost 요청 시에만 transcript scan.
+- seenIDs 메모리 bounded (매 Tick ephemeral rebuild).
+- idle 시 observed agent full read 0회 (mtime guard).
+- iTerm2 미실행 시 fork+exec 0회 (processRunning guard).
+- cost.jsonl 30일 / artifact 100MB 자동 prune.
+- pprof endpoint via -debug-addr flag.
+
+---
+
 ## 3. Phase 2 상세 태스크
 
 ### P2-0. Event Broadcast (P1-5 에서 이관)

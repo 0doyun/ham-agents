@@ -212,9 +212,21 @@ Sanity check (`go/internal/core/pricing_test.go`):
 
 ---
 
+## Addendum: P1-4.1 폴링 → on-demand 전환 (2026-04-08)
+
+P1-4 v1 의 CostTracker 는 5초 간격으로 transcript 디렉토리를 폴링했다. hamd
+polling audit (`docs/reviews/2026-04-08-hamd-polling-audit.md`) 에서 idle 시에도
+CPU 2% + 지속 I/O 가 발생하는 것이 확인되었고, 사용자 결정에 따라 on-demand 모드로
+전환:
+
+- **Before**: `CostTracker.Start(ctx)` → 5초 ticker goroutine → 자동 scan + ingest
+- **After**: goroutine 없음. `cost.summary` IPC 요청 시에만 `Tick(ctx)` 한 번 호출
+- **seenIDs**: 영구 sync.Map → 매 Tick 호출마다 CostStore 에서 ephemeral rebuild (메모리 bounded)
+- **Prune**: startup + 24h timer 로 cost.jsonl 30일 / artifact 100MB 자동 정리
+
 ## Next Steps
 
 1. ✅ 본 ADR 를 `status: accepted` 로 main 에 머지 → Phase 1 Scope Gate 통과
-2. P1-4 ralph 런 (Scenario B 시나리오대로 5-6 커밋)
-3. 실제 가격표를 commit 1 에 채울 때 Anthropic 공식 가격 페이지 한 번 더 확인
-4. P1-4 v1 출시 후 Linux/Windows 경로 검증 → P1-4.1 로 확장
+2. ✅ P1-4 ralph 런 완료 (9 커밋, critic APPROVE-WITH-RESERVATIONS + fix)
+3. ✅ P1-4.1 리소스 최적화 (on-demand + audit quick wins)
+4. P1-4 v1 출시 후 Linux/Windows 경로 검증 → P1-4.2 로 확장
