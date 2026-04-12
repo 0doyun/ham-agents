@@ -216,6 +216,30 @@ func pollRuntimeState(ctx context.Context, registry *runtime.Registry, settings 
 			if settingsErr == nil {
 				emitHeartbeatEvents(ctx, registry, settingsSnapshot, heartbeatSentAt)
 			}
+			reapDeadManagedAgents(ctx, registry)
+		}
+	}
+}
+
+func reapDeadManagedAgents(ctx context.Context, registry *runtime.Registry) {
+	agents, err := registry.List(ctx)
+	if err != nil {
+		return
+	}
+	for _, agent := range agents {
+		if agent.Mode != core.AgentModeManaged || agent.SessionProcessID <= 0 {
+			continue
+		}
+		proc, err := os.FindProcess(agent.SessionProcessID)
+		if err != nil {
+			continue
+		}
+		// signal(0) checks if process exists without killing it.
+		if err := proc.Signal(syscall.Signal(0)); err != nil {
+			log.Printf("reap: removing dead managed agent %s (pid %d)", agent.ID, agent.SessionProcessID)
+			if removeErr := registry.Remove(ctx, agent.ID); removeErr != nil {
+				log.Printf("reap: Remove %s: %v", agent.ID, removeErr)
+			}
 		}
 	}
 }

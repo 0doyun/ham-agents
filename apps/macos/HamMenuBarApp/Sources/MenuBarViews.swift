@@ -3,17 +3,21 @@ import HamAppServices
 import HamCore
 import HamNotifications
 
+enum MenuBarTab {
+    case office, inbox, settings
+}
+
 struct MenuBarContentView: View {
     @ObservedObject var viewModel: MenuBarViewModel
     @State private var selectedAgentID: Agent.ID?
     @State private var quickMessage = ""
     @State private var selectedTeamID = ""
     @State private var selectedWorkspace = ""
-    @State private var showSettings = false
+    @State private var activeTab: MenuBarTab = .office
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // Header with tab buttons
             HStack {
                 Text("Ham Office")
                     .font(.headline)
@@ -29,9 +33,27 @@ struct MenuBarContentView: View {
                 }
                 .buttonStyle(.borderless)
                 Button {
-                    showSettings.toggle()
+                    activeTab = activeTab == .inbox ? .office : .inbox
                 } label: {
-                    Image(systemName: showSettings ? "gearshape.fill" : "gearshape")
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: activeTab == .inbox ? "tray.fill" : "tray")
+                        if viewModel.unreadInboxCount > 0 {
+                            Text("\(viewModel.unreadInboxCount)")
+                                .font(.system(size: 8).bold())
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 3)
+                                .padding(.vertical, 1)
+                                .background(Color.red)
+                                .clipShape(Capsule())
+                                .offset(x: 6, y: -5)
+                        }
+                    }
+                }
+                .buttonStyle(.borderless)
+                Button {
+                    activeTab = activeTab == .settings ? .office : .settings
+                } label: {
+                    Image(systemName: activeTab == .settings ? "gearshape.fill" : "gearshape")
                 }
                 .buttonStyle(.borderless)
             }
@@ -39,10 +61,20 @@ struct MenuBarContentView: View {
             .padding(.top, 14)
             .padding(.bottom, 8)
 
-            if showSettings {
-                settingsContent
-            } else {
+            // Fixed top for office tab: summary + pixel office always visible.
+            if activeTab == .office {
+                officeFixedHeader
+                Divider()
+                    .padding(.top, 8)
+            }
+
+            switch activeTab {
+            case .office:
                 officeContent
+            case .inbox:
+                inboxContent
+            case .settings:
+                settingsContent
             }
         }
         .onAppear {
@@ -62,19 +94,91 @@ struct MenuBarContentView: View {
         .onChange(of: viewModel.selectedAgentID) { selectedAgentID = $0 }
     }
 
+    private var officeFixedHeader: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let summary = viewModel.summary {
+                HStack {
+                    SummaryBadge(title: "Total", value: summary.totalAgents)
+                    SummaryBadge(title: "Run", value: summary.runningAgents)
+                    SummaryBadge(title: "Wait", value: summary.waitingAgents)
+                }
+            }
+
+            let filteredAttentionAgents = viewModel.filteredAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
+            let filteredNonAttentionAgents = viewModel.filteredNonAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
+            let filteredOfficeAgents = filteredAttentionAgents + filteredNonAttentionAgents
+            let filteredOfficeOccupants = PixelOfficeMapper.occupants(from: filteredOfficeAgents)
+
+            PixelOfficeView(
+                occupants: filteredOfficeOccupants,
+                animationSpeedMultiplier: viewModel.settings.appearance.animationSpeedMultiplier,
+                reduceMotion: viewModel.settings.appearance.reduceMotion,
+                hamsterSkin: viewModel.settings.appearance.hamsterSkin,
+                hat: viewModel.settings.appearance.hat,
+                deskTheme: viewModel.settings.appearance.deskTheme,
+                onSelectAgent: { id in
+                    selectedAgentID = id
+                    viewModel.selectedAgentID = id
+                }
+            )
+        }
+        .padding(.horizontal, 14)
+    }
+
+    private var inboxContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                if viewModel.inboxItems.isEmpty {
+                    VStack(spacing: 10) {
+                        Image(systemName: "tray")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.secondary)
+                        Text("No messages")
+                            .font(.headline)
+                        Text("Agents will send notifications here.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+                } else {
+                    HStack {
+                        Text("Inbox")
+                            .font(.headline)
+                        if viewModel.unreadInboxCount > 0 {
+                            Text("\(viewModel.unreadInboxCount)")
+                                .font(.caption.bold())
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.red)
+                                .foregroundColor(.white)
+                                .clipShape(Capsule())
+                        }
+                        Spacer()
+                        Button("Mark all read") {
+                            Task { await viewModel.markAllInboxRead() }
+                        }
+                        .font(.caption)
+                        .buttonStyle(.plain)
+                        .disabled(viewModel.unreadInboxCount == 0)
+                    }
+                    ForEach(viewModel.inboxItems) { item in
+                        InboxRowView(item: item) {
+                            Task { @MainActor in await viewModel.openInboxItem(item) }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 12)
+            .padding(.bottom, 14)
+        }
+    }
+
     private var officeContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                if let summary = viewModel.summary {
-                    HStack {
-                        SummaryBadge(title: "Total", value: summary.totalAgents)
-                        SummaryBadge(title: "Run", value: summary.runningAgents)
-                        SummaryBadge(title: "Wait", value: summary.waitingAgents)
-                    }
-                }
-
-                InboxSection(viewModel: viewModel)
-
+                Spacer().frame(height: 2)
                 if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .font(.caption)
@@ -83,21 +187,6 @@ struct MenuBarContentView: View {
 
                 let filteredAttentionAgents = viewModel.filteredAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
                 let filteredNonAttentionAgents = viewModel.filteredNonAttentionAgents(teamID: selectedTeamID, workspace: selectedWorkspace)
-                let filteredOfficeAgents = filteredAttentionAgents + filteredNonAttentionAgents
-                let filteredOfficeOccupants = PixelOfficeMapper.occupants(from: filteredOfficeAgents)
-
-                PixelOfficeView(
-                    occupants: filteredOfficeOccupants,
-                    animationSpeedMultiplier: viewModel.settings.appearance.animationSpeedMultiplier,
-                    reduceMotion: viewModel.settings.appearance.reduceMotion,
-                    hamsterSkin: viewModel.settings.appearance.hamsterSkin,
-                    hat: viewModel.settings.appearance.hat,
-                    deskTheme: viewModel.settings.appearance.deskTheme,
-                    onSelectAgent: { id in
-                        selectedAgentID = id
-                        viewModel.selectedAgentID = id
-                    }
-                )
 
                 if !filteredAttentionAgents.isEmpty {
                     VStack(alignment: .leading, spacing: 6) {
@@ -193,6 +282,7 @@ struct MenuBarContentView: View {
     private var settingsContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
+                Spacer().frame(height: 2)
                 NotificationPermissionRow(
                     status: viewModel.notificationPermissionStatus,
                     requestPermission: {

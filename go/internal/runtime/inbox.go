@@ -151,25 +151,6 @@ func buildInboxItem(event core.Event) (core.InboxItem, bool) {
 		} else {
 			summary = "Task completed"
 		}
-	case "hook.stop":
-		itemType = core.InboxItemStop
-		summary = "Session stopped"
-	case "hook.stop-failure":
-		itemType = core.InboxItemError
-		if event.Summary != "" {
-			summary = event.Summary
-		} else {
-			summary = "Session stop failed"
-		}
-	case "hook.tool-failed":
-		itemType = core.InboxItemError
-		if event.ToolName != "" {
-			summary = fmt.Sprintf("Tool %s failed", event.ToolName)
-		} else if event.Summary != "" {
-			summary = event.Summary
-		} else {
-			summary = "Tool failed"
-		}
 	default:
 		return core.InboxItem{}, false
 	}

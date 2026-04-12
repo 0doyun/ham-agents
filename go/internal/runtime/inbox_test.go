@@ -62,26 +62,24 @@ func TestInboxManager_HandleEvent_PermissionRequest_CreatesItem(t *testing.T) {
 	}
 }
 
-func TestInboxManager_HandleEvent_AllSixHooks_CreateItems(t *testing.T) {
+func TestInboxManager_HandleEvent_AllThreeHooks_CreateItems(t *testing.T) {
 	m := newTestInboxManager(t)
 
 	m.HandleEvent(makeEventWithTool("e1", "hook.permission-request", "a", "Bash"))
 	m.HandleEvent(makeEvent("e2", "hook.notification", "a"))
 	m.HandleEvent(makeEventWithTask("e3", "hook.task-completed", "a", "my-task"))
+	// These should be ignored now:
 	m.HandleEvent(makeEvent("e4", "hook.stop", "a"))
 	m.HandleEvent(makeEvent("e5", "hook.stop-failure", "a"))
 	m.HandleEvent(makeEventWithTool("e6", "hook.tool-failed", "a", "Read"))
 
 	items := m.List("", false)
-	if len(items) != 6 {
-		t.Fatalf("want 6 items, got %d", len(items))
+	if len(items) != 3 {
+		t.Fatalf("want 3 items, got %d", len(items))
 	}
 
 	// Items are returned newest-first, so reverse order of insertion.
 	wantTypes := []core.InboxItemType{
-		core.InboxItemError,             // e6 tool-failed
-		core.InboxItemError,             // e5 stop-failure
-		core.InboxItemStop,              // e4 stop
 		core.InboxItemTaskComplete,      // e3 task-completed
 		core.InboxItemNotification,      // e2 notification
 		core.InboxItemPermissionRequest, // e1 permission-request
@@ -178,7 +176,7 @@ func TestInboxManager_Persist_RoundTrip(t *testing.T) {
 	}
 	mA.HandleEvent(makeEvent("e1", "hook.notification", "agent-1"))
 	mA.HandleEvent(makeEventWithTool("e2", "hook.permission-request", "agent-2", "Write"))
-	mA.HandleEvent(makeEvent("e3", "hook.stop", "agent-3"))
+	mA.HandleEvent(makeEventWithTask("e3", "hook.task-completed", "agent-3", "build"))
 
 	// Manager B: load same path.
 	mB, err := NewInboxManager(path)
